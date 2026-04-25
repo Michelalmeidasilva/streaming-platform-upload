@@ -56,17 +56,18 @@ export class UploadService {
       throw new Error('Invalid session');
     }
 
-    const key = `${session.videoId}/chunk-${chunkIndex}`;
-    await this.storage.uploadChunk(chunk, key, chunkIndex + 1);
+    const video = this.videos.get(session.videoId);
+    if (!video) {
+        throw new Error('Video not found');
+    }
+
+    await this.storage.upload(chunk, video.filename, video.mimeType || 'application/octet-stream');
 
     session.uploadedChunks = chunkIndex + 1;
     const progress = (session.uploadedChunks / session.totalChunks) * 100;
 
-    const video = this.videos.get(session.videoId);
-    if (video) {
-      video.progress = progress;
-      video.updatedAt = new Date();
-    }
+    video.progress = progress;
+    video.updatedAt = new Date();
 
     videoEvents.emitUploadProgress({
       videoId: session.videoId,

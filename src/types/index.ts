@@ -58,7 +58,7 @@ export interface StorageConfig {
 
 export interface IntegrationConfig {
   name: string;
-  type: 'webhook' | 'api' | 'queue';
+  type: 'webhook' | 'api' | 'queue' | 'event-gateway';
   endpoint?: string;
   apiKey?: string;
   enabled: boolean;

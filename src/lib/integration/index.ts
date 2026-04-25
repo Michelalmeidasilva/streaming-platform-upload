@@ -3,6 +3,7 @@ import { IIntegrationConnector } from './IIntegrationConnector';
 import { WebhookConnector } from './WebhookConnector';
 import { ApiConnector } from './ApiConnector';
 import { QueueConnector } from './QueueConnector';
+import { EventGatewayConnector } from './EventGatewayConnector';
 
 export class IntegrationLayer {
   private connectors: Map<string, IIntegrationConnector> = new Map();
@@ -20,6 +21,8 @@ export class IntegrationLayer {
         return new ApiConnector(config);
       case 'queue':
         return new QueueConnector(config);
+      case 'event-gateway':
+        return new EventGatewayConnector(config);
       default:
         throw new Error(`Unknown integration type: ${config.type}`);
     }

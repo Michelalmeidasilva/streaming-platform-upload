@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createStorageAdapter } from '@/lib/storage';
 import { UploadService } from '@/lib/services/UploadService';
+import { initializeEventDispatcher } from '@/lib/events/EventDispatcher';
+
+// Initialize the Event Dispatcher so that Event Gateway is connected early
+initializeEventDispatcher();
 
 const storage = createStorageAdapter({
   provider: process.env.STORAGE_PROVIDER as 's3' | 'minio' || 'minio',
@@ -47,9 +51,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Upload error detail:', error);
     return NextResponse.json(
-      { error: 'Upload failed' },
+      { error: 'Upload failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

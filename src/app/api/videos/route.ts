@@ -1,58 +1,37 @@
 import { NextResponse } from 'next/server';
-import { createStorageAdapter } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
-const storage = createStorageAdapter({
-  provider: process.env.STORAGE_PROVIDER as 's3' | 'minio' || 'minio',
-  bucket: process.env.STORAGE_BUCKET || 'videos',
-  endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
-  accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-});
-
 export async function GET() {
   try {
-    const objects = await storage.listObjects();
+    const gatewayUrl = process.env.EVENT_GATEWAY_URL || 'http://localhost:8080/api/v1';
+    
+    const response = await fetch(`${gatewayUrl}/videos`, {
+      cache: 'no-store',
+    });
 
-    // Group objects by videoId (key format: "{videoId}/{filename}")
-    const videoMap = new Map<string, { originalName: string; size: number; lastModified: Date }>();
-
-    for (const obj of objects) {
-      const parts = obj.key.split('/');
-      if (parts.length < 2) continue;
-
-      const videoId = parts[0];
-      const filename = parts.slice(1).join('/');
-
-      const existing = videoMap.get(videoId);
-      if (!existing || obj.lastModified > existing.lastModified) {
-        videoMap.set(videoId, {
-          originalName: filename,
-          size: existing ? existing.size + obj.size : obj.size,
-          lastModified: obj.lastModified,
-        });
-      } else if (existing) {
-        existing.size += obj.size;
-      }
+    if (!response.ok) {
+        throw new Error(`Event Gateway returned ${response.status}`);
     }
 
-    const videos = Array.from(videoMap.entries()).map(([id, data]) => ({
-      id,
-      originalName: data.originalName,
-      size: data.size,
-      status: 'ready',
-      createdAt: data.lastModified.toISOString(),
+    const { videos: gatewayVideos } = await response.json();
+
+    const videos = gatewayVideos.map((v: any) => ({
+      id: v.videoId,
+      originalName: v.filename,
+      size: v.size,
+      status: 'ready', // Gateway indicates successful recording in storage
+      createdAt: v.occurredAt,
     }));
 
     // Sort newest first
-    videos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    videos.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({ videos });
   } catch (error) {
-    console.error('Failed to fetch videos:', error);
+    console.error('Failed to fetch videos from Event Gateway:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch videos' },
+      { error: 'Failed to fetch videos from Event Gateway' },
       { status: 500 }
     );
   }

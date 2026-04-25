@@ -11,7 +11,7 @@ export default function Home() {
             <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
             <path d="M12 10L22 16L12 22V10Z" fill="white" />
           </svg>
-          <span>StreamUpload</span>
+          <span>Gerenciador de Vídeos</span>
         </div>
         <nav className={styles.nav}>
           <a href="#" className={styles.navLink}>Videos</a>
@@ -36,7 +36,6 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <p>&copy; 2024 StreamUpload. All rights reserved.</p>
       </footer>
     </div>
   );
