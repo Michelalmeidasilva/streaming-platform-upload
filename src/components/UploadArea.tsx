@@ -4,8 +4,6 @@ import { useState, useRef, useCallback } from 'react';
 import styles from './UploadArea.module.css';
 import { validateCMAFFile } from '@/lib/cmaf';
 
-const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB — must match server CHUNK_SIZE
-
 interface UploadProgress {
   videoId: string;
   filename: string;
@@ -33,7 +31,7 @@ export default function UploadArea() {
           continue;
         }
 
-        const videoId = `video-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const videoId = `video-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
         setUploads(prev => [...prev, { videoId, filename: file.name, progress: 0, status: 'uploading' }]);
 
         try {
