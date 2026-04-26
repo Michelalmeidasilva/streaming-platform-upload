@@ -24,6 +24,8 @@ export interface UploadSession {
   totalSize: number;
   startedAt: Date;
   filename: string;
+  uploadId: string;
+  etags: { PartNumber: number; ETag: string }[];
 }
 
 export interface UploadChunkRequest {
