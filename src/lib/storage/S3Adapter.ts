@@ -20,72 +20,73 @@ export class S3Adapter implements IStorageAdapter {
     this.client = new S3Client({
       region: config.region || 'us-east-1',
       credentials: config.accessKeyId && config.secretAccessKey
-        ? {
-          accessKeyId: config.accessKeyId,
-          secretAccessKey: config.secretAccessKey,
-        }
+        ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
         : undefined,
     });
     this.bucket = config.bucket;
   }
 
   async upload(file: Buffer, key: string, contentType: string): Promise<string> {
-    const command = new PutObjectCommand({
+    await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       Body: file,
       ContentType: contentType,
-    });
-
-    await this.client.send(command);
-    return this.getSignedUrl(key);
-  }
-
-  async uploadChunk(chunk: Buffer, key: string, partNumber: number): Promise<void> {
-    console.log(`Uploading chunk ${partNumber} for key ${key}`);
-  }
-
-  async completeMultipartUpload(key: string, uploadId: string): Promise<string> {
-    console.log(`Completing multipart upload for key ${key}`);
+    }));
     return this.getSignedUrl(key);
   }
 
   async initiateMultipartUpload(key: string, contentType: string): Promise<string> {
-    const command = new CreateMultipartUploadCommand({
+    const response = await this.client.send(new CreateMultipartUploadCommand({
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
-    });
-
-    const response = await this.client.send(command);
+    }));
     return response.UploadId || '';
   }
 
-  async delete(key: string): Promise<void> {
-    const command = new DeleteObjectCommand({
+  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string> {
+    const response = await this.client.send(new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
-    });
+      UploadId: uploadId,
+      PartNumber: partNumber,
+      Body: chunk,
+    }));
+    return response.ETag || '';
+  }
 
-    await this.client.send(command);
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: { PartNumber: number; ETag: string }[],
+  ): Promise<string> {
+    await this.client.send(new CompleteMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: [...parts].sort((a, b) => a.PartNumber - b.PartNumber),
+      },
+    }));
+    return this.getSignedUrl(key);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-    });
-
-    return getSignedUrl(this.client, command, { expiresIn });
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn },
+    );
   }
 
   async exists(key: string): Promise<boolean> {
     try {
-      const command = new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      });
-      await this.client.send(command);
+      await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
       return true;
     } catch {
       return false;
@@ -93,24 +94,16 @@ export class S3Adapter implements IStorageAdapter {
   }
 
   async listObjects(prefix?: string): Promise<StorageObject[]> {
-    const command = new ListObjectsV2Command({
+    const response = await this.client.send(new ListObjectsV2Command({
       Bucket: this.bucket,
       Prefix: prefix || '',
-    });
-
-    const response = await this.client.send(command);
-    const objects: StorageObject[] = [];
-
-    for (const item of response.Contents || []) {
-      if (item.Key && !item.Key.includes('.chunk.')) {
-        objects.push({
-          key: item.Key,
-          size: item.Size || 0,
-          lastModified: item.LastModified || new Date(),
-        });
-      }
-    }
-
-    return objects;
+    }));
+    return (response.Contents || [])
+      .filter(item => item.Key && !item.Key.includes('.chunk.'))
+      .map(item => ({
+        key: item.Key!,
+        size: item.Size || 0,
+        lastModified: item.LastModified || new Date(),
+      }));
   }
 }
