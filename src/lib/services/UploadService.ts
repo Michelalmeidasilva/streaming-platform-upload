@@ -14,14 +14,19 @@ export class UploadService {
     this.storage = storage;
   }
 
-  async initiateUpload(filename: string, size: number, mimeType?: string): Promise<{ sessionId: string; videoId: string; chunkSize: number }> {
+  async initiateUpload(
+    filename: string,
+    size: number,
+    mimeType?: string,
+  ): Promise<{ sessionId: string; videoId: string; chunkSize: number; totalChunks: number }> {
     const videoId = uuidv4();
     const sessionId = uuidv4();
     const totalChunks = Math.ceil(size / CHUNK_SIZE);
+    const key = `${videoId}/${filename}`;
 
     const video: Video = {
       id: videoId,
-      filename: `${videoId}/${filename}`,
+      filename: key,
       originalName: filename,
       size,
       status: 'uploading',
@@ -30,6 +35,14 @@ export class UploadService {
       updatedAt: new Date(),
       mimeType,
     };
+
+    let uploadId = '';
+    if (totalChunks > 1) {
+      uploadId = await this.storage.initiateMultipartUpload(
+        key,
+        mimeType || 'application/octet-stream',
+      );
+    }
 
     const session: UploadSession = {
       id: sessionId,
@@ -40,32 +53,34 @@ export class UploadService {
       totalSize: size,
       startedAt: new Date(),
       filename,
+      uploadId,
+      etags: [],
     };
 
     this.videos.set(videoId, video);
     this.sessions.set(sessionId, session);
-
     videoEvents.emitUploadStarted(videoId, filename);
 
-    return { sessionId, videoId, chunkSize: CHUNK_SIZE };
+    return { sessionId, videoId, chunkSize: CHUNK_SIZE, totalChunks };
   }
 
   async uploadChunk(sessionId: string, chunkIndex: number, chunk: Buffer): Promise<void> {
     const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error('Invalid session');
-    }
+    if (!session) throw new Error('Invalid session');
 
     const video = this.videos.get(session.videoId);
-    if (!video) {
-        throw new Error('Video not found');
-    }
+    if (!video) throw new Error('Video not found');
 
-    await this.storage.upload(chunk, video.filename, video.mimeType || 'application/octet-stream');
+    if (session.totalChunks === 1) {
+      await this.storage.upload(chunk, video.filename, video.mimeType || 'application/octet-stream');
+    } else {
+      const partNumber = chunkIndex + 1;
+      const etag = await this.storage.uploadPart(chunk, video.filename, session.uploadId, partNumber);
+      session.etags.push({ PartNumber: partNumber, ETag: etag });
+    }
 
     session.uploadedChunks = chunkIndex + 1;
     const progress = (session.uploadedChunks / session.totalChunks) * 100;
-
     video.progress = progress;
     video.updatedAt = new Date();
 
@@ -80,17 +95,22 @@ export class UploadService {
 
   async completeUpload(sessionId: string): Promise<Video> {
     const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new Error('Invalid session');
-    }
+    if (!session) throw new Error('Invalid session');
 
     const video = this.videos.get(session.videoId);
-    if (!video) {
-      throw new Error('Video not found');
+    if (!video) throw new Error('Video not found');
+
+    let url: string;
+    if (session.totalChunks === 1) {
+      url = await this.storage.getSignedUrl(video.filename);
+    } else {
+      url = await this.storage.completeMultipartUpload(
+        video.filename,
+        session.uploadId,
+        session.etags,
+      );
     }
 
-    const url = await this.storage.getSignedUrl(video.filename);
-    
     video.status = 'processing';
     video.progress = 100;
     video.url = url;
@@ -105,7 +125,6 @@ export class UploadService {
     }, 2000);
 
     this.sessions.delete(sessionId);
-
     return video;
   }
 
@@ -115,7 +134,7 @@ export class UploadService {
 
   getAllVideos(): Video[] {
     return Array.from(this.videos.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
 
