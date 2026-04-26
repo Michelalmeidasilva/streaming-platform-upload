@@ -1,104 +1,136 @@
-.container {
-  min-height: 100vh;
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+  width: 56px;
+  background: #0f0f0f;
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-}
-
-.header {
-  height: 64px;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--spacing-xl);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  padding: 12px 0;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.nav {
-  display: flex;
-  gap: var(--spacing-lg);
-}
-
-.navLink {
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  transition: color var(--transition);
-}
-
-.navLink:hover {
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.main {
-  flex: 1;
-  padding: var(--spacing-xxl) var(--spacing-xl);
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.uploadSection {
-  margin-bottom: var(--spacing-xxl);
-}
-
-.title {
-  font-size: 32px;
-  font-weight: 700;
-  margin-bottom: var(--spacing-sm);
-}
-
-.subtitle {
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-xl);
-}
-
-.videosSection {
-  margin-top: var(--spacing-xxl);
-}
-
-.sectionTitle {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: var(--spacing-lg);
-}
-
-.footer {
-  height: 48px;
-  background-color: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+.sidebarLogo {
+  width: 34px;
+  height: 34px;
+  background: var(--color-primary);
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 16px;
+}
+
+.navItem {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  color: var(--color-text-muted);
+  position: relative;
+}
+
+.navItem:hover {
+  background: var(--color-surface-2);
   color: var(--color-text-secondary);
+}
+
+.navItemActive {
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+}
+
+.navItemActive::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--color-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.sidebarSpacer {
+  flex: 1;
+}
+
+/* --- MAIN AREA --- */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.topbar {
+  height: 48px;
+  background: #111;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+
+.topbarTitle {
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--color-border-subtle); border-radius: 2px; }
+
+/* --- SECTION DIVIDER --- */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sectionLine {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
 }
 
 @media (max-width: 768px) {
-  .header {
-    padding: 0 var(--spacing-md);
-  }
-  
-  .nav {
-    display: none;
-  }
-  
-  .main {
-    padding: var(--spacing-xl) var(--spacing-md);
-  }
-  
-  .title {
-    font-size: 24px;
-  }
+  .sidebar { width: 48px; }
+  .navItem { width: 36px; height: 36px; }
+  .content { padding: 16px; }
 }
