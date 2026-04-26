@@ -62,7 +62,7 @@ export default function VideoList() {
     return (
       <div className={styles.loading}>
         <div className={styles.spinner} />
-        <p>Loading videos...</p>
+        <p>Carregando vídeos...</p>
       </div>
     );
   }
@@ -70,14 +70,15 @@ export default function VideoList() {
   if (videos.length === 0) {
     return (
       <div className={styles.empty}>
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-          <rect x="8" y="16" width="48" height="36" rx="4" stroke="var(--color-border)" strokeWidth="2" />
-          <path d="M8 28L24 20L32 28L44 16L56 28" stroke="var(--color-border)" strokeWidth="2" />
-          <circle cx="44" cy="40" r="8" stroke="var(--color-border)" strokeWidth="2" />
-          <path d="M40 40L44 44L50 36" stroke="var(--color-border)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <p>No videos yet</p>
-        <span>Upload your first video to get started</span>
+        <div className={styles.emptyIcon}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+          </svg>
+        </div>
+        <h3>Nenhum vídeo ainda</h3>
+        <p>Importe seu primeiro arquivo para começar</p>
+        <button className={styles.emptyBtn}>+ Importar vídeo</button>
       </div>
     );
   }
@@ -87,33 +88,34 @@ export default function VideoList() {
       {videos.map(video => (
         <div key={video.id} className={styles.card}>
           <div className={styles.thumbnail}>
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M12 10L22 16L12 22V10Z" fill="var(--color-primary)" />
-            </svg>
+            <div className={styles.playBtn}>
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
+                <path d="M4 2L9 6L4 10V2z" />
+              </svg>
+            </div>
+            {video.status === 'uploading' && (
+              <div className={styles.thumbProgress}>
+                <div className={styles.thumbProgressFill} />
+              </div>
+            )}
           </div>
-          
-          <div className={styles.content}>
+
+          <div className={styles.info}>
             <h3 className={styles.title}>{video.originalName}</h3>
-            
             <div className={styles.meta}>
               <span>{formatSize(video.size)}</span>
-              <span>•</span>
+              <span>·</span>
               <span>{formatDate(video.createdAt)}</span>
             </div>
-            
             <div className={styles.footer}>
-              <span className={`${styles.status} ${styles[video.status]}`}>
+              <span className={`${styles.statusBadge} ${styles[video.status]}`}>
                 {video.status === 'ready' && 'Ready'}
-                {video.status === 'processing' && 'Processing'}
+                {video.status === 'processing' && 'Process'}
                 {video.status === 'uploading' && 'Uploading'}
-                {video.status === 'error' && 'Error'}
+                {video.status === 'error' && 'Erro'}
               </span>
-              
-              <button 
-                className={styles.deleteBtn}
-                onClick={() => handleDelete(video.id)}
-              >
-                Delete
+              <button className={styles.deleteBtn} onClick={() => handleDelete(video.id)}>
+                Excluir
               </button>
             </div>
           </div>
