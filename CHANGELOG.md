@@ -1,0 +1,60 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+---
+
+## [Unreleased]
+
+## [0.2.0] - 2026-04-26
+
+### Added
+
+- **True multipart upload** via S3/MinIO Multipart Upload protocol (see ADR-0001)
+- `POST /api/upload/chunk` — new endpoint to receive individual 10MB file parts
+- `POST /api/upload/complete` — new endpoint to finalize a multipart upload
+- `src/lib/api/uploadService.ts` — shared singleton module (Next.js App Router forbids arbitrary named exports from route files)
+- `UploadSession.uploadId` — stores the upload ID returned by `initiateMultipartUpload`
+- `UploadSession.etags` — accumulates `{ PartNumber, ETag }` entries returned by each `uploadPart` call
+- `IStorageAdapter.uploadPart(chunk, key, uploadId, partNumber)` — replaces the former stub `uploadChunk`
+- `IStorageAdapter.completeMultipartUpload(key, uploadId, parts)` — now accepts the full ETags array
+- `MinIOAdapter`: internal `S3Client` with `forcePathStyle: true` for multipart operations (the `minio` npm package does not expose multipart APIs publicly)
+- Small-file fallback in `UploadService`: files ≤ 10MB skip multipart and use `storage.upload()` directly
+- Jest + ts-jest unit test suite (`npm test`)
+- 8 unit tests covering `UploadService` multipart logic and edge cases
+
+### Changed
+
+- `POST /api/upload` now accepts `{ filename, size, mimeType }` JSON body (previously received a full `FormData` file upload) and returns `{ sessionId, videoId, chunkSize, totalChunks }`
+- `UploadArea.tsx` replaced XHR single-request with a three-phase `fetch` flow: initiate → sequential chunk loop → complete; progress advances per chunk
+- `S3Adapter`: implemented `initiateMultipartUpload`, `uploadPart`, `completeMultipartUpload` (previously stubs with `console.log`)
+- `UploadSession` type extended with `totalSize`, `filename`, `uploadId`, `etags`
+- `uploadedBytes` in `upload.progress` events is now clamped to `totalSize` (previously could exceed file size on the final chunk)
+
+### Removed
+
+- `IStorageAdapter.uploadChunk` — replaced by `uploadPart` with corrected signature
+- XHR-based single-request upload from `UploadArea.tsx`
+- Temporary chunk files in `MinIOAdapter` (`.chunk.N` objects) — no longer needed with native multipart
+
+### Fixed
+
+- `uploadedBytes` in `upload.progress` events overflowed total file size on the final chunk when file size was not a multiple of chunk size
+
+---
+
+## [0.1.0] - 2026-04-25
+
+### Added
+
+- Initial project scaffold with Next.js 14 App Router
+- `UploadArea` component with drag-and-drop and file browser
+- `VideoList` component
+- `IStorageAdapter` interface with `S3Adapter` and `MinIOAdapter` implementations
+- `UploadService` with session management
+- Event-driven architecture via `VideoEventEmitter`
+- Integration layer (`ApiConnector`, `WebhookConnector`, `QueueConnector`, `EventGatewayConnector`)
+- Docker Compose setup with MinIO for local development
+- CMAF file validation

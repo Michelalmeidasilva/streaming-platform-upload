@@ -14,6 +14,7 @@
 - **Storage**: AWS S3 (production) / MinIO (local testing)
 - **Events**: EventEmitter-based architecture
 - **Video Format**: CMAF (Common Media Application Format)
+- **Testing**: Jest + ts-jest (unit tests)
 
 ## Architecture
 
@@ -130,11 +131,13 @@ Upload Request → Events → Handlers → Storage Layer
 ### Core Features
 
 1. **Video Upload**
-   - Chunked upload support (for large files 300MB-1GB)
+   - True multipart upload via S3/MinIO Multipart Upload protocol
+   - Client-side file splitting: 10MB chunks via `File.slice()`
+   - Three-phase flow: initiate → upload chunks → complete
+   - Small-file fallback: files ≤ 10MB use direct `PutObject` (S3 requires ≥ 5MB per part in multipart)
    - Drag & drop + click to browse
    - File validation (CMAF formats: .mp4, .m4v, .mov, .m3u8)
    - Maximum file size: 2GB
-   - Resume capability
 
 2. **Progress Tracking**
    - Real-time progress updates via events
@@ -143,8 +146,8 @@ Upload Request → Events → Handlers → Storage Layer
    - Visual progress bar
 
 3. **Storage Adapters**
-   - S3Adapter (production)
-   - MinIOAdapter (local development/testing)
+   - `S3Adapter` (production) — uses `@aws-sdk/client-s3` with native multipart commands
+   - `MinIOAdapter` (local development/testing) — uses `minio` Client for listing/signing/deletion; uses an internal `S3Client` with `forcePathStyle: true` for multipart (the `minio` package does not expose multipart APIs publicly; MinIO is S3-compatible)
    - Interface: `IStorageAdapter`
 
 4. **External System Integration**
@@ -160,10 +163,25 @@ Upload Request → Events → Handlers → Storage Layer
 
 ### API Endpoints
 
+#### Upload flow (three phases, must be called in order)
+
 ```
-POST   /api/upload          - Initiate upload
-POST   /api/upload/chunk   - Upload chunk
-POST   /api/upload/complete - Complete upload
+POST /api/upload
+  Body (JSON): { filename: string, size: number, mimeType?: string }
+  Response:    { sessionId: string, videoId: string, chunkSize: number, totalChunks: number }
+
+POST /api/upload/chunk
+  Body (FormData): sessionId, chunkIndex (0-based), chunk (Blob)
+  Response:        { ok: true }
+
+POST /api/upload/complete
+  Body (JSON): { sessionId: string }
+  Response:    { success: true, video: { id, filename, size, status, url } }
+```
+
+#### Other endpoints
+
+```
 GET    /api/videos         - List videos
 GET    /api/videos/:id     - Get video details
 DELETE /api/videos/:id     - Delete video
@@ -196,7 +214,11 @@ interface UploadSession {
   totalChunks: number;
   uploadedChunks: number;
   chunkSize: number;
+  totalSize: number;
   startedAt: Date;
+  filename: string;
+  uploadId: string;                               // from initiateMultipartUpload; empty for single-chunk files
+  etags: { PartNumber: number; ETag: string }[];  // accumulated per uploadPart call
 }
 ```
 
@@ -211,12 +233,14 @@ CMAF (Common Media Application Format) is supported through:
 ## Acceptance Criteria
 
 1. User can drag & drop or browse to select video files
-2. Upload progress displays in real-time
-3. Chunked upload works for files up to 1GB
-4. MinIO adapter works for local testing
-5. S3 adapter configured for production
-6. Events propagate correctly through the system
-7. External integration layer is extensible
-8. UI matches Vimeo-like aesthetic
-9. Responsive design works on all breakpoints
-10. Error states are handled gracefully
+2. Upload progress displays in real-time, advancing per chunk
+3. Chunked upload works for files up to 1GB via S3 Multipart Upload protocol
+4. Files ≤ 10MB upload via direct `PutObject` (single-chunk fallback)
+5. MinIO adapter works for local testing (uses S3-compatible multipart protocol)
+6. S3 adapter configured for production
+7. Events propagate correctly through the system
+8. External integration layer is extensible
+9. UI matches Vimeo-like aesthetic
+10. Responsive design works on all breakpoints
+11. Error states are handled gracefully
+12. Unit tests cover multipart upload service logic
