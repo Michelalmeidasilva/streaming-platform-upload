@@ -1,9 +1,17 @@
 import { Client } from 'minio';
+import {
+  S3Client,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
 import { StorageConfig } from '@/types';
 
 export class MinIOAdapter implements IStorageAdapter {
   private client: Client;
+  private s3Client: S3Client;
   private bucket: string;
 
   constructor(config: StorageConfig) {
@@ -14,6 +22,15 @@ export class MinIOAdapter implements IStorageAdapter {
       useSSL: config.endpoint?.startsWith('https') || false,
       accessKey: config.accessKeyId || 'minioadmin',
       secretKey: config.secretAccessKey || 'minioadmin',
+    });
+    this.s3Client = new S3Client({
+      endpoint: config.endpoint || 'http://localhost:9000',
+      region: 'us-east-1',
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: config.accessKeyId || 'minioadmin',
+        secretAccessKey: config.secretAccessKey || 'minioadmin',
+      },
     });
     this.bucket = config.bucket;
   }
@@ -32,37 +49,50 @@ export class MinIOAdapter implements IStorageAdapter {
 
   async upload(file: Buffer, key: string, contentType: string): Promise<string> {
     await this.ensureBucket();
-
-    await this.client.putObject(
-      this.bucket,
-      key,
-      file,
-      file.length,
-      { 'Content-Type': contentType }
-    );
-
-    return this.getSignedUrl(key);
-  }
-
-  async uploadChunk(chunk: Buffer, key: string, partNumber: number): Promise<void> {
-    await this.ensureBucket();
-    const tempKey = `${key}.chunk.${partNumber}`;
-
-    await this.client.putObject(
-      this.bucket,
-      tempKey,
-      chunk,
-      chunk.length
-    );
-  }
-
-  async completeMultipartUpload(key: string, uploadId: string): Promise<string> {
+    await this.s3Client.send(new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      Body: file,
+      ContentType: contentType,
+    }));
     return this.getSignedUrl(key);
   }
 
   async initiateMultipartUpload(key: string, contentType: string): Promise<string> {
     await this.ensureBucket();
-    return `mock-upload-id-${Date.now()}`;
+    const response = await this.s3Client.send(new CreateMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    }));
+    return response.UploadId || '';
+  }
+
+  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string> {
+    const response = await this.s3Client.send(new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+      Body: chunk,
+    }));
+    return response.ETag || '';
+  }
+
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: { PartNumber: number; ETag: string }[],
+  ): Promise<string> {
+    await this.s3Client.send(new CompleteMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: [...parts].sort((a, b) => a.PartNumber - b.PartNumber),
+      },
+    }));
+    return this.getSignedUrl(key);
   }
 
   async delete(key: string): Promise<void> {
@@ -70,12 +100,7 @@ export class MinIOAdapter implements IStorageAdapter {
   }
 
   async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
-    const url = await this.client.presignedGetObject(
-      this.bucket,
-      key,
-      expiresIn
-    );
-    return url;
+    return this.client.presignedGetObject(this.bucket, key, expiresIn);
   }
 
   async exists(key: string): Promise<boolean> {
@@ -89,24 +114,16 @@ export class MinIOAdapter implements IStorageAdapter {
 
   async listObjects(prefix?: string): Promise<StorageObject[]> {
     await this.ensureBucket();
-
     return new Promise((resolve, reject) => {
       const objects: StorageObject[] = [];
       const stream = this.client.listObjectsV2(this.bucket, prefix || '', true);
-
       stream.on('data', (obj) => {
-        // Filter out chunk files
         if (obj.name && !obj.name.includes('.chunk.')) {
-          objects.push({
-            key: obj.name,
-            size: obj.size,
-            lastModified: obj.lastModified,
-          });
+          objects.push({ key: obj.name, size: obj.size, lastModified: obj.lastModified });
         }
       });
-
       stream.on('end', () => resolve(objects));
-      stream.on('error', (err) => reject(err));
+      stream.on('error', reject);
     });
   }
 }
