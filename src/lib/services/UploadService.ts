@@ -88,7 +88,7 @@ export class UploadService {
       videoId: session.videoId,
       filename: session.filename,
       progress,
-      uploadedBytes: session.uploadedChunks * session.chunkSize,
+      uploadedBytes: Math.min(session.uploadedChunks * session.chunkSize, session.totalSize),
       totalBytes: session.totalSize,
     });
   }
