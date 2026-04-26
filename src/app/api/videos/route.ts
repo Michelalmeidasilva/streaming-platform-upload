@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
     const gatewayUrl = process.env.EVENT_GATEWAY_URL || 'http://localhost:8080/api/v1';
     
-    const response = await fetch(`${gatewayUrl}/videos`, {
+    const endpoint = query 
+      ? `${gatewayUrl}/videos/search?q=${encodeURIComponent(query)}`
+      : `${gatewayUrl}/videos`;
+
+    const response = await fetch(endpoint, {
       cache: 'no-store',
     });
 
@@ -21,7 +27,7 @@ export async function GET() {
       originalName: v.filename,
       size: v.size,
       status: 'ready', // Gateway indicates successful recording in storage
-      createdAt: v.occurredAt,
+      createdAt: v.createdAt,
     }));
 
     // Sort newest first
