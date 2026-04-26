@@ -1,60 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStorageAdapter } from '@/lib/storage';
-import { UploadService } from '@/lib/services/UploadService';
-import { initializeEventDispatcher } from '@/lib/events/EventDispatcher';
-
-// Initialize the Event Dispatcher so that Event Gateway is connected early
-initializeEventDispatcher();
-
-const storage = createStorageAdapter({
-  provider: process.env.STORAGE_PROVIDER as 's3' | 'minio' || 'minio',
-  bucket: process.env.STORAGE_BUCKET || 'videos',
-  endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
-  accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-});
-
-const uploadService = new UploadService(storage);
+import { uploadService } from '@/lib/api/uploadService';
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const { filename, size, mimeType } = await request.json();
 
-    if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+    if (!filename || !size) {
+      return NextResponse.json({ error: 'filename and size are required' }, { status: 400 });
     }
 
-    const { sessionId, videoId, chunkSize } = await uploadService.initiateUpload(
-      file.name,
-      file.size,
-      file.type
+    const { sessionId, videoId, chunkSize, totalChunks } = await uploadService.initiateUpload(
+      filename,
+      size,
+      mimeType,
     );
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    await uploadService.uploadChunk(sessionId, 0, buffer);
-    const video = await uploadService.completeUpload(sessionId);
-
-    return NextResponse.json({
-      success: true,
-      video: {
-        id: video.id,
-        filename: video.originalName,
-        size: video.size,
-        status: video.status,
-        url: video.url,
-      },
-    });
+    return NextResponse.json({ sessionId, videoId, chunkSize, totalChunks });
   } catch (error) {
-    console.error('Upload error detail:', error);
+    console.error('Initiate upload error:', error);
     return NextResponse.json(
-      { error: 'Upload failed', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
+      { error: 'Failed to initiate upload', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
     );
   }
 }
