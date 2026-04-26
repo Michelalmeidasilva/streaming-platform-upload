@@ -130,18 +130,22 @@ export default function UploadArea() {
           className={styles.fileInput}
         />
         <div className={styles.dropzoneContent}>
-          <svg className={styles.icon} width="48" height="48" viewBox="0 0 48 48" fill="none">
-            <path d="M24 4L12 16H18V32H30V16H36L24 4Z" fill="currentColor" />
-            <path d="M4 36V44H44V36" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-          <p className={styles.dropzoneText}>Drag and drop your video here</p>
-          <p className={styles.dropzoneSubtext}>or click to browse</p>
+          <div className={styles.iconWrap}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+          <div className={styles.dropzoneText}>
+            <h3>{isDragging ? 'Solte para iniciar o upload' : 'Arraste arquivos de vídeo aqui'}</h3>
+            <p>{isDragging ? 'Arquivos detectados' : 'ou clique para selecionar'}</p>
+          </div>
           <div className={styles.formats}>
-            <span>Supported formats:</span>
             <span className={styles.formatBadge}>MP4</span>
             <span className={styles.formatBadge}>MOV</span>
             <span className={styles.formatBadge}>M4V</span>
-            <span className={styles.formatBadge}>WebM</span>
+            <span className={styles.formatBadge}>WEBM</span>
           </div>
         </div>
       </div>
@@ -149,40 +153,32 @@ export default function UploadArea() {
       {uploads.length > 0 && (
         <div className={styles.uploadsList}>
           {uploads.map(upload => (
-            <div key={upload.videoId} className={styles.uploadCard}>
-              <div className={styles.uploadInfo}>
-                <div className={styles.fileIcon}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M10 2L4 8H8V14H12V8H16L10 2Z" fill="var(--color-primary)" />
-                  </svg>
-                </div>
-                <div className={styles.fileDetails}>
-                  <p className={styles.fileName}>{upload.filename}</p>
-                  <div className={styles.progressContainer}>
-                    <div className={styles.progressBar} style={{ width: `${upload.progress}%` }} />
-                  </div>
-                  <span className={styles.progressText}>{Math.round(upload.progress)}%</span>
+            <div key={upload.videoId} className={`${styles.uploadCard} ${styles[upload.status]}`}>
+              <div className={styles.fileIcon}>
+                <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
+                  <path d="M4 2L8 6L4 10V2z" />
+                </svg>
+              </div>
+              <div className={styles.fileDetails}>
+                <p className={styles.fileName}>{upload.filename}</p>
+                <div className={styles.progressContainer}>
+                  <div className={styles.progressBar} style={{ width: `${upload.progress}%` }} />
                 </div>
               </div>
               <div className={styles.uploadActions}>
-                <span className={`${styles.status} ${styles[upload.status]}`}>
-                  {upload.status === 'uploading' && 'Uploading'}
-                  {upload.status === 'processing' && 'Processing'}
-                  {upload.status === 'ready' && 'Ready'}
-                  {upload.status === 'error' && 'Error'}
+                <span className={`${styles.statusBadge} ${styles[upload.status]}`}>
+                  {upload.status === 'uploading' && `${Math.round(upload.progress)}%`}
+                  {upload.status === 'processing' && 'Processando'}
+                  {upload.status === 'ready' && 'Pronto'}
+                  {upload.status === 'error' && 'Erro'}
                 </span>
                 <button
                   className={styles.removeBtn}
-                  onClick={() => removeUpload(upload.videoId)}
-                  aria-label="Remove"
+                  onClick={e => { e.stopPropagation(); removeUpload(upload.videoId); }}
+                  aria-label="Remover"
                 >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M12 4L4 12M4 4L12 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>

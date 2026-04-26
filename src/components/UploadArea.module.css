@@ -1,174 +1,207 @@
 .container {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
+/* DROP ZONE */
 .dropzone {
-  border: 2px dashed var(--color-border);
+  background: var(--color-surface-2);
+  border: 1px dashed #2e2e2e;
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xxl);
+  padding: 22px 20px;
+  display: flex;
+  align-items: center;
   cursor: pointer;
   transition: all var(--transition);
-  background-color: var(--color-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.dropzone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--color-primary-muted) 0%, transparent 60%);
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .dropzone:hover {
   border-color: var(--color-primary);
-  background-color: rgba(0, 172, 239, 0.05);
+  background: rgba(255, 69, 0, 0.04);
 }
 
 .dragging {
   border-style: solid;
   border-color: var(--color-primary);
-  background-color: rgba(0, 172, 239, 0.1);
+  background: rgba(255, 69, 0, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 69, 0, 0.15);
 }
 
-.fileInput {
-  display: none;
-}
+.fileInput { display: none; }
 
 .dropzoneContent {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 16px;
+  width: 100%;
+  position: relative;
 }
 
-.icon {
+.iconWrap {
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary-muted);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform var(--transition), background var(--transition);
   color: var(--color-primary);
-  margin-bottom: var(--spacing-sm);
 }
 
-.dropzoneText {
-  font-size: 18px;
-  font-weight: 600;
+.dragging .iconWrap {
+  transform: scale(1.1);
+  background: rgba(255, 69, 0, 0.2);
 }
 
-.dropzoneSubtext {
-  color: var(--color-text-secondary);
+.dropzoneText { flex: 1; min-width: 0; }
+
+.dropzoneText h3 {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  transition: color var(--transition);
+}
+
+.dragging .dropzoneText h3 { color: var(--color-primary); }
+
+.dropzoneText p {
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
 .formats {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-  color: var(--color-text-secondary);
-  font-size: 12px;
-}
-
-.formatBadge {
-  background-color: var(--color-surface-elevated);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-}
-
-.uploadsList {
-  margin-top: var(--spacing-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.uploadCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-}
-
-.uploadInfo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex: 1;
-  min-width: 0;
-}
-
-.fileIcon {
+  gap: 5px;
   flex-shrink: 0;
 }
 
-.fileDetails {
-  flex: 1;
-  min-width: 0;
+.formatBadge {
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
 }
 
+/* UPLOAD QUEUE */
+.uploadsList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.uploadCard {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 2px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uploadCard.uploading { border-left-color: var(--color-primary); }
+.uploadCard.processing { border-left-color: var(--color-warning); }
+.uploadCard.ready { border-left-color: var(--color-success); }
+.uploadCard.error { border-left-color: var(--color-error); }
+
+.fileIcon {
+  width: 34px;
+  height: 22px;
+  background: var(--color-surface-3);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.uploadCard.error .fileIcon { color: var(--color-error); }
+
+.fileDetails { flex: 1; min-width: 0; }
+
 .fileName {
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: 5px;
 }
 
 .progressContainer {
-  height: 4px;
-  background-color: var(--color-surface-elevated);
+  height: 3px;
+  background: var(--color-border-subtle);
   border-radius: 2px;
   overflow: hidden;
-  margin-bottom: var(--spacing-xs);
 }
 
 .progressBar {
   height: 100%;
-  background-color: var(--color-primary);
+  background: var(--color-primary);
   border-radius: 2px;
   transition: width 200ms ease-out;
 }
 
-.progressText {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
+.uploadCard.ready .progressBar { background: var(--color-success); }
+.uploadCard.error .progressBar { background: var(--color-error); }
 
 .uploadActions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.status {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 4px 12px;
+.statusBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
   border-radius: var(--radius-sm);
+  text-transform: uppercase;
 }
 
-.uploading {
-  background-color: rgba(0, 172, 239, 0.2);
-  color: var(--color-primary);
-}
-
-.processing {
-  background-color: rgba(255, 193, 7, 0.2);
-  color: #ffc107;
-}
-
-.ready {
-  background-color: rgba(0, 200, 83, 0.2);
-  color: var(--color-success);
-}
-
-.error {
-  background-color: rgba(255, 82, 82, 0.2);
-  color: var(--color-error);
-}
+.statusBadge.uploading { background: var(--color-primary-muted); color: var(--color-primary); }
+.statusBadge.processing { background: rgba(255, 193, 7, 0.1); color: var(--color-warning); }
+.statusBadge.ready { background: rgba(0, 200, 83, 0.1); color: var(--color-success); }
+.statusBadge.error { background: rgba(255, 82, 82, 0.1); color: var(--color-error); }
 
 .removeBtn {
   background: none;
   border: none;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-xs);
+  color: var(--color-text-muted);
+  padding: 4px;
   border-radius: var(--radius-sm);
   transition: all var(--transition);
+  display: flex;
+  align-items: center;
 }
 
 .removeBtn:hover {
-  background-color: var(--color-surface-elevated);
+  background: rgba(255, 82, 82, 0.1);
   color: var(--color-error);
 }
