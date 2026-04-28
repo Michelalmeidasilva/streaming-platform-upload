@@ -19,6 +19,10 @@ export async function POST(request: NextRequest) {
         size: video.size,
         status: video.status,
         url: video.url,
+        thumbnailUrl: video.thumbnailUrl || null,
+        thumbnailStatus: video.thumbnailStatus || 'pending',
+        createdAt: video.createdAt,
+        updatedAt: video.updatedAt,
       },
     });
   } catch (error) {
