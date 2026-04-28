@@ -6,7 +6,9 @@ export type EventType =
   | 'video.processing'
   | 'video.ready'
   | 'video.transcoded'
-  | 'video.error';
+  | 'video.error'
+  | 'video.thumbnail.generated'
+  | 'video.thumbnail.fallback';
 
 export interface UploadStartedEvent {
   videoId: string;
@@ -40,12 +42,27 @@ export interface VideoProcessingEvent {
   status: 'processing' | 'ready' | 'error';
 }
 
+export interface VideoThumbnailGeneratedEvent {
+  videoId: string;
+  thumbnailUrl: string;
+  extractedAt: string;
+}
+
+export interface VideoThumbnailFallbackEvent {
+  videoId: string;
+  thumbnailUrl: string;
+  reason: 'ffmpeg_timeout' | 'unsupported_codec' | 'corrupted_file' | 'network_error' | 'storage_error';
+  fallbackAt: string;
+}
+
 export type EventData =
   | UploadStartedEvent
   | UploadProgressEvent
   | UploadCompletedEvent
   | UploadFailedEvent
-  | VideoProcessingEvent;
+  | VideoProcessingEvent
+  | VideoThumbnailGeneratedEvent
+  | VideoThumbnailFallbackEvent;
 
 export interface VideoEvents {
   on(event: 'upload.started', handler: (data: { videoId: string; filename: string }) => void): void;
@@ -56,6 +73,8 @@ export interface VideoEvents {
   on(event: 'video.ready', handler: (data: VideoProcessingEvent) => void): void;
   on(event: 'video.transcoded', handler: (data: VideoProcessingEvent) => void): void;
   on(event: 'video.error', handler: (data: VideoProcessingEvent) => void): void;
+  on(event: 'video.thumbnail.generated', handler: (data: VideoThumbnailGeneratedEvent) => void): void;
+  on(event: 'video.thumbnail.fallback', handler: (data: VideoThumbnailFallbackEvent) => void): void;
 
   emit(event: 'upload.started', data: { videoId: string; filename: string }): void;
   emit(event: 'upload.progress', data: UploadProgressEvent): void;
@@ -65,6 +84,8 @@ export interface VideoEvents {
   emit(event: 'video.ready', data: VideoProcessingEvent): void;
   emit(event: 'video.transcoded', data: VideoProcessingEvent): void;
   emit(event: 'video.error', data: VideoProcessingEvent): void;
+  emit(event: 'video.thumbnail.generated', data: VideoThumbnailGeneratedEvent): void;
+  emit(event: 'video.thumbnail.fallback', data: VideoThumbnailFallbackEvent): void;
 
   off(event: EventType, handler: (data: EventData) => void): void;
 }
