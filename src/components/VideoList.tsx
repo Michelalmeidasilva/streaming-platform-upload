@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import styles from './VideoList.module.css';
+import { useVideoEvents } from '@/lib/context/VideoEventContext';
+import VideoModal from './VideoModal';
 
 interface Video {
   id: string;
@@ -9,12 +11,27 @@ interface Video {
   size: number;
   status: string;
   createdAt: string;
+  url?: string;
 }
 
 export default function VideoList() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const { onUploadComplete, unsubscribe } = useVideoEvents();
+
+  useEffect(() => {
+    const handleUploadComplete = () => {
+      fetchVideos(search);
+    };
+
+    onUploadComplete(handleUploadComplete);
+
+    return () => {
+      unsubscribe(handleUploadComplete);
+    };
+  }, [onUploadComplete, unsubscribe, search]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -65,6 +82,9 @@ export default function VideoList() {
     }
   };
 
+  const handleCloseModal = () => {
+    setSelectedVideo(null);
+  };
 
   return (
     <div className={styles.container}>
@@ -110,7 +130,11 @@ export default function VideoList() {
       {!loading && videos.length > 0 && (
         <div className={styles.grid}>
           {videos.map(video => (
-            <div key={video.id} className={styles.card}>
+            <div
+              key={video.id}
+              className={styles.card}
+              onClick={() => setSelectedVideo(video)}
+            >
               <div className={styles.thumbnail}>
                 <div className={styles.playBtn}>
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
@@ -146,6 +170,14 @@ export default function VideoList() {
             </div>
           ))}
         </div>
+      )}
+      {selectedVideo && (
+        <VideoModal
+          isOpen={selectedVideo !== null}
+          videoUrl={selectedVideo.url || ''}
+          videoName={selectedVideo.originalName}
+          onClose={handleCloseModal}
+        />
       )}
     </div>
   );
