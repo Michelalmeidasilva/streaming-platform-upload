@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       size: v.size,
       status: 'ready', // Gateway indicates successful recording in storage
       createdAt: v.createdAt,
+      url: v.url,
     }));
 
     // Sort newest first
