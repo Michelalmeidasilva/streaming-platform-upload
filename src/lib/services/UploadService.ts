@@ -16,8 +16,8 @@ export class UploadService {
     this.storage = storage;
     this.thumbnailExtractor = new ThumbnailExtractor(storage, videoEvents);
 
-    // Listen for thumbnail events and update video
-    videoEvents.on('video.thumbnail.generated', (data) => {
+    // Listen for thumbnail events and update video (using NodeEventEmitter base methods)
+    videoEvents.on('video.thumbnail.generated' as any, (data: any) => {
       const video = this.videos.get(data.videoId);
       if (video) {
         video.thumbnailUrl = data.thumbnailUrl;
@@ -26,7 +26,7 @@ export class UploadService {
       }
     });
 
-    videoEvents.on('video.thumbnail.fallback', (data) => {
+    videoEvents.on('video.thumbnail.fallback' as any, (data: any) => {
       const video = this.videos.get(data.videoId);
       if (video) {
         video.thumbnailUrl = data.thumbnailUrl;

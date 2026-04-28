@@ -6,6 +6,8 @@ import {
   UploadCompletedEvent,
   UploadFailedEvent,
   VideoProcessingEvent,
+  VideoThumbnailGeneratedEvent,
+  VideoThumbnailFallbackEvent,
 } from './events';
 
 export class VideoEventEmitter extends NodeEventEmitter {
@@ -77,6 +79,19 @@ export class VideoEventEmitter extends NodeEventEmitter {
 
   emitVideoError(videoId: string): void {
     this.emit('video.error', { videoId, status: 'error' });
+  }
+
+  emitThumbnailGenerated(videoId: string, thumbnailUrl: string, extractedAt: string): void {
+    this.emit('video.thumbnail.generated', { videoId, thumbnailUrl, extractedAt });
+  }
+
+  emitThumbnailFallback(
+    videoId: string,
+    thumbnailUrl: string,
+    reason: 'ffmpeg_timeout' | 'unsupported_codec' | 'corrupted_file' | 'network_error' | 'storage_error',
+    fallbackAt: string,
+  ): void {
+    this.emit('video.thumbnail.fallback', { videoId, thumbnailUrl, reason, fallbackAt });
   }
 }
 

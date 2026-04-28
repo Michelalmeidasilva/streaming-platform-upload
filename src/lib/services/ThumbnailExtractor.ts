@@ -61,11 +61,11 @@ export class ThumbnailExtractor {
           size: frameBuffer.length,
         });
 
-        this.eventEmitter.emit('video.thumbnail.generated', {
-          videoId: video.id,
+        this.eventEmitter.emitThumbnailGenerated(
+          video.id,
           thumbnailUrl,
-          extractedAt: new Date().toISOString(),
-        });
+          new Date().toISOString(),
+        );
       } else {
         await this.useFallbackThumbnail(video, 'ffmpeg_timeout');
       }
@@ -157,12 +157,12 @@ export class ThumbnailExtractor {
         size: fallbackBuffer.length,
       });
 
-      this.eventEmitter.emit('video.thumbnail.fallback', {
-        videoId: video.id,
-        thumbnailUrl: fallbackUrl,
+      this.eventEmitter.emitThumbnailFallback(
+        video.id,
+        fallbackUrl,
         reason,
-        fallbackAt: new Date().toISOString(),
-      });
+        new Date().toISOString(),
+      );
     } catch (error) {
       console.error('Failed to generate fallback thumbnail', {
         videoId: video.id,
