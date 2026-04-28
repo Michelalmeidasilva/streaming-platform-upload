@@ -9,6 +9,7 @@ export interface Video {
   updatedAt: Date;
   url?: string;
   thumbnailUrl?: string;
+  thumbnailStatus?: 'pending' | 'ready' | 'failed';
   mimeType?: string;
   duration?: number;
 }
