@@ -32,6 +32,8 @@ Upload Request → Events → Handlers → Storage Layer
 - `video.processing` - Video processing started
 - `video.ready` - Video ready for streaming
 - `video.transcoded` - Transcoding completed
+- `video.thumbnail.generated` - Thumbnail successfully extracted
+- `video.thumbnail.fallback` - Fallback thumbnail generated (extraction failed)
 
 ### Layer Structure
 
@@ -161,6 +163,17 @@ Upload Request → Events → Handlers → Storage Layer
    - Event history logging
    - Error event handling
 
+6. **Automatic Thumbnail Generation**
+   - Extracts frame at 2-second mark from uploaded video
+   - Generates 640×360 JPEG thumbnail using FFmpeg
+   - Stores thumbnail in same S3/MinIO bucket under `/thumbnails/` prefix
+   - Non-blocking: extraction happens asynchronously after upload completes
+   - **Fallback handling**: If extraction fails (timeout, unsupported codec, corrupted file, etc.), 
+     generates dynamic placeholder image with video filename and upload date
+   - Publishes events: `video.thumbnail.generated` (success) or `video.thumbnail.fallback` (failure)
+   - Client receives real-time updates via EventEmitter
+   - Thumbnail URL populated in video record once ready
+
 ### API Endpoints
 
 #### Upload flow (three phases, must be called in order)
@@ -203,6 +216,7 @@ interface Video {
   updatedAt: Date;
   url?: string;
   thumbnailUrl?: string;
+  thumbnailStatus?: 'pending' | 'ready' | 'failed';
 }
 ```
 
@@ -244,3 +258,9 @@ CMAF (Common Media Application Format) is supported through:
 10. Responsive design works on all breakpoints
 11. Error states are handled gracefully
 12. Unit tests cover multipart upload service logic
+13. Thumbnail extraction succeeds for all valid video formats
+14. Fallback image generated for unsupported/corrupted videos
+15. Upload completes within 100ms, does not block on thumbnail extraction
+16. Thumbnail available in storage within 2 seconds of upload completion
+17. Client receives thumbnail events and updates UI in real-time
+18. Thumbnail extraction errors are logged for debugging
