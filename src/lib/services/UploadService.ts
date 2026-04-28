@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { IStorageAdapter } from '@/lib/storage';
 import { videoEvents } from '@/lib/VideoEventEmitter';
 import { Video, UploadSession, VideoStatus } from '@/types';
+import { ThumbnailExtractor } from './ThumbnailExtractor';
 
 const CHUNK_SIZE = 10 * 1024 * 1024;
 
@@ -9,9 +10,30 @@ export class UploadService {
   private storage: IStorageAdapter;
   private videos: Map<string, Video> = new Map();
   private sessions: Map<string, UploadSession> = new Map();
+  private thumbnailExtractor: ThumbnailExtractor;
 
   constructor(storage: IStorageAdapter) {
     this.storage = storage;
+    this.thumbnailExtractor = new ThumbnailExtractor(storage, videoEvents);
+
+    // Listen for thumbnail events and update video
+    videoEvents.on('video.thumbnail.generated', (data) => {
+      const video = this.videos.get(data.videoId);
+      if (video) {
+        video.thumbnailUrl = data.thumbnailUrl;
+        video.thumbnailStatus = 'ready';
+        video.updatedAt = new Date();
+      }
+    });
+
+    videoEvents.on('video.thumbnail.fallback', (data) => {
+      const video = this.videos.get(data.videoId);
+      if (video) {
+        video.thumbnailUrl = data.thumbnailUrl;
+        video.thumbnailStatus = 'failed';
+        video.updatedAt = new Date();
+      }
+    });
   }
 
   async initiateUpload(
@@ -114,10 +136,14 @@ export class UploadService {
     video.status = 'processing';
     video.progress = 100;
     video.url = url;
+    video.thumbnailStatus = 'pending';
     video.updatedAt = new Date();
 
     videoEvents.emitUploadCompleted(session.videoId, video.originalName, video.size, url);
     videoEvents.emitVideoProcessing(session.videoId, 'processing');
+
+    // Spawn thumbnail extraction (non-blocking)
+    this.thumbnailExtractor.extract(video);
 
     setTimeout(() => {
       video.status = 'ready';
