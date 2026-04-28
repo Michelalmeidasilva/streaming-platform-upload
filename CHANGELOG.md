@@ -8,6 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Automatic thumbnail generation** from uploaded videos
+  - Extracts frame at 2-second mark using FFmpeg
+  - Generates 640×360 JPEG thumbnail for all uploads
+  - Stores thumbnails in S3/MinIO under `/thumbnails/` prefix
+  - Non-blocking: extraction happens asynchronously after upload completes
+  - Graceful fallback to dynamic placeholder images if extraction fails
+  - Emits `video.thumbnail.generated` and `video.thumbnail.fallback` events
+  - Client receives real-time updates via EventEmitter
+- New `thumbnailStatus` field on Video model (pending | ready | failed)
+- `ThumbnailExtractor` service for FFmpeg integration and thumbnail orchestration
+- `FallbackGenerator` for dynamic placeholder image creation
+- `sharp` dependency for image generation and processing
+- Comprehensive test coverage for thumbnail extraction and fallback generation
+
+### Changed
+
+- `POST /api/upload/complete` response now includes `thumbnailStatus` and `thumbnailUrl` fields
+- Video model includes new optional `thumbnailStatus` field
+
+---
+
 ## [0.2.0] - 2026-04-26
 
 ### Added
