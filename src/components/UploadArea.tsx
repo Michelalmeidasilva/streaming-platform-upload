@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import styles from './UploadArea.module.css';
 import { validateCMAFFile } from '@/lib/cmaf';
+import { useVideoEvents } from '@/lib/context/VideoEventContext';
 
 interface UploadProgress {
   videoId: string;
@@ -15,6 +16,7 @@ export default function UploadArea() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { emitUploadComplete } = useVideoEvents();
 
   const setStatus = useCallback(
     (videoId: string, patch: Partial<UploadProgress>) =>
@@ -70,13 +72,16 @@ export default function UploadArea() {
           if (!completeRes.ok) throw new Error('Failed to complete upload');
 
           setStatus(videoId, { progress: 100, status: 'processing' });
-          setTimeout(() => setStatus(videoId, { status: 'ready' }), 2000);
+          setTimeout(() => {
+            setStatus(videoId, { status: 'ready' });
+            emitUploadComplete();
+          }, 2000);
         } catch {
           setStatus(videoId, { status: 'error' });
         }
       }
     },
-    [setStatus],
+    [setStatus, emitUploadComplete],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
