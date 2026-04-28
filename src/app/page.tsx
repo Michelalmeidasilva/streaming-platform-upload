@@ -1,10 +1,12 @@
 import styles from './page.module.css';
 import UploadArea from '@/components/UploadArea';
 import VideoList from '@/components/VideoList';
+import { VideoEventProvider } from '@/lib/context/VideoEventContext';
 
 export default function Home() {
   return (
-    <div className={styles.app}>
+    <VideoEventProvider>
+      <div className={styles.app}>
       <nav className={styles.sidebar}>
         <div className={styles.sidebarLogo}>
           <svg width="18" height="18" viewBox="0 0 18 18" fill="white">
@@ -63,5 +65,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+    </VideoEventProvider>
   );
 }
