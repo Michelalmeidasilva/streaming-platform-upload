@@ -22,13 +22,13 @@ Plans:
 
 **Depends on:** Phase 1
 **Goal:** Add security controls that protect sensitive data, preserve data integrity, and keep the platform available for authorized users.
-**Requirements:** TBD
+**Requirements:** [SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06]
 **Success Criteria:**
 1. Sensitive information is protected with encryption and access controls.
 2. Data integrity is protected with verification and tamper-resistant handling.
 3. Authorized users retain reliable access through redundancy and backup-oriented controls.
 4. Security expectations are documented for future implementation phases.
-**Plans:** TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (promote with $gsd-review-backlog when ready)
+- [ ] 02-01: Storage encryption, integrity checks, and recovery controls
