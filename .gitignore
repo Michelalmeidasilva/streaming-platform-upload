@@ -3,3 +3,5 @@ node_modules/
 .worktrees/
 .design-docs/
 .env
+playwright-report/
+test-results/

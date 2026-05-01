@@ -6,12 +6,28 @@ import {
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
+  ListPartsCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
 import { StorageConfig, StorageSecurityPolicy } from '@/types';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
+
+function getEncryptionOptions(policy: StorageSecurityPolicy) {
+  return policy.encryptionEnabled
+    ? { ServerSideEncryption: policy.encryptionMode }
+    : {};
+}
+
+function normalizeCompletedParts(parts: { PartNumber: number; ETag: string }[]) {
+  return [...parts]
+    .sort((a, b) => a.PartNumber - b.PartNumber)
+    .map(part => ({
+      PartNumber: part.PartNumber,
+      ETag: part.ETag.startsWith('"') ? part.ETag : `"${part.ETag}"`,
+    }));
+}
 
 export class S3Adapter implements IStorageAdapter {
   private client: S3Client;
@@ -29,13 +45,37 @@ export class S3Adapter implements IStorageAdapter {
     this.bucket = config.bucket;
   }
 
+  private async listUploadedParts(key: string, uploadId: string) {
+    const parts: { PartNumber: number; ETag: string }[] = [];
+    let partNumberMarker: number | undefined;
+
+    do {
+      const response = await this.client.send(new ListPartsCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumberMarker: partNumberMarker,
+      }));
+
+      for (const part of response.Parts || []) {
+        if (part.PartNumber && part.ETag) {
+          parts.push({ PartNumber: part.PartNumber, ETag: part.ETag });
+        }
+      }
+
+      partNumberMarker = response.IsTruncated ? response.NextPartNumberMarker : undefined;
+    } while (partNumberMarker);
+
+    return normalizeCompletedParts(parts);
+  }
+
   async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string): Promise<string> {
     await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       Body: file,
       ContentType: contentType,
-      ServerSideEncryption: this.policy.encryptionMode,
+      ...getEncryptionOptions(this.policy),
       ChecksumAlgorithm: this.policy.checksumAlgorithm,
       ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : {}),
     }));
@@ -57,7 +97,7 @@ export class S3Adapter implements IStorageAdapter {
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
-      ServerSideEncryption: this.policy.encryptionMode,
+      ...getEncryptionOptions(this.policy),
       ChecksumAlgorithm: this.policy.checksumAlgorithm,
     }));
     return response.UploadId || '';
@@ -78,7 +118,7 @@ export class S3Adapter implements IStorageAdapter {
       Body: chunk,
       ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : { ChecksumAlgorithm: this.policy.checksumAlgorithm }),
     }));
-    return response.ETag || '';
+    return (response.ETag || '').replace(/"/g, '');
   }
 
   async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string> {
@@ -97,12 +137,16 @@ export class S3Adapter implements IStorageAdapter {
     uploadId: string,
     parts: { PartNumber: number; ETag: string }[],
   ): Promise<string> {
+    const completedParts = await this.listUploadedParts(key, uploadId);
+    const fallbackParts = normalizeCompletedParts(parts);
+    const multipartParts = completedParts.length > 0 ? completedParts : fallbackParts;
+
     await this.client.send(new CompleteMultipartUploadCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       MultipartUpload: {
-        Parts: [...parts].sort((a, b) => a.PartNumber - b.PartNumber),
+        Parts: multipartParts,
       },
     }));
     return this.getSignedUrl(key);

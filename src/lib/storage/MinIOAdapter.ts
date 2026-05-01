@@ -1,21 +1,40 @@
-import { Client } from 'minio';
+import { randomUUID } from 'crypto';
+import { Client, CopyDestinationOptions, CopySourceOptions } from 'minio';
 import {
   S3Client,
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   PutObjectCommand,
+  ListPartsCommand,
+  AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
 import { StorageConfig, StorageSecurityPolicy } from '@/types';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
+function getEncryptionOptions(policy: StorageSecurityPolicy) {
+  return policy.encryptionEnabled
+    ? { ServerSideEncryption: policy.encryptionMode }
+    : {};
+}
+
+function normalizeCompletedParts(parts: { PartNumber: number; ETag: string }[]) {
+  return [...parts]
+    .sort((a, b) => a.PartNumber - b.PartNumber)
+    .map(part => ({
+      PartNumber: part.PartNumber,
+      ETag: part.ETag.startsWith('"') ? part.ETag : `"${part.ETag}"`,
+    }));
+}
+
 export class MinIOAdapter implements IStorageAdapter {
   private client: Client;
   private s3Client: S3Client;
   private bucket: string;
   private policy: StorageSecurityPolicy;
+  private multipartComposeState = new Map<string, { key: string; partKeys: Map<number, string> }>();
 
   constructor(config: StorageConfig) {
     this.policy = resolveStoragePolicy(config);
@@ -39,6 +58,30 @@ export class MinIOAdapter implements IStorageAdapter {
     this.bucket = config.bucket;
   }
 
+  private async listUploadedParts(key: string, uploadId: string) {
+    const parts: { PartNumber: number; ETag: string }[] = [];
+    let partNumberMarker: number | undefined;
+
+    do {
+      const response = await this.s3Client.send(new ListPartsCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        PartNumberMarker: partNumberMarker,
+      }));
+
+      for (const part of response.Parts || []) {
+        if (part.PartNumber && part.ETag) {
+          parts.push({ PartNumber: part.PartNumber, ETag: part.ETag });
+        }
+      }
+
+      partNumberMarker = response.IsTruncated ? response.NextPartNumberMarker : undefined;
+    } while (partNumberMarker);
+
+    return normalizeCompletedParts(parts);
+  }
+
   private extractPort(endpoint: string): number {
     const match = endpoint.match(/:(\d+)/);
     return match ? parseInt(match[1], 10) : 9000;
@@ -58,7 +101,7 @@ export class MinIOAdapter implements IStorageAdapter {
       Key: key,
       Body: file,
       ContentType: contentType,
-      ServerSideEncryption: this.policy.encryptionMode,
+      ...getEncryptionOptions(this.policy),
       ChecksumAlgorithm: this.policy.checksumAlgorithm,
       ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : {}),
     }));
@@ -82,10 +125,11 @@ export class MinIOAdapter implements IStorageAdapter {
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
-      ServerSideEncryption: this.policy.encryptionMode,
-      ChecksumAlgorithm: this.policy.checksumAlgorithm,
+      ...getEncryptionOptions(this.policy),
     }));
-    return response.UploadId || '';
+    const uploadId = response.UploadId || randomUUID();
+    this.multipartComposeState.set(uploadId, { key, partKeys: new Map() });
+    return uploadId;
   }
 
   async uploadPart(
@@ -93,17 +137,27 @@ export class MinIOAdapter implements IStorageAdapter {
     key: string,
     uploadId: string,
     partNumber: number,
-    checksumSHA256?: string,
+    _checksumSHA256?: string,
   ): Promise<string> {
+    const composeSession = this.multipartComposeState.get(uploadId);
+    if (composeSession) {
+      await this.ensureBucket();
+      const partKey = `${key}.__part__.${uploadId}.${partNumber}`;
+      await this.client.putObject(this.bucket, partKey, chunk, chunk.byteLength, {
+        'Content-Type': 'application/octet-stream',
+      });
+      composeSession.partKeys.set(partNumber, partKey);
+      return randomUUID().replace(/-/g, '');
+    }
+
     const response = await this.s3Client.send(new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
       Body: chunk,
-      ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : { ChecksumAlgorithm: this.policy.checksumAlgorithm }),
     }));
-    return response.ETag || '';
+    return (response.ETag || '').replace(/"/g, '');
   }
 
   async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string> {
@@ -122,12 +176,43 @@ export class MinIOAdapter implements IStorageAdapter {
     uploadId: string,
     parts: { PartNumber: number; ETag: string }[],
   ): Promise<string> {
+    const composeSession = this.multipartComposeState.get(uploadId);
+    if (composeSession && composeSession.partKeys.size > 0) {
+      const orderedPartKeys = [...composeSession.partKeys.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, partKey]) => partKey);
+
+      await this.client.composeObject(
+        new CopyDestinationOptions({
+          Bucket: this.bucket,
+          Object: key,
+        }),
+        orderedPartKeys.map(partKey => new CopySourceOptions({
+          Bucket: this.bucket,
+          Object: partKey,
+        })),
+      );
+
+      await Promise.all(orderedPartKeys.map(partKey => this.client.removeObject(this.bucket, partKey)));
+      this.multipartComposeState.delete(uploadId);
+      await this.s3Client.send(new AbortMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: composeSession.key,
+        UploadId: uploadId,
+      })).catch(() => undefined);
+      return this.getSignedUrl(key);
+    }
+
+    const completedParts = await this.listUploadedParts(key, uploadId);
+    const fallbackParts = normalizeCompletedParts(parts);
+    const multipartParts = completedParts.length > 0 ? completedParts : fallbackParts;
+
     await this.s3Client.send(new CompleteMultipartUploadCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       MultipartUpload: {
-        Parts: [...parts].sort((a, b) => a.PartNumber - b.PartNumber),
+        Parts: multipartParts,
       },
     }));
     return this.getSignedUrl(key);

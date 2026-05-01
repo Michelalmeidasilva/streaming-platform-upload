@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { createE2ESession, E2E_AUTH_COOKIE, isE2EAuthEnabled } from '@/lib/auth/e2e';
 import { evaluateRateLimit } from '@/lib/security/rate-limit';
 import { recordSecurityEvent } from '@/lib/security/audit';
 
@@ -12,6 +13,10 @@ function getClientKey(request: NextRequest, tokenEmail?: string | null) {
 function rateLimitFor(pathname: string) {
   if (pathname.startsWith('/api/auth')) {
     return { limit: 10, windowMs: 60_000 };
+  }
+
+  if (pathname.startsWith('/api/upload/chunk')) {
+    return { limit: 512, windowMs: 60_000 };
   }
 
   if (pathname.startsWith('/api/upload')) {
@@ -37,7 +42,10 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
   const isAuthRoute = pathname.startsWith('/api/auth');
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || 'development-secret' });
+  const e2eEmail = isE2EAuthEnabled() ? request.cookies.get(E2E_AUTH_COOKIE)?.value : undefined;
+  const token = e2eEmail
+    ? { email: e2eEmail, role: createE2ESession(e2eEmail).user.role }
+    : await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || 'development-secret' });
   const key = `${pathname}:${method}:${getClientKey(request, token?.email || null)}`;
   const rateLimit = evaluateRateLimit(key, rateLimitFor(pathname));
 
@@ -101,4 +109,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/api/:path*'],
 };
-

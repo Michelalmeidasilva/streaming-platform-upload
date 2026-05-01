@@ -3,6 +3,7 @@ export type StorageEncryptionMode = 'AES256';
 export type StorageChecksumAlgorithm = 'SHA256';
 
 export interface StorageSecurityPolicy {
+  encryptionEnabled: boolean;
   encryptionMode: StorageEncryptionMode;
   checksumAlgorithm: StorageChecksumAlgorithm;
   signedUrlTtlSeconds: number;
@@ -77,13 +78,14 @@ export interface VideoCreateInput {
 }
 
 export interface StorageConfig {
-  provider: 's3' | 'minio';
+  provider: 's3' | 'minio' | 'memory';
   bucket: string;
   region?: string;
   endpoint?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
   forcePathStyle?: boolean;
+  encryptionEnabled?: boolean;
   encryptionMode?: StorageEncryptionMode;
   checksumAlgorithm?: StorageChecksumAlgorithm;
   signedUrlTtlSeconds?: number;

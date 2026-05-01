@@ -4,6 +4,10 @@ import { canDownloadVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
 
+function toAttachmentFilename(filename: string) {
+  return filename.replace(/[/\\"]/g, '_');
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { videoId: string } },
@@ -45,6 +49,18 @@ export async function GET(
     return NextResponse.json({ error: 'Download unavailable' }, { status: 503 });
   }
 
-  return NextResponse.redirect(targetUrl);
-}
+  const upstreamResponse = await fetch(new URL(targetUrl, _request.url));
+  if (!upstreamResponse.ok || !upstreamResponse.body) {
+    return NextResponse.json({ error: 'Download unavailable' }, { status: 503 });
+  }
 
+  return new NextResponse(upstreamResponse.body, {
+    status: 200,
+    headers: {
+      'Content-Type': upstreamResponse.headers.get('content-type') || 'application/octet-stream',
+      'Content-Length': upstreamResponse.headers.get('content-length') || '',
+      'Content-Disposition': `attachment; filename="${toAttachmentFilename(video.originalName)}"`,
+      'Cache-Control': 'private, no-store',
+    },
+  });
+}

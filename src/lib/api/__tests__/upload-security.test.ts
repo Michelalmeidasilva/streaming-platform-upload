@@ -32,6 +32,7 @@ describe('upload security metadata', () => {
     const video = service.getVideo(videoId);
     expect(video?.securityPosture).toEqual({
       storage: {
+        encryptionEnabled: true,
         encryptionMode: 'AES256',
         checksumAlgorithm: 'SHA256',
         signedUrlTtlSeconds: 3600,
@@ -64,4 +65,3 @@ describe('upload security metadata', () => {
     );
   });
 });
-

@@ -19,6 +19,8 @@ jest.mock('@/lib/security/audit', () => ({
   recordSecurityEvent: jest.fn(),
 }));
 
+global.fetch = jest.fn();
+
 const { getCurrentSession } = jest.requireMock('@/lib/auth/session') as {
   getCurrentSession: jest.Mock;
 };
@@ -84,7 +86,7 @@ describe('video authorization', () => {
     expect(response.status).toBe(200);
   });
 
-  it('redirects authenticated users to a signed download URL', async () => {
+  it('streams authenticated downloads as an attachment', async () => {
     getCurrentSession.mockResolvedValue({
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
@@ -102,11 +104,26 @@ describe('video authorization', () => {
       downloadUrl: '/api/videos/1/download',
     });
 
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('video'));
+          controller.close();
+        },
+      }),
+      headers: new Headers({
+        'content-type': 'video/mp4',
+        'content-length': '5',
+      }),
+    });
+
     const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
       params: { videoId: '1' },
     });
 
-    expect(response.status).toBe(307);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video"');
+    expect(response.headers.get('content-type')).toBe('video/mp4');
   });
 });
-

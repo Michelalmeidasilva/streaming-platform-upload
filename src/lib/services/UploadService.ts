@@ -14,7 +14,17 @@ import { ThumbnailExtractor } from './ThumbnailExtractor';
 import { getRecoveryPolicy } from '@/lib/security/recovery-policy';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
-const CHUNK_SIZE = 10 * 1024 * 1024;
+const MIN_MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024;
+const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
+
+function resolveChunkSize() {
+  const parsed = Number.parseInt(process.env.UPLOAD_CHUNK_SIZE_BYTES || '', 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_CHUNK_SIZE;
+  }
+
+  return Math.max(parsed, MIN_MULTIPART_CHUNK_SIZE);
+}
 
 export class UploadService {
   private storage: IStorageAdapter;
@@ -60,9 +70,10 @@ export class UploadService {
     size: number,
     mimeType?: string,
   ): Promise<{ sessionId: string; videoId: string; chunkSize: number; totalChunks: number; presignedUrls: string[] }> {
+    const chunkSize = resolveChunkSize();
     const videoId = uuidv4();
     const sessionId = uuidv4();
-    const totalChunks = Math.ceil(size / CHUNK_SIZE);
+    const totalChunks = Math.ceil(size / chunkSize);
     const key = `${videoId}/${filename}`;
     const contentType = mimeType || 'application/octet-stream';
 
@@ -108,7 +119,7 @@ export class UploadService {
       videoId,
       totalChunks,
       uploadedChunks: 0,
-      chunkSize: CHUNK_SIZE,
+      chunkSize,
       totalSize: size,
       startedAt: new Date(),
       filename,
@@ -121,7 +132,7 @@ export class UploadService {
     this.sessions.set(sessionId, session);
     videoEvents.emitUploadStarted(videoId, filename);
 
-    return { sessionId, videoId, chunkSize: CHUNK_SIZE, totalChunks, presignedUrls };
+    return { sessionId, videoId, chunkSize, totalChunks, presignedUrls };
   }
 
   async uploadChunk(sessionId: string, chunkIndex: number, chunk: Buffer): Promise<void> {

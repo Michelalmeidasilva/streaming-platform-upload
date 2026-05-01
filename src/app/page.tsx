@@ -1,16 +1,56 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import styles from './page.module.css';
 import UploadArea from '@/components/UploadArea';
 import VideoList from '@/components/VideoList';
 import { VideoEventProvider } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
+import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
 
 export default function Home() {
   const { data: session, status } = useSession();
-  const role = session?.user?.role;
+  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
+  const e2eEmail = process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL || 'admin-e2e@example.com';
+  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
+    e2eAuthEnabled ? undefined : null,
+  );
+
+  useEffect(() => {
+    if (!e2eAuthEnabled) {
+      setE2ESession(null);
+      return;
+    }
+
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
+      ?.split('=')
+      .slice(1)
+      .join('=');
+
+    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
+  }, [e2eAuthEnabled]);
+
+  const effectiveSession = e2eSession || session;
+  const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
+  const role = effectiveSession?.user?.role;
   const isAdmin = canUploadVideo(role);
+  const signInAsE2EAdmin = async () => {
+    document.cookie = `${E2E_AUTH_COOKIE}=${encodeURIComponent(e2eEmail)}; path=/; SameSite=Lax`;
+    setE2ESession(createE2ESession(e2eEmail));
+    window.location.href = '/';
+  };
+  const handleSignOut = () => {
+    if (e2eSession) {
+      document.cookie = `${E2E_AUTH_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+      window.location.href = '/';
+      return;
+    }
+
+    void signOut({ callbackUrl: '/' });
+  };
 
   return (
     <VideoEventProvider>
@@ -61,32 +101,39 @@ export default function Home() {
             <div className={styles.topbarLeft}>
               <span className={styles.topbarTitle}>Biblioteca</span>
               <span className={styles.roleBadge}>
-                {status === 'loading' ? 'LOADING' : session ? role : 'SIGN IN REQUIRED'}
+                {effectiveStatus === 'loading' ? 'LOADING' : effectiveSession ? role : 'SIGN IN REQUIRED'}
               </span>
             </div>
 
             <div className={styles.topbarActions}>
-              {status === 'loading' ? (
+              {effectiveStatus === 'loading' ? (
                 <span className={styles.authStatus}>Loading session...</span>
-              ) : session ? (
+              ) : effectiveSession ? (
                 <>
                   <span className={styles.authStatus}>
-                    {session.user?.name || session.user?.email}
+                    {effectiveSession.user?.name || effectiveSession.user?.email}
                   </span>
-                  <button className={styles.authButton} onClick={() => signOut({ callbackUrl: '/' })}>
+                  <button className={styles.authButton} onClick={handleSignOut}>
                     Sign out
                   </button>
                 </>
               ) : (
-                <button className={styles.authButton} onClick={() => signIn('google')}>
-                  Sign in with Google
-                </button>
+                <>
+                  <button className={styles.authButton} onClick={() => signIn('google')}>
+                    Sign in with Google
+                  </button>
+                  {e2eAuthEnabled ? (
+                    <button className={styles.authButton} onClick={signInAsE2EAdmin}>
+                      Sign in as E2E admin
+                    </button>
+                  ) : null}
+                </>
               )}
             </div>
           </div>
 
           <div className={styles.content}>
-            {!session ? (
+            {!effectiveSession ? (
               <section className={styles.hero}>
                 <p className={styles.heroEyebrow}>Secure access</p>
                 <h1 className={styles.heroTitle}>Google sign-in protects uploads, edits, and downloads.</h1>
@@ -97,13 +144,18 @@ export default function Home() {
                   <button className={styles.primaryButton} onClick={() => signIn('google')}>
                     Sign in with Google
                   </button>
+                  {e2eAuthEnabled ? (
+                    <button className={styles.primaryButton} onClick={signInAsE2EAdmin}>
+                      Sign in as E2E admin
+                    </button>
+                  ) : null}
                 </div>
               </section>
             ) : (
               <section className={styles.statusPanel}>
                 <div>
                   <p className={styles.statusLabel}>Session</p>
-                  <p className={styles.statusValue}>{session.user?.email}</p>
+                  <p className={styles.statusValue}>{effectiveSession.user?.email}</p>
                 </div>
                 <div>
                   <p className={styles.statusLabel}>Role</p>

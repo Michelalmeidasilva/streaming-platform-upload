@@ -114,7 +114,7 @@ export default function VideoModal({
           />
         </div>
         <div className={styles.footer}>
-          <a className={styles.downloadButton} href={video.downloadUrl}>
+          <a className={styles.downloadButton} href={video.downloadUrl} download={video.originalName}>
             Download
           </a>
           {canManageVideos ? (

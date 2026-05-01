@@ -1,9 +1,11 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { resolveRoleFromEmail } from './roles';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID || 'missing-google-client-id';
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || 'missing-google-client-secret';
+const e2eAuthEnabled = process.env.E2E_AUTH_ENABLED === '1';
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'development-secret',
@@ -15,6 +17,30 @@ export const authOptions: NextAuthOptions = {
       clientId: googleClientId,
       clientSecret: googleClientSecret,
     }),
+    ...(e2eAuthEnabled
+      ? [
+          CredentialsProvider({
+            name: 'E2E Credentials',
+            credentials: {
+              email: { label: 'Email', type: 'email' },
+              name: { label: 'Name', type: 'text' },
+            },
+            async authorize(credentials) {
+              const email = credentials?.email?.trim().toLowerCase();
+              if (!email) {
+                return null;
+              }
+
+              return {
+                id: email,
+                email,
+                name: credentials?.name?.trim() || email,
+                role: resolveRoleFromEmail(email),
+              };
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     async jwt({ token, user, account }) {

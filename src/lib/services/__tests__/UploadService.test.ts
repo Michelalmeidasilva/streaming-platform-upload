@@ -37,6 +37,24 @@ describe('UploadService — multipart upload', () => {
     );
   });
 
+  it('enforces the S3 minimum multipart chunk size when env is configured too low', async () => {
+    const originalChunkSize = process.env.UPLOAD_CHUNK_SIZE_BYTES;
+    process.env.UPLOAD_CHUNK_SIZE_BYTES = String(1024 * 1024);
+
+    const storage = makeStorage();
+    const svc = new UploadService(storage);
+    const { chunkSize, totalChunks } = await svc.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
+
+    expect(chunkSize).toBe(5 * MB);
+    expect(totalChunks).toBe(3);
+
+    if (originalChunkSize === undefined) {
+      delete process.env.UPLOAD_CHUNK_SIZE_BYTES;
+    } else {
+      process.env.UPLOAD_CHUNK_SIZE_BYTES = originalChunkSize;
+    }
+  });
+
   it('does NOT call initiateMultipartUpload for single-chunk files', async () => {
     const storage = makeStorage();
     const svc = new UploadService(storage);

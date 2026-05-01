@@ -3,10 +3,14 @@ import path from 'path';
 
 test.describe('Streaming Platform E2E Tests', () => {
   test('should perform a full video upload and playback flow with scroll and long playback', async ({ page }) => {
+    test.setTimeout(90_000);
+
     // 1. Visualização da tela inicial
     await page.goto('/');
     await page.screenshot({ path: 'test-results/screenshots/01-home-page.png' });
     await expect(page).toHaveTitle(/Streaming Platform Upload/);
+    await page.getByRole('button', { name: /sign in as e2e admin/i }).first().click();
+    await expect(page.getByText('admin-e2e@example.com')).toBeVisible();
 
     // Adiciona um scroll inicial para mostrar o movimento
     await page.mouse.wheel(0, 300);
@@ -92,5 +96,15 @@ test.describe('Streaming Platform E2E Tests', () => {
     await page.getByLabel('Close video player').click();
     await expect(videoPlayer).not.toBeVisible();
     await page.screenshot({ path: 'test-results/screenshots/10-video-modal-closed.png' });
+
+    // 8. Download do vídeo via fluxo autenticado
+    await videoCard.click();
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('link', { name: /^download$/i }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBeTruthy();
+    expect(await download.path()).toBeTruthy();
+    await page.screenshot({ path: 'test-results/screenshots/11-download-validated.png' });
   });
 });

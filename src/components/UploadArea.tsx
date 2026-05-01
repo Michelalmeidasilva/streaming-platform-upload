@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import styles from './UploadArea.module.css';
 import { validateCMAFFile } from '@/lib/cmaf';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
+import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
 
 interface UploadProgress {
   videoId: string;
@@ -53,12 +54,36 @@ const generateThumbnail = (file: File): Promise<string | null> => {
 };
 
 export default function UploadArea() {
+  const directUploadEnabled = process.env.NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED !== 'false';
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { emitUploadComplete } = useVideoEvents();
   const { data: session, status } = useSession();
-  const isAdmin = canUploadVideo(session?.user?.role);
+  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
+  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
+    e2eAuthEnabled ? undefined : null,
+  );
+
+  useEffect(() => {
+    if (!e2eAuthEnabled) {
+      setE2ESession(null);
+      return;
+    }
+
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
+      ?.split('=')
+      .slice(1)
+      .join('=');
+
+    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
+  }, [e2eAuthEnabled]);
+
+  const effectiveSession = e2eSession || session;
+  const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
+  const isAdmin = canUploadVideo(effectiveSession?.user?.role);
 
   const setStatus = useCallback(
     (videoId: string, patch: Partial<UploadProgress>) =>
@@ -98,14 +123,19 @@ export default function UploadArea() {
             const end = Math.min(start + chunkSize, file.size);
             const chunkBlob = file.slice(start, end);
 
-            const chunkRes = await fetch(presignedUrls[i], { 
-              method: 'PUT', 
-              body: chunkBlob 
-            });
+            const chunkRes = directUploadEnabled
+              ? await fetch(presignedUrls[i], {
+                  method: 'PUT',
+                  body: chunkBlob,
+                })
+              : await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
+                  method: 'POST',
+                  body: chunkBlob,
+                });
             if (!chunkRes.ok) throw new Error(`Chunk ${i} upload failed`);
 
             const etag = chunkRes.headers.get('ETag');
-            if (etag) {
+            if (directUploadEnabled && etag) {
               etags.push({ PartNumber: i + 1, ETag: etag.replace(/"/g, '') });
             }
 
@@ -126,7 +156,8 @@ export default function UploadArea() {
             setStatus(videoId, { status: 'ready' });
             emitUploadComplete();
           }, 2000);
-        } catch {
+        } catch (error) {
+          console.error('Upload flow failed:', error);
           setStatus(videoId, { status: 'error' });
         }
       }
@@ -167,7 +198,7 @@ export default function UploadArea() {
     [],
   );
 
-  if (status === 'loading') {
+  if (effectiveStatus === 'loading') {
     return (
       <div className={styles.container}>
         <div className={styles.lockedState}>
@@ -179,7 +210,7 @@ export default function UploadArea() {
     );
   }
 
-  if (!session) {
+  if (!effectiveSession) {
     return (
       <div className={styles.container}>
         <div className={styles.lockedState}>

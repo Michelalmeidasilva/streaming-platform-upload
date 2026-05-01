@@ -6,6 +6,7 @@ import styles from './VideoList.module.css';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
+import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
 
 interface Video {
   id: string;
@@ -22,18 +23,41 @@ interface Video {
 
 export default function VideoList() {
   const { data: session, status: sessionStatus } = useSession();
+  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
+  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
+    e2eAuthEnabled ? undefined : null,
+  );
+
+  useEffect(() => {
+    if (!e2eAuthEnabled) {
+      setE2ESession(null);
+      return;
+    }
+
+    const cookieValue = document.cookie
+      .split('; ')
+      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
+      ?.split('=')
+      .slice(1)
+      .join('=');
+
+    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
+  }, [e2eAuthEnabled]);
+
+  const effectiveSession = e2eSession || session;
+  const effectiveSessionStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : sessionStatus;
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { onUploadComplete, unsubscribe } = useVideoEvents();
-  const canBrowse = canViewVideo(session?.user?.role);
-  const canManageVideos = canDeleteVideo(session?.user?.role);
+  const canBrowse = canViewVideo(effectiveSession?.user?.role);
+  const canManageVideos = canDeleteVideo(effectiveSession?.user?.role);
 
   useEffect(() => {
     const handleUploadComplete = () => {
-      if (sessionStatus === 'authenticated') {
+      if (effectiveSessionStatus === 'authenticated') {
         fetchVideos(search);
       }
     };
@@ -43,12 +67,12 @@ export default function VideoList() {
     return () => {
       unsubscribe(handleUploadComplete);
     };
-  }, [onUploadComplete, unsubscribe, search, sessionStatus]);
+  }, [effectiveSessionStatus, onUploadComplete, search, unsubscribe]);
 
   useEffect(() => {
-    if (sessionStatus !== 'authenticated') {
+    if (effectiveSessionStatus !== 'authenticated') {
       setVideos([]);
-      setLoading(sessionStatus === 'loading');
+      setLoading(effectiveSessionStatus === 'loading');
       return;
     }
 
@@ -57,7 +81,7 @@ export default function VideoList() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, sessionStatus]);
+  }, [effectiveSessionStatus, search]);
 
   const fetchVideos = async (query = '') => {
     if (!canBrowse) {
@@ -128,7 +152,7 @@ export default function VideoList() {
     setSelectedVideo(null);
   };
 
-  if (sessionStatus === 'loading') {
+  if (effectiveSessionStatus === 'loading') {
     return (
       <div className={styles.loading}>
         <div className={styles.spinner} />
@@ -137,7 +161,7 @@ export default function VideoList() {
     );
   }
 
-  if (!session) {
+  if (!effectiveSession) {
     return (
       <div className={styles.empty}>
         <div className={styles.emptyIcon}>
@@ -274,4 +298,3 @@ export default function VideoList() {
     </div>
   );
 }
-
