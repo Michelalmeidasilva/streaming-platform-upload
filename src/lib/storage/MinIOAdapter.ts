@@ -6,6 +6,7 @@ import {
   CompleteMultipartUploadCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
 import { StorageConfig } from '@/types';
 
@@ -77,6 +78,16 @@ export class MinIOAdapter implements IStorageAdapter {
       Body: chunk,
     }));
     return response.ETag || '';
+  }
+
+  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn = 3600): Promise<string> {
+    const command = new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    });
+    return getSignedUrl(this.s3Client, command, { expiresIn });
   }
 
   async completeMultipartUpload(

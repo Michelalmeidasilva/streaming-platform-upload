@@ -56,6 +56,16 @@ export class S3Adapter implements IStorageAdapter {
     return response.ETag || '';
   }
 
+  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn = 3600): Promise<string> {
+    const command = new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    });
+    return getSignedUrl(this.client, command, { expiresIn });
+  }
+
   async completeMultipartUpload(
     key: string,
     uploadId: string,

@@ -40,7 +40,7 @@ export class UploadService {
     filename: string,
     size: number,
     mimeType?: string,
-  ): Promise<{ sessionId: string; videoId: string; chunkSize: number; totalChunks: number }> {
+  ): Promise<{ sessionId: string; videoId: string; chunkSize: number; totalChunks: number; presignedUrls: string[] }> {
     const videoId = uuidv4();
     const sessionId = uuidv4();
     const totalChunks = Math.ceil(size / CHUNK_SIZE);
@@ -58,12 +58,15 @@ export class UploadService {
       mimeType,
     };
 
-    let uploadId = '';
-    if (totalChunks > 1) {
-      uploadId = await this.storage.initiateMultipartUpload(
-        key,
-        mimeType || 'application/octet-stream',
-      );
+    const uploadId = await this.storage.initiateMultipartUpload(
+      key,
+      mimeType || 'application/octet-stream',
+    );
+
+    const presignedUrls: string[] = [];
+    for (let i = 1; i <= totalChunks; i++) {
+      const url = await this.storage.getUploadPartPresignedUrl(key, uploadId, i, 3600);
+      presignedUrls.push(url);
     }
 
     const session: UploadSession = {
@@ -83,7 +86,7 @@ export class UploadService {
     this.sessions.set(sessionId, session);
     videoEvents.emitUploadStarted(videoId, filename);
 
-    return { sessionId, videoId, chunkSize: CHUNK_SIZE, totalChunks };
+    return { sessionId, videoId, chunkSize: CHUNK_SIZE, totalChunks, presignedUrls };
   }
 
   async uploadChunk(sessionId: string, chunkIndex: number, chunk: Buffer): Promise<void> {
@@ -115,23 +118,18 @@ export class UploadService {
     });
   }
 
-  async completeUpload(sessionId: string): Promise<Video> {
+  async completeUpload(sessionId: string, etags: { PartNumber: number; ETag: string }[], thumbnailBase64?: string): Promise<Video> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error('Invalid session');
 
     const video = this.videos.get(session.videoId);
     if (!video) throw new Error('Video not found');
 
-    let url: string;
-    if (session.totalChunks === 1) {
-      url = await this.storage.getSignedUrl(video.filename);
-    } else {
-      url = await this.storage.completeMultipartUpload(
-        video.filename,
-        session.uploadId,
-        session.etags,
-      );
-    }
+    const url = await this.storage.completeMultipartUpload(
+      video.filename,
+      session.uploadId,
+      etags,
+    );
 
     video.status = 'processing';
     video.progress = 100;
@@ -142,8 +140,23 @@ export class UploadService {
     videoEvents.emitUploadCompleted(session.videoId, video.originalName, video.size, url);
     videoEvents.emitVideoProcessing(session.videoId, 'processing');
 
-    // Spawn thumbnail extraction (non-blocking)
-    this.thumbnailExtractor.extract(video);
+    if (thumbnailBase64) {
+      try {
+        const base64Data = thumbnailBase64.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        const thumbnailKey = `thumbnails/${video.id}.jpg`;
+        const thumbnailUrl = await this.storage.upload(buffer, thumbnailKey, 'image/jpeg');
+        video.thumbnailUrl = thumbnailUrl;
+        video.thumbnailStatus = 'ready';
+        videoEvents.emitThumbnailGenerated(video.id, thumbnailUrl, new Date().toISOString());
+      } catch (err) {
+        console.error('Failed to upload client-provided thumbnail', err);
+        this.thumbnailExtractor.extract(video);
+      }
+    } else {
+      // Spawn thumbnail extraction (non-blocking)
+      this.thumbnailExtractor.extract(video);
+    }
 
     setTimeout(() => {
       video.status = 'ready';

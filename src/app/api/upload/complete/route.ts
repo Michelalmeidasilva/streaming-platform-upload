@@ -3,13 +3,13 @@ import { uploadService } from '@/lib/api/uploadService';
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId } = await request.json();
+    const { sessionId, etags, thumbnail } = await request.json();
 
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
-    const video = await uploadService.completeUpload(sessionId);
+    const video = await uploadService.completeUpload(sessionId, etags || [], thumbnail);
 
     return NextResponse.json({
       success: true,

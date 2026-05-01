@@ -12,6 +12,44 @@ interface UploadProgress {
   status: 'uploading' | 'processing' | 'ready' | 'error';
 }
 
+const generateThumbnail = (file: File): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = URL.createObjectURL(file);
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadeddata = () => {
+      video.currentTime = Math.min(1, video.duration * 0.25 || 1);
+    };
+
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 360;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const ratio = Math.max(canvas.width / video.videoWidth, canvas.height / video.videoHeight);
+        const nw = video.videoWidth * ratio;
+        const nh = video.videoHeight * ratio;
+        const x = (canvas.width - nw) / 2;
+        const y = (canvas.height - nh) / 2;
+        ctx.drawImage(video, x, y, nw, nh);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      } else {
+        resolve(null);
+      }
+      URL.revokeObjectURL(video.src);
+    };
+
+    video.onerror = () => {
+      resolve(null);
+      URL.revokeObjectURL(video.src);
+    };
+  });
+};
+
 export default function UploadArea() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
@@ -37,6 +75,9 @@ export default function UploadArea() {
         setUploads(prev => [...prev, { videoId, filename: file.name, progress: 0, status: 'uploading' }]);
 
         try {
+          // Generate thumbnail immediately
+          const thumbnailPromise = generateThumbnail(file);
+
           // 1. Initiate upload session
           const initRes = await fetch('/api/upload', {
             method: 'POST',
@@ -44,30 +85,35 @@ export default function UploadArea() {
             body: JSON.stringify({ filename: file.name, size: file.size, mimeType: file.type }),
           });
           if (!initRes.ok) throw new Error('Failed to initiate upload');
-          const { sessionId, chunkSize, totalChunks } = await initRes.json();
+          const { sessionId, chunkSize, totalChunks, presignedUrls } = await initRes.json();
 
           // 2. Upload each chunk sequentially
+          const etags: { PartNumber: number; ETag: string }[] = [];
           for (let i = 0; i < totalChunks; i++) {
             const start = i * chunkSize;
             const end = Math.min(start + chunkSize, file.size);
             const chunkBlob = file.slice(start, end);
 
-            const formData = new FormData();
-            formData.append('sessionId', sessionId);
-            formData.append('chunkIndex', String(i));
-            formData.append('chunk', chunkBlob);
-
-            const chunkRes = await fetch('/api/upload/chunk', { method: 'POST', body: formData });
+            const chunkRes = await fetch(presignedUrls[i], { 
+              method: 'PUT', 
+              body: chunkBlob 
+            });
             if (!chunkRes.ok) throw new Error(`Chunk ${i} upload failed`);
+
+            const etag = chunkRes.headers.get('ETag');
+            if (etag) {
+              etags.push({ PartNumber: i + 1, ETag: etag.replace(/"/g, '') });
+            }
 
             setStatus(videoId, { progress: ((i + 1) / totalChunks) * 100 });
           }
 
           // 3. Complete upload
+          const thumbnailBase64 = await thumbnailPromise;
           const completeRes = await fetch('/api/upload/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId }),
+            body: JSON.stringify({ sessionId, etags, thumbnail: thumbnailBase64 }),
           });
           if (!completeRes.ok) throw new Error('Failed to complete upload');
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { storageAdapter } from '@/lib/api/uploadService';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,13 +23,26 @@ export async function GET(request: Request) {
 
     const { videos: gatewayVideos } = await response.json();
 
-    const videos = gatewayVideos.map((v: any) => ({
-      id: v.videoId,
-      originalName: v.filename,
-      size: v.size,
-      status: 'ready', // Gateway indicates successful recording in storage
-      createdAt: v.createdAt,
-      url: v.url,
+    const videos = await Promise.all(gatewayVideos.map(async (v: any) => {
+      const thumbnailKey = `thumbnails/${v.videoId}.jpg`;
+      const fallbackKey = `thumbnails/${v.videoId}-fallback.jpg`;
+      let thumbnailUrl = null;
+
+      if (await storageAdapter.exists(thumbnailKey)) {
+        thumbnailUrl = await storageAdapter.getSignedUrl(thumbnailKey);
+      } else if (await storageAdapter.exists(fallbackKey)) {
+        thumbnailUrl = await storageAdapter.getSignedUrl(fallbackKey);
+      }
+
+      return {
+        id: v.videoId,
+        originalName: v.filename,
+        size: v.size,
+        status: 'ready', // Gateway indicates successful recording in storage
+        createdAt: v.createdAt,
+        url: v.url,
+        thumbnailUrl,
+      };
     }));
 
     // Sort newest first
