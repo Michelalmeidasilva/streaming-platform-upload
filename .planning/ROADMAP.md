@@ -17,3 +17,18 @@
 
 Plans:
 - [ ] 01-01: Google auth, role enforcement, and security controls
+
+### Phase 2: Security principles and controls for confidentiality, integrity, and availability
+
+**Depends on:** Phase 1
+**Goal:** Add security controls that protect sensitive data, preserve data integrity, and keep the platform available for authorized users.
+**Requirements:** TBD
+**Success Criteria:**
+1. Sensitive information is protected with encryption and access controls.
+2. Data integrity is protected with verification and tamper-resistant handling.
+3. Authorized users retain reliable access through redundancy and backup-oriented controls.
+4. Security expectations are documented for future implementation phases.
+**Plans:** TBD
+
+Plans:
+- [ ] TBD (promote with $gsd-review-backlog when ready)
