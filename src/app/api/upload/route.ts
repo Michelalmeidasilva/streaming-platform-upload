@@ -9,13 +9,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'filename and size are required' }, { status: 400 });
     }
 
-    const { sessionId, videoId, chunkSize, totalChunks } = await uploadService.initiateUpload(
+    const { sessionId, videoId, chunkSize, totalChunks, presignedUrls } = await uploadService.initiateUpload(
       filename,
       size,
       mimeType,
     );
 
-    return NextResponse.json({ sessionId, videoId, chunkSize, totalChunks });
+    return NextResponse.json({ sessionId, videoId, chunkSize, totalChunks, presignedUrls });
   } catch (error) {
     console.error('Initiate upload error:', error);
     return NextResponse.json(

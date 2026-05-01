@@ -13,3 +13,4 @@ const storage = createStorageAdapter({
 });
 
 export const uploadService = new UploadService(storage);
+export const storageAdapter = storage;

@@ -8,6 +8,7 @@ export interface IStorageAdapter {
   upload(file: Buffer, key: string, contentType: string): Promise<string>;
   initiateMultipartUpload(key: string, contentType: string): Promise<string>;
   uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string>;
+  getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string>;
   completeMultipartUpload(key: string, uploadId: string, parts: { PartNumber: number; ETag: string }[]): Promise<string>;
   delete(key: string): Promise<void>;
   getSignedUrl(key: string, expiresIn?: number): Promise<string>;

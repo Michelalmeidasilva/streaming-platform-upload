@@ -12,6 +12,8 @@ interface Video {
   status: string;
   createdAt: string;
   url?: string;
+  thumbnailUrl?: string;
+  thumbnailStatus?: string;
 }
 
 export default function VideoList() {
@@ -136,6 +138,9 @@ export default function VideoList() {
               onClick={() => setSelectedVideo(video)}
             >
               <div className={styles.thumbnail}>
+                {video.thumbnailUrl ? (
+                  <img src={video.thumbnailUrl} alt={video.originalName} className={styles.thumbnailImage} />
+                ) : null}
                 <div className={styles.playBtn}>
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
                     <path d="M4 2L9 6L4 10V2z" />
