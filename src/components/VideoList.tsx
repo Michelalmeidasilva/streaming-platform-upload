@@ -1,31 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import styles from './VideoList.module.css';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
+import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
 
 interface Video {
   id: string;
+  title: string;
   originalName: string;
   size: number;
   status: string;
   createdAt: string;
-  url?: string;
+  updatedAt?: string;
+  downloadUrl: string;
   thumbnailUrl?: string;
   thumbnailStatus?: string;
 }
 
 export default function VideoList() {
+  const { data: session, status: sessionStatus } = useSession();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { onUploadComplete, unsubscribe } = useVideoEvents();
+  const canBrowse = canViewVideo(session?.user?.role);
+  const canManageVideos = canDeleteVideo(session?.user?.role);
 
   useEffect(() => {
     const handleUploadComplete = () => {
-      fetchVideos(search);
+      if (sessionStatus === 'authenticated') {
+        fetchVideos(search);
+      }
     };
 
     onUploadComplete(handleUploadComplete);
@@ -33,25 +43,50 @@ export default function VideoList() {
     return () => {
       unsubscribe(handleUploadComplete);
     };
-  }, [onUploadComplete, unsubscribe, search]);
+  }, [onUploadComplete, unsubscribe, search, sessionStatus]);
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') {
+      setVideos([]);
+      setLoading(sessionStatus === 'loading');
+      return;
+    }
+
     const timer = setTimeout(() => {
       fetchVideos(search);
-    }, 300); // Debounce search
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, sessionStatus]);
 
   const fetchVideos = async (query = '') => {
+    if (!canBrowse) {
+      setVideos([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      setLoadError(null);
       const url = query ? `/api/videos?q=${encodeURIComponent(query)}` : '/api/videos';
       const response = await fetch(url);
+
+      if (response.status === 401) {
+        setVideos([]);
+        setLoadError('Sign in to browse the library.');
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to load videos (${response.status})`);
+      }
+
       const data = await response.json();
       setVideos(data.videos || []);
     } catch (error) {
       console.error('Failed to fetch videos:', error);
+      setLoadError('Unable to load videos right now.');
     } finally {
       setLoading(false);
     }
@@ -75,9 +110,14 @@ export default function VideoList() {
 
   const handleDelete = async (videoId: string) => {
     try {
-      await fetch(`/api/videos/${videoId}`, {
+      const response = await fetch(`/api/videos/${videoId}`, {
         method: 'DELETE',
       });
+
+      if (!response.ok) {
+        throw new Error(`Delete failed (${response.status})`);
+      }
+
       setVideos(prev => prev.filter(v => v.id !== videoId));
     } catch (error) {
       console.error('Failed to delete video:', error);
@@ -87,6 +127,30 @@ export default function VideoList() {
   const handleCloseModal = () => {
     setSelectedVideo(null);
   };
+
+  if (sessionStatus === 'loading') {
+    return (
+      <div className={styles.loading}>
+        <div className={styles.spinner} />
+        <p>Loading session...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className={styles.empty}>
+        <div className={styles.emptyIcon}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+          </svg>
+        </div>
+        <h3>Sign in to view videos</h3>
+        <p>Authenticated members can search and download the library.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -98,15 +162,21 @@ export default function VideoList() {
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
-          <input 
-            type="text" 
-            placeholder="Search your videos..." 
+          <input
+            type="text"
+            placeholder="Search your videos..."
             className={styles.searchInput}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
       </div>
+
+      {loadError && (
+        <div className={styles.errorBanner}>
+          <p>{loadError}</p>
+        </div>
+      )}
 
       {loading && (
         <div className={styles.loading}>
@@ -125,7 +195,6 @@ export default function VideoList() {
           </div>
           <h3>{search ? 'Nenhum resultado encontrado' : 'Nenhum vídeo ainda'}</h3>
           <p>{search ? `Não encontramos nada para "${search}"` : 'Importe seu primeiro arquivo para começar'}</p>
-          {!search && <button className={styles.emptyBtn}>+ Importar vídeo</button>}
         </div>
       )}
 
@@ -139,7 +208,7 @@ export default function VideoList() {
             >
               <div className={styles.thumbnail}>
                 {video.thumbnailUrl ? (
-                  <img src={video.thumbnailUrl} alt={video.originalName} className={styles.thumbnailImage} />
+                  <img src={video.thumbnailUrl} alt={video.title} className={styles.thumbnailImage} />
                 ) : null}
                 <div className={styles.playBtn}>
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
@@ -154,7 +223,7 @@ export default function VideoList() {
               </div>
 
               <div className={styles.info}>
-                <h3 className={styles.title}>{video.originalName}</h3>
+                <h3 className={styles.title}>{video.title}</h3>
                 <div className={styles.meta}>
                   <span>{formatSize(video.size)}</span>
                   <span>·</span>
@@ -167,9 +236,19 @@ export default function VideoList() {
                     {video.status === 'uploading' && 'Uploading'}
                     {video.status === 'error' && 'Erro'}
                   </span>
-                  <button className={styles.deleteBtn} onClick={() => handleDelete(video.id)}>
-                    Excluir
-                  </button>
+                  {canManageVideos ? (
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(video.id);
+                      }}
+                    >
+                      Excluir
+                    </button>
+                  ) : (
+                    <span className={styles.memberLabel}>Download only</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -179,11 +258,20 @@ export default function VideoList() {
       {selectedVideo && (
         <VideoModal
           isOpen={selectedVideo !== null}
-          videoUrl={selectedVideo.url || ''}
-          videoName={selectedVideo.originalName}
+          video={selectedVideo}
+          canManageVideos={canManageVideos}
           onClose={handleCloseModal}
+          onDeleted={(videoId) => {
+            setVideos(prev => prev.filter(video => video.id !== videoId));
+            handleCloseModal();
+          }}
+          onUpdated={(updated) => {
+            setVideos(prev => prev.map(video => (video.id === updated.id ? updated : video)));
+            setSelectedVideo(updated);
+          }}
         />
       )}
     </div>
   );
 }
+

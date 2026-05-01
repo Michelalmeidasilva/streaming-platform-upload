@@ -8,14 +8,17 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
-import { StorageConfig } from '@/types';
+import { StorageConfig, StorageSecurityPolicy } from '@/types';
+import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
 export class MinIOAdapter implements IStorageAdapter {
   private client: Client;
   private s3Client: S3Client;
   private bucket: string;
+  private policy: StorageSecurityPolicy;
 
   constructor(config: StorageConfig) {
+    this.policy = resolveStoragePolicy(config);
     const cleanEndpoint = (config.endpoint?.replace('http://', '').replace('https://', '') || 'localhost').split(':')[0];
     this.client = new Client({
       endPoint: cleanEndpoint,
@@ -48,15 +51,29 @@ export class MinIOAdapter implements IStorageAdapter {
     }
   }
 
-  async upload(file: Buffer, key: string, contentType: string): Promise<string> {
+  async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string): Promise<string> {
     await this.ensureBucket();
     await this.s3Client.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       Body: file,
       ContentType: contentType,
+      ServerSideEncryption: this.policy.encryptionMode,
+      ChecksumAlgorithm: this.policy.checksumAlgorithm,
+      ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : {}),
     }));
     return this.getSignedUrl(key);
+  }
+
+  async getUploadPresignedUrl(key: string, contentType: string, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
+    await this.ensureBucket();
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    return getSignedUrl(this.s3Client, command, { expiresIn: ttl });
   }
 
   async initiateMultipartUpload(key: string, contentType: string): Promise<string> {
@@ -65,29 +82,39 @@ export class MinIOAdapter implements IStorageAdapter {
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      ServerSideEncryption: this.policy.encryptionMode,
+      ChecksumAlgorithm: this.policy.checksumAlgorithm,
     }));
     return response.UploadId || '';
   }
 
-  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string> {
+  async uploadPart(
+    chunk: Buffer,
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    checksumSHA256?: string,
+  ): Promise<string> {
     const response = await this.s3Client.send(new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
       Body: chunk,
+      ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : { ChecksumAlgorithm: this.policy.checksumAlgorithm }),
     }));
     return response.ETag || '';
   }
 
-  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn = 3600): Promise<string> {
+  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
     const command = new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
     });
-    return getSignedUrl(this.s3Client, command, { expiresIn });
+    return getSignedUrl(this.s3Client, command, { expiresIn: ttl });
   }
 
   async completeMultipartUpload(
@@ -110,8 +137,9 @@ export class MinIOAdapter implements IStorageAdapter {
     await this.client.removeObject(this.bucket, key);
   }
 
-  async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
-    return this.client.presignedGetObject(this.bucket, key, expiresIn);
+  async getSignedUrl(key: string, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
+    return this.client.presignedGetObject(this.bucket, key, ttl);
   }
 
   async exists(key: string): Promise<boolean> {

@@ -2,6 +2,10 @@
   display: flex;
   height: 100vh;
   overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(255, 69, 0, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 193, 7, 0.08), transparent 28%),
+    var(--color-bg);
 }
 
 /* --- SIDEBAR --- */
@@ -81,8 +85,16 @@
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
   flex-shrink: 0;
+}
+
+.topbarLeft,
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .topbarTitle {
@@ -91,6 +103,56 @@
   letter-spacing: 2px;
   color: var(--color-text-secondary);
   text-transform: uppercase;
+}
+
+.roleBadge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.authStatus {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.authButton,
+.primaryButton,
+.secondaryButton {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: transform var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.authButton,
+.secondaryButton {
+  background: var(--color-surface-2);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+
+.authButton:hover,
+.secondaryButton:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-primary);
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, var(--color-primary), #ff8a5c);
+  color: #111;
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px);
 }
 
 .content {
@@ -129,8 +191,66 @@
   background: var(--color-border);
 }
 
+.hero,
+.statusPanel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent), var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.hero {
+  display: grid;
+  gap: 10px;
+}
+
+.heroEyebrow,
+.statusLabel {
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.heroTitle {
+  font-size: clamp(24px, 4vw, 42px);
+  line-height: 1.05;
+  max-width: 14ch;
+  color: #f2f2f2;
+}
+
+.heroCopy,
+.statusValue {
+  color: var(--color-text-secondary);
+  max-width: 68ch;
+}
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.statusPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
 @media (max-width: 768px) {
   .sidebar { width: 48px; }
   .navItem { width: 36px; height: 36px; }
   .content { padding: 16px; }
+  .topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 10px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .statusPanel {
+    grid-template-columns: 1fr;
+  }
 }

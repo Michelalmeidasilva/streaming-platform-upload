@@ -2,7 +2,9 @@
 
 ## Current Milestone
 
-- Phase 1 is active: Google authentication with secure ADMIN/MEMBER roles.
+- Phase 1 and Phase 2 are complete.
+- Google authentication with secure ADMIN/MEMBER roles is implemented.
+- Storage confidentiality, integrity, and recovery controls are implemented.
 
 ## Notes
 

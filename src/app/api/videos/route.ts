@@ -1,59 +1,69 @@
-import { NextResponse } from 'next/server';
-import { storageAdapter } from '@/lib/api/uploadService';
+import { NextRequest, NextResponse } from 'next/server';
+import { uploadService } from '@/lib/api/uploadService';
+import { getCurrentSession } from '@/lib/auth/session';
+import { canSearchVideos } from '@/lib/auth/permissions';
+import { recordSecurityEvent } from '@/lib/security/audit';
+import type { Video as VideoModel } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const gatewayUrl = process.env.EVENT_GATEWAY_URL || 'http://localhost:8080/api/v1';
-    
-    const endpoint = query 
-      ? `${gatewayUrl}/videos/search?q=${encodeURIComponent(query)}`
-      : `${gatewayUrl}/videos`;
+function toVideoDto(video: VideoModel) {
+  return {
+    id: video.id,
+    title: video.title || video.originalName,
+    originalName: video.originalName,
+    size: video.size,
+    status: video.status,
+    createdAt: video.createdAt.toISOString(),
+    updatedAt: video.updatedAt.toISOString(),
+    downloadUrl: `/api/videos/${video.id}/download`,
+    thumbnailUrl: video.thumbnailUrl || null,
+    thumbnailStatus: video.thumbnailStatus || 'pending',
+  };
+}
 
-    const response = await fetch(endpoint, {
-      cache: 'no-store',
+export async function GET(request: NextRequest) {
+  const session = await getCurrentSession();
+  if (!session) {
+    recordSecurityEvent({
+      type: 'access_denied',
+      route: '/api/videos',
+      method: 'GET',
+      reason: 'missing_session',
+      status: 401,
+      email: null,
+      role: null,
     });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    if (!response.ok) {
-        throw new Error(`Event Gateway returned ${response.status}`);
-    }
+  if (!canSearchVideos(session.user.role)) {
+    recordSecurityEvent({
+      type: 'access_denied',
+      route: '/api/videos',
+      method: 'GET',
+      reason: 'insufficient_role',
+      status: 403,
+      email: session.user.email || null,
+      role: session.user.role,
+    });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
-    const { videos: gatewayVideos } = await response.json();
-
-    const videos = await Promise.all(gatewayVideos.map(async (v: any) => {
-      const thumbnailKey = `thumbnails/${v.videoId}.jpg`;
-      const fallbackKey = `thumbnails/${v.videoId}-fallback.jpg`;
-      let thumbnailUrl = null;
-
-      if (await storageAdapter.exists(thumbnailKey)) {
-        thumbnailUrl = await storageAdapter.getSignedUrl(thumbnailKey);
-      } else if (await storageAdapter.exists(fallbackKey)) {
-        thumbnailUrl = await storageAdapter.getSignedUrl(fallbackKey);
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get('q')?.trim().toLowerCase();
+  const videos = uploadService
+    .getAllVideos()
+    .filter(video => {
+      if (!query) {
+        return true;
       }
 
-      return {
-        id: v.videoId,
-        originalName: v.filename,
-        size: v.size,
-        status: 'ready', // Gateway indicates successful recording in storage
-        createdAt: v.createdAt,
-        url: v.url,
-        thumbnailUrl,
-      };
-    }));
+      return [video.title, video.originalName]
+        .filter(Boolean)
+        .some(value => value.toLowerCase().includes(query));
+    })
+    .map(toVideoDto);
 
-    // Sort newest first
-    videos.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    return NextResponse.json({ videos });
-  } catch (error) {
-    console.error('Failed to fetch videos from Event Gateway:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch videos from Event Gateway' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ videos });
 }

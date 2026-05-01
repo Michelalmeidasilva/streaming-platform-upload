@@ -4,6 +4,32 @@
   gap: 6px;
 }
 
+.lockedState {
+  background: linear-gradient(180deg, rgba(255, 69, 0, 0.08), transparent), var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.lockedLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.lockedState h3 {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.lockedState p {
+  color: var(--color-text-secondary);
+}
+
 /* DROP ZONE */
 .dropzone {
   background: var(--color-surface-2);

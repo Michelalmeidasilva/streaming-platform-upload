@@ -4,11 +4,19 @@ import { IStorageAdapter } from '@/lib/storage/IStorageAdapter';
 const MB = 1024 * 1024;
 const CHUNK_SIZE = 10 * MB;
 
+jest.mock('../ThumbnailExtractor', () => ({
+  ThumbnailExtractor: jest.fn().mockImplementation(() => ({
+    extract: jest.fn(),
+  })),
+}));
+
 function makeStorage(): jest.Mocked<IStorageAdapter> {
   return {
     upload: jest.fn().mockResolvedValue('http://storage/file'),
+    getUploadPresignedUrl: jest.fn().mockResolvedValue('http://storage/presigned-put'),
     initiateMultipartUpload: jest.fn().mockResolvedValue('upload-id-123'),
     uploadPart: jest.fn().mockResolvedValue('"etag-abc"'),
+    getUploadPartPresignedUrl: jest.fn().mockResolvedValue('http://storage/presigned-part'),
     completeMultipartUpload: jest.fn().mockResolvedValue('http://storage/file'),
     delete: jest.fn().mockResolvedValue(undefined),
     getSignedUrl: jest.fn().mockResolvedValue('http://storage/signed'),
@@ -47,6 +55,7 @@ describe('UploadService — multipart upload', () => {
       expect.any(String),
       'upload-id-123',
       1,
+      expect.any(String),
     );
   });
 

@@ -1,17 +1,43 @@
+export type UserRole = 'ADMIN' | 'MEMBER';
+export type StorageEncryptionMode = 'AES256';
+export type StorageChecksumAlgorithm = 'SHA256';
+
+export interface StorageSecurityPolicy {
+  encryptionMode: StorageEncryptionMode;
+  checksumAlgorithm: StorageChecksumAlgorithm;
+  signedUrlTtlSeconds: number;
+}
+
+export interface RecoveryPolicy {
+  versioning: 'required';
+  backupTarget: 'required';
+  replicationTarget: 'required';
+  accidentalDeletionRecovery: 'versioning-plus-backup';
+  regionalLossRecovery: 'replication-plus-backup';
+}
+
+export interface SecurityPosture {
+  storage: StorageSecurityPolicy;
+  recovery: RecoveryPolicy;
+}
+
 export interface Video {
   id: string;
   filename: string;
   originalName: string;
+  title: string;
   size: number;
   status: VideoStatus;
   progress: number;
   createdAt: Date;
   updatedAt: Date;
   url?: string;
+  downloadUrl?: string;
   thumbnailUrl?: string;
   thumbnailStatus?: 'pending' | 'ready' | 'failed';
   mimeType?: string;
   duration?: number;
+  securityPosture?: SecurityPosture;
 }
 
 export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'error';
@@ -27,6 +53,7 @@ export interface UploadSession {
   filename: string;
   uploadId: string;
   etags: { PartNumber: number; ETag: string }[];
+  securityPosture?: SecurityPosture;
 }
 
 export interface UploadChunkRequest {
@@ -57,6 +84,9 @@ export interface StorageConfig {
   accessKeyId?: string;
   secretAccessKey?: string;
   forcePathStyle?: boolean;
+  encryptionMode?: StorageEncryptionMode;
+  checksumAlgorithm?: StorageChecksumAlgorithm;
+  signedUrlTtlSeconds?: number;
 }
 
 export interface IntegrationConfig {

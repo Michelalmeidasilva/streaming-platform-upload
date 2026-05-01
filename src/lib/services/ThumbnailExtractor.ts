@@ -186,8 +186,9 @@ export class ThumbnailExtractor {
   }
 
   private timeout(ms: number): Promise<never> {
-    return new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms),
-    );
+    return new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
+      timer.unref?.();
+    });
   }
 }

@@ -1,6 +1,6 @@
 # Roadmap
 
-## Active Milestone
+## Completed Milestone
 
 ### Phase 1: Google authentication with secure ADMIN/MEMBER roles
 
@@ -16,7 +16,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01: Google auth, role enforcement, and security controls
+- [x] 01-01: Google auth, role enforcement, and security controls
 
 ### Phase 2: Security principles and controls for confidentiality, integrity, and availability
 
@@ -31,4 +31,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: Storage encryption, integrity checks, and recovery controls
+- [x] 02-01: Storage encryption, integrity checks, and recovery controls

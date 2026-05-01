@@ -10,13 +10,16 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { IStorageAdapter, StorageObject } from './IStorageAdapter';
-import { StorageConfig } from '@/types';
+import { StorageConfig, StorageSecurityPolicy } from '@/types';
+import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
 export class S3Adapter implements IStorageAdapter {
   private client: S3Client;
   private bucket: string;
+  private policy: StorageSecurityPolicy;
 
   constructor(config: StorageConfig) {
+    this.policy = resolveStoragePolicy(config);
     this.client = new S3Client({
       region: config.region || 'us-east-1',
       credentials: config.accessKeyId && config.secretAccessKey
@@ -26,14 +29,27 @@ export class S3Adapter implements IStorageAdapter {
     this.bucket = config.bucket;
   }
 
-  async upload(file: Buffer, key: string, contentType: string): Promise<string> {
+  async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string): Promise<string> {
     await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       Body: file,
       ContentType: contentType,
+      ServerSideEncryption: this.policy.encryptionMode,
+      ChecksumAlgorithm: this.policy.checksumAlgorithm,
+      ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : {}),
     }));
     return this.getSignedUrl(key);
+  }
+
+  async getUploadPresignedUrl(key: string, contentType: string, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    return getSignedUrl(this.client, command, { expiresIn: ttl });
   }
 
   async initiateMultipartUpload(key: string, contentType: string): Promise<string> {
@@ -41,29 +57,39 @@ export class S3Adapter implements IStorageAdapter {
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      ServerSideEncryption: this.policy.encryptionMode,
+      ChecksumAlgorithm: this.policy.checksumAlgorithm,
     }));
     return response.UploadId || '';
   }
 
-  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string> {
+  async uploadPart(
+    chunk: Buffer,
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    checksumSHA256?: string,
+  ): Promise<string> {
     const response = await this.client.send(new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
       Body: chunk,
+      ...(checksumSHA256 ? { ChecksumSHA256: checksumSHA256 } : { ChecksumAlgorithm: this.policy.checksumAlgorithm }),
     }));
     return response.ETag || '';
   }
 
-  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn = 3600): Promise<string> {
+  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
     const command = new UploadPartCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       PartNumber: partNumber,
     });
-    return getSignedUrl(this.client, command, { expiresIn });
+    return getSignedUrl(this.client, command, { expiresIn: ttl });
   }
 
   async completeMultipartUpload(
@@ -86,11 +112,12 @@ export class S3Adapter implements IStorageAdapter {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
-  async getSignedUrl(key: string, expiresIn = 3600): Promise<string> {
+  async getSignedUrl(key: string, expiresIn?: number): Promise<string> {
+    const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
     return getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn },
+      { expiresIn: ttl },
     );
   }
 

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import styles from './UploadArea.module.css';
 import { validateCMAFFile } from '@/lib/cmaf';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
+import { canUploadVideo } from '@/lib/auth/permissions';
 
 interface UploadProgress {
   videoId: string;
@@ -55,6 +57,8 @@ export default function UploadArea() {
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { emitUploadComplete } = useVideoEvents();
+  const { data: session, status } = useSession();
+  const isAdmin = canUploadVideo(session?.user?.role);
 
   const setStatus = useCallback(
     (videoId: string, patch: Partial<UploadProgress>) =>
@@ -162,6 +166,42 @@ export default function UploadArea() {
     (videoId: string) => setUploads(prev => prev.filter(u => u.videoId !== videoId)),
     [],
   );
+
+  if (status === 'loading') {
+    return (
+      <div className={styles.container}>
+        <div className={styles.lockedState}>
+          <p className={styles.lockedLabel}>Loading session</p>
+          <h3>Checking access</h3>
+          <p>Preparing role-aware upload controls.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.lockedState}>
+          <p className={styles.lockedLabel}>Sign in required</p>
+          <h3>Upload controls are protected</h3>
+          <p>Use Google sign-in to access admin upload actions.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.lockedState}>
+          <p className={styles.lockedLabel}>Member access</p>
+          <h3>Uploads are available to admins only</h3>
+          <p>You can still browse and download videos from the library.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

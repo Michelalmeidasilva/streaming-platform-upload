@@ -5,9 +5,10 @@ export interface StorageObject {
 }
 
 export interface IStorageAdapter {
-  upload(file: Buffer, key: string, contentType: string): Promise<string>;
+  upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string): Promise<string>;
+  getUploadPresignedUrl(key: string, contentType: string, expiresIn?: number): Promise<string>;
   initiateMultipartUpload(key: string, contentType: string): Promise<string>;
-  uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number): Promise<string>;
+  uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number, checksumSHA256?: string): Promise<string>;
   getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number): Promise<string>;
   completeMultipartUpload(key: string, uploadId: string, parts: { PartNumber: number; ETag: string }[]): Promise<string>;
   delete(key: string): Promise<void>;
