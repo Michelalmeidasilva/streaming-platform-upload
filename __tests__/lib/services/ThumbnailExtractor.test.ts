@@ -12,11 +12,11 @@ class MockStorageAdapter implements IStorageAdapter {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
-  async initiateMultipartUpload(key: string, _contentType: string) {
+  async initiateMultipartUpload(_key: string, _contentType: string) {
     return 'upload-id-123';
   }
 
-  async uploadPart(_chunk: Buffer, _key: string, uploadId: string, partNumber: number, _checksumSHA256?: string) {
+  async uploadPart(_chunk: Buffer, _key: string, _uploadId: string, _partNumber: number, _checksumSHA256?: string) {
     return 'etag-123';
   }
 
@@ -28,11 +28,11 @@ class MockStorageAdapter implements IStorageAdapter {
     return 'https://mock-storage.example.com/video';
   }
 
-  async delete(key: string) {
+  async delete(_key: string) {
     // No return value (Promise<void>)
   }
 
-  async getSignedUrl(key: string, expiresIn?: number) {
+  async getSignedUrl(key: string, _expiresIn?: number) {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
@@ -40,7 +40,7 @@ class MockStorageAdapter implements IStorageAdapter {
     return true;
   }
 
-  async listObjects(prefix?: string) {
+  async listObjects(_prefix?: string) {
     return [];
   }
 }
