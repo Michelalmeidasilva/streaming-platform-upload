@@ -534,4 +534,200 @@ describe('video authorization', () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'Video not found' });
   });
+
+  it('returns 401 when downloading without a session', async () => {
+    getCurrentSession.mockResolvedValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('returns 404 when downloading a video that does not exist', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/nonexistent/download') as any, {
+      params: { videoId: 'nonexistent' },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Video not found' });
+  });
+
+  it('returns 503 when download fails due to storage fetch error', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Video',
+      originalName: 'Video.mp4',
+      size: 10,
+      status: 'ready',
+      progress: 100,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      url: 'https://storage.example.com/video',
+      downloadUrl: '/api/videos/1/download',
+    });
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'Download unavailable' });
+  });
+
+  it('uses default content-type when storage response has no content-type header', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Video',
+      originalName: 'Video.mp4',
+      size: 10,
+      status: 'ready',
+      progress: 100,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      url: 'https://storage.example.com/video',
+      downloadUrl: '/api/videos/1/download',
+    });
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('video'));
+          controller.close();
+        },
+      }),
+      headers: new Headers({
+        'content-length': '5',
+      }),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video.mp4"');
+  });
+
+  it('returns 403 when a GUEST role tries to download a video', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'guest@example.com', role: 'GUEST' },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Forbidden' });
+  });
+
+  it('returns 403 when a GUEST role with no email tries to download a video', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: null, role: 'GUEST' },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Forbidden' });
+  });
+
+  it('returns 503 when video has no download URL available', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Video',
+      originalName: 'Video.mp4',
+      size: 10,
+      status: 'processing',
+      progress: 50,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'Download unavailable' });
+  });
+
+  it('handles missing content-length header with empty string fallback', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Video',
+      originalName: 'test-video.mp4',
+      size: 10,
+      status: 'ready',
+      progress: 100,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      url: 'https://storage.example.com/video',
+      downloadUrl: '/api/videos/1/download',
+    });
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('video data'));
+          controller.close();
+        },
+      }),
+      headers: new Headers({
+        'content-type': 'video/mp4',
+      }),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-length')).toBe('');
+    expect(response.headers.get('content-type')).toBe('video/mp4');
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="test-video.mp4"');
+  });
 });

@@ -15,9 +15,9 @@ This project uses **automated semantic versioning** with GitHub Actions. Every p
    - `feat:` prefix → Minor version bump (1.0.0 → 1.1.0)
    - `fix:` prefix → Patch version bump (1.0.0 → 1.0.1)
 4. **package.json** is updated with the new version
-5. **CHANGELOG.md** is updated with commit messages since the last release
+5. **CHANGELOG.md** is updated with commit messages from `git log` since the last release
 6. **Git tag** is created (e.g., `v1.0.3`)
-7. **GitHub Release** is created with auto-generated release notes
+7. **GitHub Release** is created with release notes containing commit history
 
 ### Commit Message Format
 
@@ -84,6 +84,21 @@ git show v1.0.2
 
 The `CHANGELOG.md` file at the project root contains all release notes in reverse chronological order (newest first).
 
+#### How CHANGELOG.md is Generated
+
+The automated release workflow generates `CHANGELOG.md` entries from commit messages since the last tag:
+- Uses `git log $LAST_TAG..HEAD --oneline` to extract commits
+- Each entry shows the commit hash and message
+- These entries are prepended to the top of `CHANGELOG.md` with a version header and date
+
+#### Manual Changelog Organization
+
+The organized `CHANGELOG.md` file (with Added/Changed/Fixed/Removed sections visible in the file) is **manually maintained by developers** as part of the Feature Development Checklist. This happens separately from the automated release workflow:
+- Developers create `CHANGELOG.md` entries during feature development
+- The automated workflow generates release notes from raw git commits
+- When a release is created, the workflow prepends the git-derived entries to the manually-organized sections
+- Future releases will continue to add entries above your manual edits
+
 ## Manual Release (Advanced)
 
 If you need to create a release manually (not recommended):
@@ -134,17 +149,19 @@ After the fix is merged to `main`, a new release will be created automatically.
 
 ## How Version Detection Works
 
-The version detection script (`.github/scripts/detect-version.sh`) performs these steps:
+The version detection script (`.github/scripts/detect-version.sh`) scans commits to calculate semantic versioning:
 
 1. Retrieves the last git tag (or `v0.0.0` if none exist)
 2. Reads the current version from `package.json`
 3. Scans all commits since the last tag using `git log $LAST_TAG..HEAD`
 4. Detects the highest-priority change type:
-   - `BREAKING CHANGE:` in commit body → major
-   - `feat:` prefix in commit message → minor
-   - `fix:` prefix in commit message → patch
+   - `BREAKING CHANGE:` in commit body → major bump
+   - `feat:` prefix in commit message → minor bump
+   - `fix:` prefix in commit message → patch bump
 5. Increments the version accordingly
-6. Outputs version info for the GitHub Actions workflow
+6. Outputs version info (bump type, next version, last tag) for the GitHub Actions workflow
+
+The workflow then uses these outputs to update `package.json`, generate changelog entries from `git log`, create a git tag, and publish a GitHub Release.
 
 ## Workflow Files
 
@@ -194,10 +211,10 @@ last_tag=v1.0.2
    - Test locally in the environment matching production
    - Don't push broken commits to main
 
-4. **Review the auto-generated CHANGELOG.md**
-   - Check the GitHub Actions log after a release
-   - Ensure version bump was correct
-   - Verify release notes are meaningful
+4. **Follow the Feature Development Checklist**
+   - Manually maintain organized CHANGELOG.md entries with Added/Changed/Fixed sections (see editor.md)
+   - These manual entries are distinct from the automated commit-based entries prepended by the release workflow
+   - The automated workflow adds raw git commit messages at the top; your manual entries remain organized below
 
 5. **Tag your releases for milestones**
    - Keep important versions as git references
@@ -231,10 +248,14 @@ This is an advanced scenario not covered by the current automation.
 
 ### Q: How do I create a pre-release (alpha, beta, rc)?
 
-**A**: Not supported by the current automation. All releases are production releases. To create a pre-release:
+**A**: Pre-releases are not supported by the current automation. All automated releases are production releases (`prerelease: false` is hardcoded in `.github/workflows/release.yml`).
+
+To create a pre-release without modifying the workflow:
 1. Manually tag it: `git tag -a v1.0.0-rc.1 -m "Release v1.0.0-rc.1"`
 2. Push the tag: `git push origin v1.0.0-rc.1`
-3. Create the GitHub Release manually from the releases page
+3. Create the GitHub Release manually from the releases page and mark it as a pre-release
+
+To enable pre-releases in the automated workflow, modify `.github/workflows/release.yml` line 116 from `prerelease: false` to `prerelease: true` (or add logic to detect `-rc`, `-beta`, `-alpha` suffixes).
 
 ## Troubleshooting
 
@@ -248,16 +269,19 @@ This is an advanced scenario not covered by the current automation.
 
 **Cause**: Commit message doesn't follow Conventional Commits format, or `BREAKING CHANGE:` is in the wrong place.
 
-**Solution**: 
+**Solution**:
 - Commit messages must start with `feat:`, `fix:`, etc. (not just contain it)
 - `BREAKING CHANGE:` must be in the commit body (footer), not the subject line
 - Example: `git log <last-tag>..HEAD` to inspect messages
 
 ### CHANGELOG.md looks wrong
 
-**Cause**: Release notes are generated from raw commit messages. Complex commits or multi-line messages may look odd.
+**Cause**: The automated release workflow generates entries from raw commit messages via `git log`. If commits don't have well-structured messages or detailed descriptions, the generated entries will appear sparse.
 
-**Solution**: The automation is simple by design. For complex changelogs, manually edit `CHANGELOG.md` after a release. Future releases will prepend new entries above your manual edits.
+**Solution**: The automation is simple by design — it extracts commit history, nothing more. The organized sections (Added/Changed/Fixed) in `CHANGELOG.md` are maintained manually during development (see Feature Development Checklist in editor.md). If you need more polished release notes:
+1. Ensure commit messages follow Conventional Commits format and include context
+2. Manually edit the generated entries in `CHANGELOG.md` after a release to add context
+3. Future releases will prepend new entries above your manual edits
 
 ### Tag already exists error
 
