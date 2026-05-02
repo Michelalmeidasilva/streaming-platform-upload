@@ -36,7 +36,7 @@ class MockStorageAdapter implements IStorageAdapter {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
-  async exists(key: string) {
+  async exists(_key: string) {
     return true;
   }
 
