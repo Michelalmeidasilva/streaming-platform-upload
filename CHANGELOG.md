@@ -1,10 +1,6 @@
-## [1.0.1] - 2026-05-02
+## [1.0.2] - 2026-05-02
 
-$COMMITS
-
-## [Unreleased]
-
-### Added
+6fbccac fix: enable variable expansion in changelog generation
 
 - **Automatic thumbnail generation** from uploaded videos
   - Extracts frame at 2-second mark using FFmpeg
