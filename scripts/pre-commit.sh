@@ -15,7 +15,7 @@ echo ""
 # Run Jest unit tests
 echo "🧪 Running unit tests..."
 cd "$PROJECT_ROOT"
-if ! npm test 2>&1; then
+if ! npm test -- --forceExit 2>&1; then
     echo "❌ Tests failed. Commit aborted."
     exit 1
 fi
