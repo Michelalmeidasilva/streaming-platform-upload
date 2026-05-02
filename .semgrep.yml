@@ -1,6 +1,12 @@
 # Semgrep configuration for streaming-platform-upload
-# Combines security, type safety, and code quality rules for Node.js/TypeScript
-# Rules: OWASP Top 10, Security Audit, TypeScript, Node.js-specific
+# Integrates with pre-commit hook to catch security, type safety, and code quality issues
+# before code is committed.
+#
+# Rule sets:
+#   - p/owasp-top-ten: OWASP web vulnerabilities (XSS, CSRF, injection, etc)
+#   - p/security-audit: Hardcoded secrets, unsafe crypto, dangerous patterns
+#   - p/typescript: Type safety violations and best practices
+#   - p/nodejs: Node.js and Express-specific security issues
 
 rules: []
 
@@ -12,6 +18,7 @@ extends:
 
 paths:
   exclude:
+    # Test directories and patterns
     - tests
     - __tests__
     - "*.test.ts"
@@ -20,6 +27,11 @@ paths:
     - "*.spec.tsx"
     - "*.test.js"
     - "*.spec.js"
+    # Test output and reports
+    - coverage
+    - playwright-report
+    - test-results
+    # Build outputs and dependencies
     - node_modules
     - dist
     - build
