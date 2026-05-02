@@ -1,5 +1,11 @@
 # Shift-Left: Execução local antes do push
+# Pre-commit framework configuration for streaming-platform-upload
+# Install hooks: pre-commit install
+# Run manually: pre-commit run --all-files
+# Skip for a commit: git commit --no-verify
+
 repos:
+  # Standard pre-commit hooks: trailing-whitespace, EOF handling, YAML validation
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
@@ -7,14 +13,17 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+        args: ['--maxkb=10000']
 
+  # Detect hardcoded secrets (API keys, credentials, etc.)
   - repo: https://github.com/zricethezav/gitleaks
     rev: v8.18.1
     hooks:
       - id: gitleaks
         description: Detect hardcoded secrets prior to commit
 
-  # Node.js linting and formatting
+  # Node.js linting (ESLint)
+  # Note: TypeScript checking and Jest unit tests are run by scripts/pre-commit.sh
   - repo: local
     hooks:
       - id: npm-lint
