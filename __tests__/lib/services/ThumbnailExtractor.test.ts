@@ -20,11 +20,11 @@ class MockStorageAdapter implements IStorageAdapter {
     return 'etag-123';
   }
 
-  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number) {
+  async getUploadPartPresignedUrl(key: string, _uploadId: string, partNumber: number, _expiresIn?: number) {
     return `https://mock-storage.example.com/${key}?partNumber=${partNumber}&signature=...`;
   }
 
-  async completeMultipartUpload(key: string, uploadId: string, parts: { PartNumber: number; ETag: string }[]) {
+  async completeMultipartUpload(_key: string, _uploadId: string, _parts: { PartNumber: number; ETag: string }[]) {
     return 'https://mock-storage.example.com/video';
   }
 
