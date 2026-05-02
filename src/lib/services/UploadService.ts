@@ -46,6 +46,7 @@ export class UploadService {
     this.thumbnailExtractor = new ThumbnailExtractor(storage, videoEvents);
 
     // Listen for thumbnail events and update video (using NodeEventEmitter base methods)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     videoEvents.on('video.thumbnail.generated' as any, (data: any) => {
       const video = this.videos.get(data.videoId);
       if (video) {
@@ -55,6 +56,7 @@ export class UploadService {
       }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     videoEvents.on('video.thumbnail.fallback' as any, (data: any) => {
       const video = this.videos.get(data.videoId);
       if (video) {

@@ -9,7 +9,6 @@ import VideoList from '@/components/VideoList';
 import ThemeToggle from '@/components/ThemeToggle';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { VideoEventProvider } from '@/lib/context/VideoEventContext';
-import { canUploadVideo } from '@/lib/auth/permissions';
 import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
@@ -58,7 +57,6 @@ export default function Home() {
   const effectiveSession = e2eSession || session;
   const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
   const role = effectiveSession?.user?.role;
-  const isAdmin = canUploadVideo(role);
   const isSessionLoading = effectiveStatus === 'loading';
   const roleLabel = role === 'ADMIN'
     ? t('roles.admin')

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 
 interface VideoEventContextType {
   onUploadComplete: (callback: () => void) => void;
@@ -11,18 +11,18 @@ interface VideoEventContextType {
 const VideoEventContext = createContext<VideoEventContextType | undefined>(undefined);
 
 export function VideoEventProvider({ children }: { children: ReactNode }) {
-  const subscribers: Set<() => void> = new Set();
+  const subscribers = useRef<Set<() => void>>(new Set());
 
   const onUploadComplete = useCallback((callback: () => void) => {
-    subscribers.add(callback);
+    subscribers.current.add(callback);
   }, []);
 
   const unsubscribe = useCallback((callback: () => void) => {
-    subscribers.delete(callback);
+    subscribers.current.delete(callback);
   }, []);
 
   const emitUploadComplete = useCallback(() => {
-    subscribers.forEach(callback => callback());
+    subscribers.current.forEach(callback => callback());
   }, []);
 
   return (

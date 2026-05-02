@@ -169,7 +169,7 @@ export default function UploadArea() {
         }
       }
     },
-    [setStatus, emitUploadComplete, t],
+    [setStatus, emitUploadComplete, t, directUploadEnabled],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {

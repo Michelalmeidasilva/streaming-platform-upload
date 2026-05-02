@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import styles from './VideoList.module.css';
 import Skeleton from './Skeleton';
@@ -58,35 +59,7 @@ export default function VideoList() {
   const canBrowse = canViewVideo(effectiveSession?.user?.role);
   const canManageVideos = canDeleteVideo(effectiveSession?.user?.role);
 
-  useEffect(() => {
-    const handleUploadComplete = () => {
-      if (effectiveSessionStatus === 'authenticated') {
-        fetchVideos(search);
-      }
-    };
-
-    onUploadComplete(handleUploadComplete);
-
-    return () => {
-      unsubscribe(handleUploadComplete);
-    };
-  }, [effectiveSessionStatus, onUploadComplete, search, unsubscribe]);
-
-  useEffect(() => {
-    if (effectiveSessionStatus !== 'authenticated') {
-      setVideos([]);
-      setLoading(effectiveSessionStatus === 'loading');
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      fetchVideos(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [effectiveSessionStatus, search]);
-
-  const fetchVideos = async (query = '') => {
+  const fetchVideos = useCallback(async (query = '') => {
     if (!canBrowse) {
       setVideos([]);
       setLoading(false);
@@ -117,7 +90,35 @@ export default function VideoList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [canBrowse]);
+
+  useEffect(() => {
+    const handleUploadComplete = () => {
+      if (effectiveSessionStatus === 'authenticated') {
+        fetchVideos(search);
+      }
+    };
+
+    onUploadComplete(handleUploadComplete);
+
+    return () => {
+      unsubscribe(handleUploadComplete);
+    };
+  }, [effectiveSessionStatus, onUploadComplete, search, unsubscribe, fetchVideos]);
+
+  useEffect(() => {
+    if (effectiveSessionStatus !== 'authenticated') {
+      setVideos([]);
+      setLoading(effectiveSessionStatus === 'loading');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchVideos(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [effectiveSessionStatus, search, fetchVideos]);
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} ${t('library.formats.sizeBytes')}`;
@@ -236,7 +237,13 @@ export default function VideoList() {
             >
               <div className={styles.thumbnail}>
                 {video.thumbnailUrl ? (
-                  <img src={video.thumbnailUrl} alt={video.title} className={styles.thumbnailImage} />
+                  <Image
+                    src={video.thumbnailUrl}
+                    alt={video.title}
+                    fill
+                    className={styles.thumbnailImage}
+                    style={{ objectFit: 'cover' }}
+                  />
                 ) : null}
                 <div className={styles.playBtn}>
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="white">

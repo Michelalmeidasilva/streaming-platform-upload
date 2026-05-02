@@ -3,11 +3,6 @@ import {
   EventType,
   EventData,
   UploadProgressEvent,
-  UploadCompletedEvent,
-  UploadFailedEvent,
-  VideoProcessingEvent,
-  VideoThumbnailGeneratedEvent,
-  VideoThumbnailFallbackEvent,
 } from './events';
 
 export class VideoEventEmitter extends NodeEventEmitter {

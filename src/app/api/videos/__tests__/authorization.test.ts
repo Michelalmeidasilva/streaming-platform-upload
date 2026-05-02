@@ -1,5 +1,5 @@
 import { GET as listVideos } from '../route';
-import { GET as getVideo, PATCH as updateVideo, DELETE as deleteVideo } from '../[videoId]/route';
+import { PATCH as updateVideo, DELETE as deleteVideo } from '../[videoId]/route';
 import { GET as downloadVideo } from '../[videoId]/download/route';
 
 jest.mock('@/lib/auth/session', () => ({
@@ -42,6 +42,7 @@ describe('video authorization', () => {
   it('returns 401 when listing videos without a session', async () => {
     getCurrentSession.mockResolvedValue(null);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await listVideos(new Request('http://localhost/api/videos') as any);
     expect(response.status).toBe(401);
   });
@@ -51,6 +52,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await deleteVideo(new Request('http://localhost/api/videos/1', { method: 'DELETE' }) as any, {
       params: { videoId: '1' },
     });
@@ -79,6 +81,7 @@ describe('video authorization', () => {
         method: 'PATCH',
         body: JSON.stringify({ title: 'New title' }),
         headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any,
       { params: { videoId: '1' } },
     );
@@ -118,6 +121,7 @@ describe('video authorization', () => {
       }),
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await downloadVideo(new Request('http://localhost/api/videos/1/download') as any, {
       params: { videoId: '1' },
     });
