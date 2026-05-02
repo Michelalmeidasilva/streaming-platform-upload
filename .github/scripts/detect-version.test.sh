@@ -11,6 +11,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Test constants
+TEST_USER='Test User'
+TEST_EMAIL='test@example.com'
+INITIAL_COMMIT='initial commit'
+BREAKING_CHANGE_PREFIX='BREAKING CHANGE:'
+
 # Test counter
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -31,6 +37,7 @@ run_test() {
     echo -e "${RED}FAIL${NC}"
     ((TESTS_FAILED++))
   fi
+  return 0
 }
 
 # Helper function for assertions
@@ -39,7 +46,7 @@ assert_equals() {
   local actual="$2"
   local message="${3:-Values should be equal}"
 
-  if [ "$expected" = "$actual" ]; then
+  if [[ "$expected" = "$actual" ]]; then
     return 0
   else
     echo -e "\n  ${RED}Assertion failed:${NC} $message"
@@ -74,45 +81,55 @@ increment_version() {
     patch)
       ((patch++))
       ;;
+    *)
+      return 1
+      ;;
   esac
 
   echo "${major}.${minor}.${patch}"
+  return 0
 }
 
 # TEST 1: Test major version bump increment
 test_major_version_bump() {
   local result=$(increment_version "1.0.0" "major")
   assert_equals "2.0.0" "$result" "Major version bump should increment major and reset minor/patch"
+  return 0
 }
 
 # TEST 2: Test minor version bump increment
 test_minor_version_bump() {
   local result=$(increment_version "1.0.0" "minor")
   assert_equals "1.1.0" "$result" "Minor version bump should increment minor and reset patch"
+  return 0
 }
 
 # TEST 3: Test patch version bump increment
 test_patch_version_bump() {
   local result=$(increment_version "1.0.0" "patch")
   assert_equals "1.0.1" "$result" "Patch version bump should increment patch only"
+  return 0
 }
 
 # TEST 4: Test major bump with existing minor and patch
 test_major_version_bump_complex() {
   local result=$(increment_version "1.5.7" "major")
   assert_equals "2.0.0" "$result" "Major version bump should reset minor and patch even when non-zero"
+  return 0
 }
 
 # TEST 5: Test minor bump with existing patch
 test_minor_version_bump_complex() {
   local result=$(increment_version "1.5.7" "minor")
   assert_equals "1.6.0" "$result" "Minor version bump should reset patch"
+  return 0
 }
 
 # TEST 6: Test patch bump doesn't affect major/minor
 test_patch_version_bump_complex() {
   local result=$(increment_version "1.5.7" "patch")
   assert_equals "1.5.8" "$result" "Patch version bump should only increment patch"
+  return 0
 }
 
 # TEST 7: Test detection of major (BREAKING CHANGE)
@@ -122,13 +139,13 @@ test_detect_major_breaking_change() {
   cd "$tmpdir"
 
   git init > /dev/null 2>&1
-  git config user.email "test@example.com"
-  git config user.name "Test User"
+  git config user.email "$TEST_EMAIL"
+  git config user.name "$TEST_USER"
 
   # Create initial commit and tag
   echo "test" > file.txt
   git add file.txt
-  git commit -m "initial commit" > /dev/null 2>&1
+  git commit -m "$INITIAL_COMMIT" > /dev/null 2>&1
   git tag v1.0.0 > /dev/null 2>&1
 
   # Create commit with BREAKING CHANGE
@@ -136,13 +153,13 @@ test_detect_major_breaking_change() {
   git add file.txt
   git commit -m "feat: breaking change
 
-BREAKING CHANGE: API endpoint changed" > /dev/null 2>&1
+$BREAKING_CHANGE_PREFIX API endpoint changed" > /dev/null 2>&1
 
   # Extract commits and detect type
   COMMITS=$(git log v1.0.0..HEAD --format=%B)
   local bump_type="patch"
 
-  if echo "$COMMITS" | grep -q "BREAKING CHANGE:"; then
+  if echo "$COMMITS" | grep -q "$BREAKING_CHANGE_PREFIX"; then
     bump_type="major"
   fi
 
@@ -150,6 +167,7 @@ BREAKING CHANGE: API endpoint changed" > /dev/null 2>&1
   rm -rf "$tmpdir"
 
   assert_equals "major" "$bump_type" "Should detect major bump from BREAKING CHANGE in commit message"
+  return 0
 }
 
 # TEST 8: Test detection of minor (feat:)
@@ -158,13 +176,13 @@ test_detect_minor_feature() {
   cd "$tmpdir"
 
   git init > /dev/null 2>&1
-  git config user.email "test@example.com"
-  git config user.name "Test User"
+  git config user.email "$TEST_EMAIL"
+  git config user.name "$TEST_USER"
 
   # Create initial commit and tag
   echo "test" > file.txt
   git add file.txt
-  git commit -m "initial commit" > /dev/null 2>&1
+  git commit -m "$INITIAL_COMMIT" > /dev/null 2>&1
   git tag v1.0.0 > /dev/null 2>&1
 
   # Create commit with feat:
@@ -176,7 +194,7 @@ test_detect_minor_feature() {
   COMMITS=$(git log v1.0.0..HEAD --format=%B)
   local bump_type="patch"
 
-  if echo "$COMMITS" | grep -q "BREAKING CHANGE:"; then
+  if echo "$COMMITS" | grep -q "$BREAKING_CHANGE_PREFIX"; then
     bump_type="major"
   elif echo "$COMMITS" | grep -q "^feat:"; then
     bump_type="minor"
@@ -186,6 +204,7 @@ test_detect_minor_feature() {
   rm -rf "$tmpdir"
 
   assert_equals "minor" "$bump_type" "Should detect minor bump from 'feat:' commit message"
+  return 0
 }
 
 # TEST 9: Test detection of patch (fix:)
@@ -194,13 +213,13 @@ test_detect_patch_fix() {
   cd "$tmpdir"
 
   git init > /dev/null 2>&1
-  git config user.email "test@example.com"
-  git config user.name "Test User"
+  git config user.email "$TEST_EMAIL"
+  git config user.name "$TEST_USER"
 
   # Create initial commit and tag
   echo "test" > file.txt
   git add file.txt
-  git commit -m "initial commit" > /dev/null 2>&1
+  git commit -m "$INITIAL_COMMIT" > /dev/null 2>&1
   git tag v1.0.0 > /dev/null 2>&1
 
   # Create commit with fix:
@@ -212,7 +231,7 @@ test_detect_patch_fix() {
   COMMITS=$(git log v1.0.0..HEAD --format=%B)
   local bump_type="patch"
 
-  if echo "$COMMITS" | grep -q "BREAKING CHANGE:"; then
+  if echo "$COMMITS" | grep -q "$BREAKING_CHANGE_PREFIX"; then
     bump_type="major"
   elif echo "$COMMITS" | grep -q "^feat:"; then
     bump_type="minor"
@@ -224,6 +243,7 @@ test_detect_patch_fix() {
   rm -rf "$tmpdir"
 
   assert_equals "patch" "$bump_type" "Should detect patch bump from 'fix:' commit message"
+  return 0
 }
 
 # TEST 10: Test that BREAKING CHANGE takes precedence over feat:
@@ -232,13 +252,13 @@ test_breaking_change_precedence() {
   cd "$tmpdir"
 
   git init > /dev/null 2>&1
-  git config user.email "test@example.com"
-  git config user.name "Test User"
+  git config user.email "$TEST_EMAIL"
+  git config user.name "$TEST_USER"
 
   # Create initial commit and tag
   echo "test" > file.txt
   git add file.txt
-  git commit -m "initial commit" > /dev/null 2>&1
+  git commit -m "$INITIAL_COMMIT" > /dev/null 2>&1
   git tag v1.0.0 > /dev/null 2>&1
 
   # Create feat with BREAKING CHANGE
@@ -246,13 +266,13 @@ test_breaking_change_precedence() {
   git add file.txt
   git commit -m "feat: new feature
 
-BREAKING CHANGE: API changed" > /dev/null 2>&1
+$BREAKING_CHANGE_PREFIX API changed" > /dev/null 2>&1
 
   # Extract commits and detect type
   COMMITS=$(git log v1.0.0..HEAD --format=%B)
   local bump_type="patch"
 
-  if echo "$COMMITS" | grep -q "BREAKING CHANGE:"; then
+  if echo "$COMMITS" | grep -q "$BREAKING_CHANGE_PREFIX"; then
     bump_type="major"
   elif echo "$COMMITS" | grep -q "^feat:"; then
     bump_type="minor"
@@ -262,24 +282,28 @@ BREAKING CHANGE: API changed" > /dev/null 2>&1
   rm -rf "$tmpdir"
 
   assert_equals "major" "$bump_type" "BREAKING CHANGE should take precedence over feat:"
+  return 0
 }
 
 # TEST 11: Test pre-release version parsing and stripping
 test_prerelease_version_parsing() {
   local result=$(increment_version "1.0.0-alpha.1" "minor")
   assert_equals "1.1.0" "$result" "Pre-release version should be stripped before incrementing"
+  return 0
 }
 
 # TEST 12: Test pre-release version with build metadata
 test_prerelease_with_build_metadata() {
   local result=$(increment_version "1.0.0-beta.1+build.123" "major")
   assert_equals "2.0.0" "$result" "Pre-release and build metadata should be stripped before incrementing"
+  return 0
 }
 
 # TEST 13: Test pre-release patch bump
 test_prerelease_patch_bump() {
   local result=$(increment_version "1.5.7-rc.1" "patch")
   assert_equals "1.5.8" "$result" "Patch bump should work with pre-release versions"
+  return 0
 }
 
 # Run all tests

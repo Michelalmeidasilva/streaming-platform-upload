@@ -35,6 +35,15 @@ jobs:
         id: version
         run: bash .github/scripts/detect-version.sh
 
+      - name: Validate version detection
+        run: |
+          if [[ -z "${{ steps.version.outputs.next_version }}" ]]; then
+            echo "Error: Failed to detect next version"
+            exit 1
+          fi
+          echo "Version bump detected: ${{ steps.version.outputs.bump_type }}"
+          echo "Next version: ${{ steps.version.outputs.next_version }}"
+
       - name: Update package.json version
         run: |
           npm version ${{ steps.version.outputs.next_version }} --no-git-tag-version
@@ -42,13 +51,12 @@ jobs:
 
       - name: Generate Changelog
         id: changelog_builder
-        uses: mikepenz/changelog-builder-action@v4
+        uses: mikepenz/changelog-builder-action@v4.4.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           sinceTag: ${{ steps.version.outputs.last_tag }}
           untilTag: v${{ steps.version.outputs.next_version }}
           outputFile: RELEASE_NOTES.md
-        continue-on-error: true
 
       - name: Update CHANGELOG.md
         run: |
@@ -75,6 +83,13 @@ jobs:
           # Replace old changelog
           mv CHANGELOG_NEW.md CHANGELOG.md
 
+      - name: Validate changes
+        run: |
+          if [[ $(git status --porcelain | wc -l) -eq 0 ]]; then
+            echo "Error: No changes to commit"
+            exit 1
+          fi
+
       - name: Commit version and changelog
         run: |
           git add package.json package-lock.json CHANGELOG.md
@@ -86,11 +101,10 @@ jobs:
 
       - name: Push commits and tags
         run: |
-          git push origin main
-          git push origin v${{ steps.version.outputs.next_version }}
+          git push origin main --tags
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v1.8.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ steps.version.outputs.next_version }}
