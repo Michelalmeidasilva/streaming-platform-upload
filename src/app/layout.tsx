@@ -25,6 +25,23 @@ export default function RootLayout({
 
   return (
     <html lang={initialLocale}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const saved = localStorage.getItem('theme');
+                  const theme = saved || 'light';
+                  document.documentElement.setAttribute('data-theme', theme);
+                } catch (e) {
+                  document.documentElement.setAttribute('data-theme', 'light');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body>
         <Providers initialLocale={initialLocale}>{children}</Providers>
       </body>

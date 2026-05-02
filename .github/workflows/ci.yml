@@ -47,6 +47,6 @@ jobs:
           projectBaseDir: .
           args: >
             -Dsonar.projectKey=vod-streaming-platform-upload
-            -Dsonar.organization=your-org
+            -Dsonar.organization=michelalmeidasilva
             -Dsonar.sources=.
             -Dsonar.exclusions=node_modules/**,dist/**,coverage/**

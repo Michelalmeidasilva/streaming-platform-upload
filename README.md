@@ -247,6 +247,8 @@ This service is part of the **Video on Demand (VOD) platform** microservices:
 
 Refer to the parent `editor.md` for the complete architecture and end-to-end flow.
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Michelalmeidasilva_streaming-platform-upload&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Michelalmeidasilva_streaming-platform-upload)
+
 ## License
 
 See LICENSE file (if present) or contact the project maintainers.

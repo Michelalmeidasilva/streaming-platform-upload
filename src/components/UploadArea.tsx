@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import styles from './UploadArea.module.css';
+import Skeleton from './Skeleton';
 import { validateCMAFFile } from '@/lib/cmaf';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
@@ -207,10 +208,9 @@ export default function UploadArea() {
   if (effectiveStatus === 'loading') {
     return (
       <div className={styles.container}>
-        <div className={styles.lockedState}>
-          <p className={styles.lockedLabel}>{t('upload.loading.sessionLabel')}</p>
-          <h3>{t('upload.loading.title')}</h3>
-          <p>{t('upload.loading.copy')}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <Skeleton height="240px" variant="rect" />
+          <Skeleton height="16px" width="40%" />
         </div>
       </div>
     );

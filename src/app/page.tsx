@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import UploadArea from '@/components/UploadArea';
 import VideoList from '@/components/VideoList';
+import ThemeToggle from '@/components/ThemeToggle';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { VideoEventProvider } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
@@ -12,6 +15,7 @@ import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 export default function Home() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const { locale, setLocale, t } = useI18n();
   const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
@@ -19,6 +23,13 @@ export default function Home() {
   const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
     e2eAuthEnabled ? undefined : null,
   );
+
+  // Redirecionar usuários não autenticados para login
+  useEffect(() => {
+    if (status === 'unauthenticated' && !e2eSession) {
+      router.push('/auth/login');
+    }
+  }, [status, e2eSession, router]);
 
   useEffect(() => {
     document.title = t('metadata.title');
@@ -73,16 +84,7 @@ export default function Home() {
     return (
       <VideoEventProvider>
         <div className={styles.loadingScreen}>
-          <div className={styles.loadingPanel}>
-            <p className={styles.loadingEyebrow}>{t('auth.secureAccess')}</p>
-            <h1 className={styles.loadingTitle}>{t('auth.restoringSession')}</h1>
-            <p className={styles.loadingCopy}>{t('auth.checkingSession')}</p>
-            <div className={styles.loadingIndicator} aria-hidden="true">
-              <span className={styles.loadingDot} />
-              <span className={styles.loadingDot} />
-              <span className={styles.loadingDot} />
-            </div>
-          </div>
+          <LoadingSpinner />
         </div>
       </VideoEventProvider>
     );
@@ -104,26 +106,7 @@ export default function Home() {
               <path d="M8 21h8M12 17v4" />
             </svg>
           </div>
-
-          <div className={styles.navItem} title={t('app.sidebar.upload')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </div>
-
-          <div className={styles.navItem} title={t('app.sidebar.dashboard')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-            </svg>
-          </div>
-
           <div className={styles.sidebarSpacer} />
-
           <div className={styles.navItem} title={t('app.sidebar.settings')}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -142,6 +125,7 @@ export default function Home() {
             </div>
 
             <div className={styles.topbarActions}>
+              <ThemeToggle />
               <label className={styles.localeSelectWrap}>
                 <span className={styles.srOnly}>{t('locale.label')}</span>
                 <select
@@ -181,41 +165,6 @@ export default function Home() {
           </div>
 
           <div className={styles.content}>
-            {!effectiveSession ? (
-              <section className={styles.hero}>
-                <p className={styles.heroEyebrow}>{t('auth.secureAccess')}</p>
-                <h1 className={styles.heroTitle}>{t('auth.protectMessage')}</h1>
-                <p className={styles.heroCopy}>{t('auth.memberMessage')}</p>
-                <div className={styles.heroActions}>
-                  <button className={styles.primaryButton} onClick={() => signIn('google')}>
-                    {t('auth.signInWithGoogle')}
-                  </button>
-                  {e2eAuthEnabled ? (
-                    <button className={styles.primaryButton} onClick={signInAsE2EAdmin}>
-                      {t('auth.signInAsE2EAdmin')}
-                    </button>
-                  ) : null}
-                </div>
-              </section>
-            ) : (
-              <section className={styles.statusPanel}>
-                <div>
-                  <p className={styles.statusLabel}>{t('auth.session')}</p>
-                  <p className={styles.statusValue}>{effectiveSession.user?.email}</p>
-                </div>
-                <div>
-                  <p className={styles.statusLabel}>{t('auth.role')}</p>
-                  <p className={styles.statusValue}>{roleLabel || role}</p>
-                </div>
-                <div>
-                  <p className={styles.statusLabel}>{t('auth.capabilities')}</p>
-                  <p className={styles.statusValue}>
-                    {isAdmin ? t('auth.capabilitiesAdmin') : t('auth.capabilitiesMember')}
-                  </p>
-                </div>
-              </section>
-            )}
-
             <UploadArea />
 
             <div className={styles.sectionHeader}>

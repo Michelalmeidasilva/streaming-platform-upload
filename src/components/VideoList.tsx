@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import styles from './VideoList.module.css';
+import Skeleton from './Skeleton';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
@@ -147,9 +148,14 @@ export default function VideoList() {
 
   if (effectiveSessionStatus === 'loading') {
     return (
-      <div className={styles.loading}>
-        <div className={styles.spinner} />
-        <p>{t('library.loadingSession')}</p>
+      <div className={styles.grid}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Skeleton height="180px" variant="rect" />
+            <Skeleton height="16px" width="80%" />
+            <Skeleton height="12px" width="60%" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -196,9 +202,14 @@ export default function VideoList() {
       )}
 
       {loading && (
-        <div className={styles.loading}>
-          <div className={styles.spinner} />
-          <p>{t('library.search.loading')}</p>
+        <div className={styles.grid}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Skeleton height="180px" variant="rect" />
+              <Skeleton height="16px" width="80%" />
+              <Skeleton height="12px" width="60%" />
+            </div>
+          ))}
         </div>
       )}
 

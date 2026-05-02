@@ -22,9 +22,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Semgrep
-        uses: docker://semgrep/semgrep:latest
+        uses: returntocorp/semgrep-action@v1
         with:
-          args: scan --config=.semgrep.yml --sarif --sarif-output=semgrep.sarif .
+          config: .semgrep.yml
+          sarif: true
+          generateSarif: semgrep.sarif
 
       - name: Upload SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
