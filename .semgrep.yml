@@ -1,12 +1,14 @@
 # Semgrep configuration for streaming-platform-upload
-# Integrates with pre-commit hook to catch security, type safety, and code quality issues
-# before code is committed.
+# Security, type safety, and code quality rules for Node.js/TypeScript
 #
 # Rule sets:
 #   - p/owasp-top-ten: OWASP web vulnerabilities (XSS, CSRF, injection, etc)
 #   - p/security-audit: Hardcoded secrets, unsafe crypto, dangerous patterns
 #   - p/typescript: Type safety violations and best practices
 #   - p/nodejs: Node.js and Express-specific security issues
+#
+# This configuration is prepared for integration with the pre-commit hook
+# (see Task 2: updating .pre-commit-config.yaml)
 
 rules: []
 
