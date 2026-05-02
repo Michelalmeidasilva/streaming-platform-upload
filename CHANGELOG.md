@@ -1,11 +1,15 @@
-## [1.0.2] - 2026-05-02
+## [1.0.3] - 2026-05-02
 
-6fbccac fix: enable variable expansion in changelog generation
+b3b31f5 Fix upload service test expectations
+b96c304 test: add comprehensive VideoEventEmitter coverage to 80%+
+d4e6241 test: improve S3Adapter coverage to 80%+
+592c595 test: improve MinIOAdapter coverage to 80%+
+54b4217 docs: clarify that every push to main creates a release
+4961c48 test: improve download endpoint coverage to 80%+
+3a95a05 docs: add release process documentation
+89e95df test: improve PATCH/DELETE /api/videos/[videoId] coverage to 80%+
+66ab897 test: improve GET /api/videos endpoint coverage to 80%+
 
-- **Automatic thumbnail generation** from uploaded videos
-  - Extracts frame at 2-second mark using FFmpeg
-  - Generates 640×360 JPEG thumbnail for all uploads
-  - Stores thumbnails in S3/MinIO under `/thumbnails/` prefix
   - Non-blocking: extraction happens asynchronously after upload completes
   - Graceful fallback to dynamic placeholder images if extraction fails
   - Emits `video.thumbnail.generated` and `video.thumbnail.fallback` events
