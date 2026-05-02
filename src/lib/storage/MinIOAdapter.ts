@@ -67,7 +67,7 @@ export class MinIOAdapter implements IStorageAdapter {
         Bucket: this.bucket,
         Key: key,
         UploadId: uploadId,
-        PartNumberMarker: partNumberMarker,
+        PartNumberMarker: partNumberMarker?.toString(),
       }));
 
       for (const part of response.Parts || []) {
@@ -76,7 +76,9 @@ export class MinIOAdapter implements IStorageAdapter {
         }
       }
 
-      partNumberMarker = response.IsTruncated ? response.NextPartNumberMarker : undefined;
+      partNumberMarker = response.IsTruncated && response.NextPartNumberMarker
+        ? Number(response.NextPartNumberMarker)
+        : undefined;
     } while (partNumberMarker);
 
     return normalizeCompletedParts(parts);
@@ -178,7 +180,7 @@ export class MinIOAdapter implements IStorageAdapter {
   ): Promise<string> {
     const composeSession = this.multipartComposeState.get(uploadId);
     if (composeSession && composeSession.partKeys.size > 0) {
-      const orderedPartKeys = [...composeSession.partKeys.entries()]
+      const orderedPartKeys = Array.from(composeSession.partKeys.entries())
         .sort((a, b) => a[0] - b[0])
         .map(([, partKey]) => partKey);
 

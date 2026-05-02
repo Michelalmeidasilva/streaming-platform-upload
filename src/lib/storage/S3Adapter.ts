@@ -54,7 +54,7 @@ export class S3Adapter implements IStorageAdapter {
         Bucket: this.bucket,
         Key: key,
         UploadId: uploadId,
-        PartNumberMarker: partNumberMarker,
+        PartNumberMarker: partNumberMarker?.toString(),
       }));
 
       for (const part of response.Parts || []) {
@@ -63,7 +63,9 @@ export class S3Adapter implements IStorageAdapter {
         }
       }
 
-      partNumberMarker = response.IsTruncated ? response.NextPartNumberMarker : undefined;
+      partNumberMarker = response.IsTruncated && response.NextPartNumberMarker
+        ? Number(response.NextPartNumberMarker)
+        : undefined;
     } while (partNumberMarker);
 
     return normalizeCompletedParts(parts);

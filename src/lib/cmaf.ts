@@ -2,7 +2,7 @@ const SUPPORTED_FORMATS = ['.mp4', '.mov', '.m4v', '.webm', '.m3u8'];
 
 export interface ValidationResult {
   valid: boolean;
-  error?: string;
+  errorKey?: 'unsupportedFormat' | 'fileTooLarge';
 }
 
 export function validateCMAFFile(file: File): ValidationResult {
@@ -12,7 +12,7 @@ export function validateCMAFFile(file: File): ValidationResult {
   if (!SUPPORTED_FORMATS.includes(extension)) {
     return {
       valid: false,
-      error: `Unsupported format. Supported formats: ${SUPPORTED_FORMATS.join(', ')}`,
+      errorKey: 'unsupportedFormat',
     };
   }
 
@@ -20,7 +20,7 @@ export function validateCMAFFile(file: File): ValidationResult {
   if (file.size > maxSize) {
     return {
       valid: false,
-      error: 'File size exceeds 5GB limit',
+      errorKey: 'fileTooLarge',
     };
   }
 

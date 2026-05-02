@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Object not found' }, { status: 404 });
   }
 
-  return new NextResponse(object.body, {
+  return new NextResponse(new Uint8Array(object.body), {
     status: 200,
     headers: {
       'Content-Type': object.contentType,

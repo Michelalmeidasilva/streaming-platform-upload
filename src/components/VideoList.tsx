@@ -7,6 +7,7 @@ import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
 import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 interface Video {
   id: string;
@@ -23,6 +24,7 @@ interface Video {
 
 export default function VideoList() {
   const { data: session, status: sessionStatus } = useSession();
+  const { t, formatDate } = useI18n();
   const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
   const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
     e2eAuthEnabled ? undefined : null,
@@ -50,7 +52,7 @@ export default function VideoList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<'signIn' | 'generic' | null>(null);
   const { onUploadComplete, unsubscribe } = useVideoEvents();
   const canBrowse = canViewVideo(effectiveSession?.user?.role);
   const canManageVideos = canDeleteVideo(effectiveSession?.user?.role);
@@ -98,7 +100,7 @@ export default function VideoList() {
 
       if (response.status === 401) {
         setVideos([]);
-        setLoadError('Sign in to browse the library.');
+        setLoadError('signIn');
         return;
       }
 
@@ -110,26 +112,17 @@ export default function VideoList() {
       setVideos(data.videos || []);
     } catch (error) {
       console.error('Failed to fetch videos:', error);
-      setLoadError('Unable to load videos right now.');
+      setLoadError('generic');
     } finally {
       setLoading(false);
     }
   };
 
   const formatSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    if (bytes < 1024) return `${bytes} ${t('library.formats.sizeBytes')}`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${t('library.formats.sizeKilobytes')}`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} ${t('library.formats.sizeMegabytes')}`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} ${t('library.formats.sizeGigabytes')}`;
   };
 
   const handleDelete = async (videoId: string) => {
@@ -156,7 +149,7 @@ export default function VideoList() {
     return (
       <div className={styles.loading}>
         <div className={styles.spinner} />
-        <p>Loading session...</p>
+        <p>{t('library.loadingSession')}</p>
       </div>
     );
   }
@@ -170,8 +163,8 @@ export default function VideoList() {
             <path d="M8 21h8M12 17v4" />
           </svg>
         </div>
-        <h3>Sign in to view videos</h3>
-        <p>Authenticated members can search and download the library.</p>
+        <h3>{t('library.signInToView')}</h3>
+        <p>{t('library.signInToViewCopy')}</p>
       </div>
     );
   }
@@ -188,7 +181,7 @@ export default function VideoList() {
           </div>
           <input
             type="text"
-            placeholder="Search your videos..."
+            placeholder={t('library.search.placeholder')}
             className={styles.searchInput}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -198,14 +191,14 @@ export default function VideoList() {
 
       {loadError && (
         <div className={styles.errorBanner}>
-          <p>{loadError}</p>
+          <p>{t(`library.loadError.${loadError}`)}</p>
         </div>
       )}
 
       {loading && (
         <div className={styles.loading}>
           <div className={styles.spinner} />
-          <p>Searching videos...</p>
+          <p>{t('library.search.loading')}</p>
         </div>
       )}
 
@@ -217,8 +210,8 @@ export default function VideoList() {
               <path d="M8 21h8M12 17v4" />
             </svg>
           </div>
-          <h3>{search ? 'Nenhum resultado encontrado' : 'Nenhum vídeo ainda'}</h3>
-          <p>{search ? `Não encontramos nada para "${search}"` : 'Importe seu primeiro arquivo para começar'}</p>
+          <h3>{search ? t('library.empty.searchTitle') : t('library.empty.emptyTitle')}</h3>
+          <p>{search ? t('library.empty.searchCopy', { query: search }) : t('library.empty.emptyCopy')}</p>
         </div>
       )}
 
@@ -255,10 +248,10 @@ export default function VideoList() {
                 </div>
                 <div className={styles.footer}>
                   <span className={`${styles.statusBadge} ${styles[video.status]}`}>
-                    {video.status === 'ready' && 'Ready'}
-                    {video.status === 'processing' && 'Process'}
-                    {video.status === 'uploading' && 'Uploading'}
-                    {video.status === 'error' && 'Erro'}
+                    {video.status === 'ready' && t('library.status.ready')}
+                    {video.status === 'processing' && t('library.status.processing')}
+                    {video.status === 'uploading' && t('library.status.uploading')}
+                    {video.status === 'error' && t('library.status.error')}
                   </span>
                   {canManageVideos ? (
                     <button
@@ -268,10 +261,10 @@ export default function VideoList() {
                         handleDelete(video.id);
                       }}
                     >
-                      Excluir
+                      {t('library.actions.delete')}
                     </button>
                   ) : (
-                    <span className={styles.memberLabel}>Download only</span>
+                    <span className={styles.memberLabel}>{t('library.memberOnly')}</span>
                   )}
                 </div>
               </div>

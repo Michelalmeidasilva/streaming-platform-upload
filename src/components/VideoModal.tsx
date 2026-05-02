@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import styles from './VideoModal.module.css';
+import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 interface Video {
   id: string;
@@ -35,6 +36,7 @@ export default function VideoModal({
 }: VideoModalProps) {
   const [title, setTitle] = useState(video.title);
   const [saving, setSaving] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     setTitle(video.title);
@@ -91,13 +93,13 @@ export default function VideoModal({
       <div className={styles.modal}>
         <div className={styles.header}>
           <div className={styles.headerCopy}>
-            <h2 className={styles.title}>{canManageVideos ? 'Manage video' : video.title}</h2>
+            <h2 className={styles.title}>{canManageVideos ? t('modal.manageVideo') : video.title}</h2>
             <p className={styles.subtitle}>{video.originalName}</p>
           </div>
           <button
             className={styles.closeBtn}
             onClick={onClose}
-            aria-label="Close video player"
+            aria-label={t('modal.closeLabel')}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -115,7 +117,7 @@ export default function VideoModal({
         </div>
         <div className={styles.footer}>
           <a className={styles.downloadButton} href={video.downloadUrl} download={video.originalName}>
-            Download
+            {t('modal.download')}
           </a>
           {canManageVideos ? (
             <div className={styles.manageGroup}>
@@ -123,13 +125,13 @@ export default function VideoModal({
                 className={styles.titleInput}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                aria-label="Video title"
+                aria-label={t('modal.titleLabel')}
               />
               <button className={styles.secondaryButton} onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save title'}
+                {saving ? t('modal.saving') : t('modal.saveTitle')}
               </button>
               <button className={styles.dangerButton} onClick={handleDelete}>
-                Delete
+                {t('modal.delete')}
               </button>
             </div>
           ) : null}

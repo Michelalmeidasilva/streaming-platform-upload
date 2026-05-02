@@ -7,6 +7,7 @@ import { validateCMAFFile } from '@/lib/cmaf';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 interface UploadProgress {
   videoId: string;
@@ -58,6 +59,7 @@ export default function UploadArea() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useI18n();
   const { emitUploadComplete } = useVideoEvents();
   const { data: session, status } = useSession();
   const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
@@ -96,7 +98,11 @@ export default function UploadArea() {
       for (const file of Array.from(files)) {
         const validation = validateCMAFFile(file);
         if (!validation.valid) {
-          alert(validation.error);
+          if (validation.errorKey === 'unsupportedFormat') {
+            alert(t('upload.validation.unsupportedFormat', { formats: '.mp4, .mov, .m4v, .webm, .m3u8' }));
+          } else if (validation.errorKey === 'fileTooLarge') {
+            alert(t('upload.validation.fileTooLarge'));
+          }
           continue;
         }
 
@@ -113,7 +119,7 @@ export default function UploadArea() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: file.name, size: file.size, mimeType: file.type }),
           });
-          if (!initRes.ok) throw new Error('Failed to initiate upload');
+          if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
           const { sessionId, chunkSize, totalChunks, presignedUrls } = await initRes.json();
 
           // 2. Upload each chunk sequentially
@@ -132,7 +138,7 @@ export default function UploadArea() {
                   method: 'POST',
                   body: chunkBlob,
                 });
-            if (!chunkRes.ok) throw new Error(`Chunk ${i} upload failed`);
+            if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
 
             const etag = chunkRes.headers.get('ETag');
             if (directUploadEnabled && etag) {
@@ -149,7 +155,7 @@ export default function UploadArea() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId, etags, thumbnail: thumbnailBase64 }),
           });
-          if (!completeRes.ok) throw new Error('Failed to complete upload');
+          if (!completeRes.ok) throw new Error(t('upload.errors.complete'));
 
           setStatus(videoId, { progress: 100, status: 'processing' });
           setTimeout(() => {
@@ -162,7 +168,7 @@ export default function UploadArea() {
         }
       }
     },
-    [setStatus, emitUploadComplete],
+    [setStatus, emitUploadComplete, t],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -202,9 +208,9 @@ export default function UploadArea() {
     return (
       <div className={styles.container}>
         <div className={styles.lockedState}>
-          <p className={styles.lockedLabel}>Loading session</p>
-          <h3>Checking access</h3>
-          <p>Preparing role-aware upload controls.</p>
+          <p className={styles.lockedLabel}>{t('upload.loading.sessionLabel')}</p>
+          <h3>{t('upload.loading.title')}</h3>
+          <p>{t('upload.loading.copy')}</p>
         </div>
       </div>
     );
@@ -214,9 +220,9 @@ export default function UploadArea() {
     return (
       <div className={styles.container}>
         <div className={styles.lockedState}>
-          <p className={styles.lockedLabel}>Sign in required</p>
-          <h3>Upload controls are protected</h3>
-          <p>Use Google sign-in to access admin upload actions.</p>
+          <p className={styles.lockedLabel}>{t('auth.signInRequiredCopy')}</p>
+          <h3>{t('auth.uploadProtected')}</h3>
+          <p>{t('auth.uploadProtectedCopy')}</p>
         </div>
       </div>
     );
@@ -226,9 +232,9 @@ export default function UploadArea() {
     return (
       <div className={styles.container}>
         <div className={styles.lockedState}>
-          <p className={styles.lockedLabel}>Member access</p>
-          <h3>Uploads are available to admins only</h3>
-          <p>You can still browse and download videos from the library.</p>
+          <p className={styles.lockedLabel}>{t('auth.memberAccess')}</p>
+          <h3>{t('auth.uploadsAdminOnly')}</h3>
+          <p>{t('auth.memberBrowseCopy')}</p>
         </div>
       </div>
     );
@@ -260,10 +266,11 @@ export default function UploadArea() {
             </svg>
           </div>
           <div className={styles.dropzoneText}>
-            <h3>{isDragging ? 'Solte para iniciar o upload' : 'Arraste arquivos de vídeo aqui'}</h3>
-            <p>{isDragging ? 'Arquivos detectados' : 'ou clique para selecionar'}</p>
+            <h3>{isDragging ? t('upload.dropzone.activeTitle') : t('upload.dropzone.idleTitle')}</h3>
+            <p>{isDragging ? t('upload.dropzone.activeCopy') : t('upload.dropzone.idleCopy')}</p>
           </div>
           <div className={styles.formats}>
+            <span className={styles.formatLabel}>{t('upload.dropzone.formats')}</span>
             <span className={styles.formatBadge}>MP4</span>
             <span className={styles.formatBadge}>MOV</span>
             <span className={styles.formatBadge}>M4V</span>
@@ -289,15 +296,15 @@ export default function UploadArea() {
               </div>
               <div className={styles.uploadActions}>
                 <span className={`${styles.statusBadge} ${styles[upload.status]}`}>
-                  {upload.status === 'uploading' && `${Math.round(upload.progress)}%`}
-                  {upload.status === 'processing' && 'Processando'}
-                  {upload.status === 'ready' && 'Pronto'}
-                  {upload.status === 'error' && 'Erro'}
+                  {upload.status === 'uploading' && t('upload.uploadStatus.uploading', { progress: Math.round(upload.progress) })}
+                  {upload.status === 'processing' && t('upload.uploadStatus.processing')}
+                  {upload.status === 'ready' && t('upload.uploadStatus.ready')}
+                  {upload.status === 'error' && t('upload.uploadStatus.error')}
                 </span>
                 <button
                   className={styles.removeBtn}
                   onClick={e => { e.stopPropagation(); removeUpload(upload.videoId); }}
-                  aria-label="Remover"
+                  aria-label={t('upload.actions.remove')}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
