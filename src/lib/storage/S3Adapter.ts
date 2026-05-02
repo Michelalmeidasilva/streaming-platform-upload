@@ -29,6 +29,12 @@ function normalizeCompletedParts(parts: { PartNumber: number; ETag: string }[]) 
     }));
 }
 
+/**
+ * S3Adapter — AWS S3 storage implementation for the IStorageAdapter interface.
+ * Handles single and multipart uploads with automatic encryption and integrity checking.
+ * Supports presigned URLs for direct browser uploads (bypass server).
+ * Respects StorageSecurityPolicy for encryption, checksums, and TTLs.
+ */
 export class S3Adapter implements IStorageAdapter {
   private client: S3Client;
   private bucket: string;
