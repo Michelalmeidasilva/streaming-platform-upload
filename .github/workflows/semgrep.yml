@@ -12,19 +12,22 @@ jobs:
   semgrep:
     runs-on: ubuntu-latest
     name: Security & Code Quality
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
+        uses: docker://semgrep/semgrep:latest
         with:
-          config: .semgrep.yml
-          generateSarif: true
+          args: scan --config=.semgrep.yml --sarif --sarif-output=semgrep.sarif .
 
       - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('semgrep.sarif') != ''
         with:
           sarif_file: semgrep.sarif
