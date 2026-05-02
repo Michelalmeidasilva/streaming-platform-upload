@@ -28,7 +28,7 @@ repos:
     rev: v1.45.0
     hooks:
       - id: semgrep
-        args: ['--config=.semgrep.yml', '--error']
+        args: ['--config=p/owasp-top-ten', '--config=p/security-audit', '--config=p/typescript', '--config=p/nodejs', '--error']
         types_or: [ts, tsx, javascript, json]
         description: Run semgrep security and code quality checks
 
