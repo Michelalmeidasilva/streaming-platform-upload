@@ -22,6 +22,16 @@ repos:
       - id: gitleaks
         description: Detect hardcoded secrets prior to commit
 
+  # Security & code quality scanning with semgrep
+  # Checks for OWASP vulnerabilities, type safety, and Node.js-specific issues
+  - repo: https://github.com/returntocorp/semgrep
+    rev: v1.45.0
+    hooks:
+      - id: semgrep
+        args: ['--config=.semgrep.yml', '--error']
+        types: [ts, tsx, js, json]
+        description: Run semgrep security and code quality checks
+
   # Node.js linting (ESLint)
   # Note: TypeScript checking and Jest unit tests are run by scripts/pre-commit.sh
   - repo: local
