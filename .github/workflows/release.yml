@@ -56,7 +56,7 @@ jobs:
           LAST_TAG=${{ steps.version.outputs.last_tag }}
           COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
 
-          cat > RELEASE_NOTES.md << 'EOF'
+          cat > RELEASE_NOTES.md << EOF
           $COMMITS
           EOF
 
