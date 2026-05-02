@@ -51,12 +51,14 @@ jobs:
 
       - name: Generate Changelog
         id: changelog_builder
-        uses: mikepenz/changelog-builder-action@v4.4.2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          sinceTag: ${{ steps.version.outputs.last_tag }}
-          untilTag: v${{ steps.version.outputs.next_version }}
-          outputFile: RELEASE_NOTES.md
+        run: |
+          # Generate release notes from commits since last tag
+          LAST_TAG=${{ steps.version.outputs.last_tag }}
+          COMMITS=$(git log ${LAST_TAG}..HEAD --oneline)
+
+          cat > RELEASE_NOTES.md << 'EOF'
+          $COMMITS
+          EOF
 
       - name: Update CHANGELOG.md
         run: |
@@ -104,7 +106,7 @@ jobs:
           git push origin main --tags
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1.8.0
+        uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ steps.version.outputs.next_version }}
