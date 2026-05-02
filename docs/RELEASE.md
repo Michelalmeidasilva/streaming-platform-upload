@@ -51,9 +51,15 @@ BREAKING CHANGE: /api/v1/upload/legacy removed in favor of /upload/initiate
 - `feat: add thumbnail generation` → Minor bump (1.0.2 → 1.1.0)
 - `feat: redesign storage adapter interface\n\nBREAKING CHANGE: old adapter interface removed` → Major bump (1.1.0 → 2.0.0)
 
-### No Changes?
+### Default Patch Bumps
 
-If a push to `main` contains **no feat, fix, or BREAKING CHANGE** commits (e.g., only docs or chore commits), the release workflow **does not trigger a version bump**. The workflow still runs but exits without creating a release.
+Every push to `main` creates a release. The workflow defaults to a **patch version bump** for commits that don't include `feat:` or `BREAKING CHANGE:` prefixes:
+
+- `BREAKING CHANGE:` footer → Major version bump (1.0.0 → 2.0.0)
+- `feat:` prefix → Minor version bump (1.0.0 → 1.1.0)
+- All other commits (`fix:`, `docs:`, `chore:`, `style:`, etc.) → Patch version bump (1.0.0 → 1.0.1)
+
+This means documentation-only or chore-only pushes will trigger a patch release. If you want to avoid automatic releases for documentation changes, use feature branches and only merge to `main` when code is ready for release.
 
 ## Viewing Releases
 
@@ -220,14 +226,56 @@ last_tag=v1.0.2
    - Keep important versions as git references
    - Tags are immutable; helpful for debugging
 
+## Release Strategy
+
+This project uses **automatic releases on every push to main**. Understanding this strategy helps you decide when to commit directly to main vs. use feature branches:
+
+### Every Push Creates a Release
+
+- **Every commit to main** → one release (minimum patch bump)
+- **Documentation changes** → patch release (e.g., 1.0.0 → 1.0.1)
+- **Feature additions** → minor release (e.g., 1.0.0 → 1.1.0)
+- **Breaking changes** → major release (e.g., 1.0.0 → 2.0.0)
+
+### When to Use Feature Branches
+
+If you want to avoid patch releases for certain types of changes:
+
+1. **Documentation-only updates**: Commit to a feature branch, don't push directly to main
+2. **Chore-only changes**: Use a feature branch if you don't want a release for minor housekeeping
+3. **Multiple related changes**: Group them in a feature branch, then merge with a single meaningful `feat:` or `fix:` commit to main
+
+### When to Commit Directly to Main
+
+- **Code changes ready for production**: Every commit to main is a deployable release
+- **Bug fixes**: Patch releases (ideal for hotfixes)
+- **New features**: Minor releases (clear version bump for feature tracking)
+- **Breaking changes**: Major releases (clear signal to users to review migration guide)
+
+### Release Version Examples
+
+Given the current version is `1.0.2`:
+
+| Commit Type | Message | Result | Reason |
+|---|---|---|---|
+| `feat:` | `feat: add multipart resumption` | 1.0.2 → 1.1.0 | Minor bump (new feature) |
+| `fix:` | `fix: handle network timeout` | 1.0.2 → 1.0.3 | Patch bump (bug fix) |
+| `BREAKING CHANGE:` | `feat: redesign API\n\nBREAKING CHANGE: old endpoint removed` | 1.0.2 → 2.0.0 | Major bump (breaking change) |
+| `docs:` | `docs: update API guide` | 1.0.2 → 1.0.3 | Patch bump (documentation) |
+| `chore:` | `chore: update deps` | 1.0.2 → 1.0.3 | Patch bump (maintenance) |
+
+This ensures releases are always tied to a version bump and remain meaningful for tracking changes.
+
 ## FAQ
 
 ### Q: How do I skip a release?
 
-**A**: Merge commits without `feat:`, `fix:`, or `BREAKING CHANGE:`. The workflow runs but doesn't create a release. Examples:
-- `docs: update README`
-- `chore: clean up comments`
-- `style: fix formatting`
+**A**: Every push to `main` creates a release—there is no way to skip releases when committing directly to `main`. However, commits without `feat:` or `BREAKING CHANGE:` triggers a **patch release** (e.g., 1.0.0 → 1.0.1) for documentation and chore changes.
+
+If you want to avoid patch releases for documentation-only changes, commit to a **feature branch instead of main**, and only merge to main when you have actual code changes to release. Examples of commits that trigger patch releases:
+- `docs: update README` → Patch release
+- `chore: clean up comments` → Patch release
+- `style: fix formatting` → Patch release
 
 ### Q: Can I manually set the version?
 
@@ -261,9 +309,9 @@ To enable pre-releases in the automated workflow, modify `.github/workflows/rele
 
 ### Release workflow fails with "No changes detected"
 
-**Cause**: No commits on main since the last release contained `feat:`, `fix:`, or `BREAKING CHANGE:`.
+**Cause**: No new commits on main since the last release (or the branch is out of sync with the last tag).
 
-**Solution**: This is expected behavior. The workflow doesn't create a release if there are no version-bumping commits. Push a `feat:` or `fix:` commit if you want a release.
+**Solution**: This typically means the workflow ran for an empty changeset. Push new commits (any commit type) to main to trigger a new release. Note: Even `docs:` or `chore:` commits will create a patch release, so ensure you want a release before pushing to main.
 
 ### Version bump is wrong
 
