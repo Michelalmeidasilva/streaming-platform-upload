@@ -84,7 +84,7 @@ export default function UploadArea() {
     setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
   }, [e2eAuthEnabled]);
 
-  const effectiveSession = e2eSession || session;
+  const effectiveSession = e2eSession ?? session;
   const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
   const isAdmin = canUploadVideo(effectiveSession?.user?.role);
 

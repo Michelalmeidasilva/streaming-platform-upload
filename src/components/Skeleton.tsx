@@ -3,10 +3,10 @@
 import styles from './Skeleton.module.css';
 
 interface SkeletonProps {
-  width?: string | number;
-  height?: string | number;
-  variant?: 'text' | 'circle' | 'rect';
-  className?: string;
+  readonly width?: string | number;
+  readonly height?: string | number;
+  readonly variant?: 'text' | 'circle' | 'rect';
+  readonly className?: string;
 }
 
 export default function Skeleton({
@@ -14,7 +14,7 @@ export default function Skeleton({
   height = '16px',
   variant = 'text',
   className,
-}: SkeletonProps) {
+}: Readonly<SkeletonProps>) {
   const style = {
     width: typeof width === 'number' ? `${width}px` : width,
     height: typeof height === 'number' ? `${height}px` : height,

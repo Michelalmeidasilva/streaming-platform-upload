@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import styles from './VideoList.module.css';
@@ -48,7 +48,7 @@ export default function VideoList() {
     setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
   }, [e2eAuthEnabled]);
 
-  const effectiveSession = e2eSession || session;
+  const effectiveSession = e2eSession ?? session;
   const effectiveSessionStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : sessionStatus;
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +120,16 @@ export default function VideoList() {
     return () => clearTimeout(timer);
   }, [effectiveSessionStatus, search, fetchVideos]);
 
+  const initialLoadingSkeletonIds = useMemo(
+    () => Array.from({ length: 4 }, () => crypto.randomUUID()),
+    []
+  );
+
+  const mainLoadingSkeletonIds = useMemo(
+    () => Array.from({ length: 6 }, () => crypto.randomUUID()),
+    []
+  );
+
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} ${t('library.formats.sizeBytes')}`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${t('library.formats.sizeKilobytes')}`;
@@ -150,8 +160,8 @@ export default function VideoList() {
   if (effectiveSessionStatus === 'loading') {
     return (
       <div className={styles.grid}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {initialLoadingSkeletonIds.map((id) => (
+          <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Skeleton height="180px" variant="rect" />
             <Skeleton height="16px" width="80%" />
             <Skeleton height="12px" width="60%" />
@@ -204,8 +214,8 @@ export default function VideoList() {
 
       {loading && (
         <div className={styles.grid}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {mainLoadingSkeletonIds.map((id) => (
+            <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <Skeleton height="180px" variant="rect" />
               <Skeleton height="16px" width="80%" />
               <Skeleton height="12px" width="60%" />

@@ -41,7 +41,7 @@
   height: 48px;
   background: linear-gradient(135deg, #fe712d, #f85a14);
   border-radius: 12px;
-  color: white;
+  color: #000;
 }
 
 .content {

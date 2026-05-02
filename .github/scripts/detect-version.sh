@@ -45,16 +45,21 @@ increment_version() {
     patch)
       ((patch++))
       ;;
+    *)
+      echo "Error: invalid bump type '$bump'" >&2
+      return 1
+      ;;
   esac
 
   echo "${major}.${minor}.${patch}"
+  return 0
 }
 
 # Calculate next version
 NEXT_VERSION=$(increment_version "$CURRENT_VERSION" "$BUMP_TYPE")
 
 # Output as JSON for GitHub Actions
-if [ -n "$GITHUB_OUTPUT" ]; then
+if [[ -n "$GITHUB_OUTPUT" ]]; then
   echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
   echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
   echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT

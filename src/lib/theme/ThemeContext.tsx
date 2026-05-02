@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -11,18 +11,22 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
+interface ThemeProviderProps {
+  readonly children: React.ReactNode;
+}
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light');
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>('light');
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light');
 
   // Inicializar tema ao montar
   useEffect(() => {
     // Restaurar preferência salva
     const saved = localStorage.getItem('theme') as Theme | null;
-    const initialTheme = saved || 'system';
-    setThemeState(initialTheme);
+    const initialTheme = saved ?? 'system';
+    setTheme(initialTheme);
 
     // Computar tema efetivo imediatamente
     const computedEffective = computeEffectiveTheme(initialTheme);
@@ -39,7 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const computeEffectiveTheme = (t: Theme): 'light' | 'dark' => {
     if (t === 'system') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = globalThis.matchMedia('(prefers-color-scheme: dark)').matches;
       return isDark ? 'dark' : 'light';
     }
     return t;
@@ -47,23 +51,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const applyTheme = (effective: 'light' | 'dark') => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', effective);
+    root.dataset.theme = effective;
     root.style.colorScheme = effective;
   };
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+  const setThemeValue = (newTheme: Theme) => {
+    setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
   };
 
   const toggleTheme = () => {
     const newTheme: Theme = effectiveTheme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
+    setThemeValue(newTheme);
   };
+
+  const value = useMemo(() => ({
+    theme,
+    effectiveTheme,
+    setTheme: setThemeValue,
+    toggleTheme,
+  }), [theme, effectiveTheme]);
 
   // Sempre renderizar com contexto (evita erro de context missing)
   return (
-    <ThemeContext.Provider value={{ theme, effectiveTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
