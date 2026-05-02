@@ -1,5 +1,5 @@
 import { GET as listVideos } from '../route';
-import { PATCH as updateVideo, DELETE as deleteVideo } from '../[videoId]/route';
+import { GET as getVideo, PATCH as updateVideo, DELETE as deleteVideo } from '../[videoId]/route';
 import { GET as downloadVideo } from '../[videoId]/download/route';
 
 jest.mock('@/lib/auth/session', () => ({
@@ -344,5 +344,194 @@ describe('video authorization', () => {
 
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: 'Forbidden' });
+  });
+
+  it('returns 403 when a MEMBER tries to update a video', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await updateVideo(
+      new Request('http://localhost/api/videos/1', {
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Updated title' }),
+        headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+      { params: { videoId: '1' } },
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Forbidden' });
+  });
+
+  it('returns 401 when deleting a video without a session', async () => {
+    getCurrentSession.mockResolvedValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await deleteVideo(new Request('http://localhost/api/videos/1', { method: 'DELETE' }) as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('allows ADMIN to delete a video', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Video to delete',
+      originalName: 'video.mp4',
+      size: 1024,
+      status: 'ready',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    uploadService.deleteVideo.mockResolvedValue(undefined);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await deleteVideo(new Request('http://localhost/api/videos/1', { method: 'DELETE' }) as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true });
+    expect(uploadService.deleteVideo).toHaveBeenCalledWith('1');
+  });
+
+  it('returns video details when video is found', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue({
+      id: '1',
+      title: 'Test Video',
+      originalName: 'test.mp4',
+      size: 2048,
+      status: 'ready',
+      thumbnailUrl: 'http://storage/thumbnail.jpg',
+      thumbnailStatus: 'ready',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await getVideo(new Request('http://localhost/api/videos/1') as any, {
+      params: { videoId: '1' },
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.video).toEqual({
+      id: '1',
+      title: 'Test Video',
+      originalName: 'test.mp4',
+      size: 2048,
+      status: 'ready',
+      downloadUrl: '/api/videos/1/download',
+      thumbnailUrl: 'http://storage/thumbnail.jpg',
+      thumbnailStatus: 'ready',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('returns 404 when video is not found', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getVideo.mockReturnValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await getVideo(new Request('http://localhost/api/videos/nonexistent') as any, {
+      params: { videoId: 'nonexistent' },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Video not found' });
+  });
+
+  it('returns 401 when updating a video without a session', async () => {
+    getCurrentSession.mockResolvedValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await updateVideo(
+      new Request('http://localhost/api/videos/1', {
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Updated title' }),
+        headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+      { params: { videoId: '1' } },
+    );
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Unauthorized' });
+  });
+
+  it('returns 400 when updating a video with empty title', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await updateVideo(
+      new Request('http://localhost/api/videos/1', {
+        method: 'PATCH',
+        body: JSON.stringify({ title: '   ' }),
+        headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+      { params: { videoId: '1' } },
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'title is required' });
+  });
+
+  it('returns 404 when updating a video that does not exist', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.updateVideoTitle.mockReturnValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await updateVideo(
+      new Request('http://localhost/api/videos/nonexistent', {
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'New title' }),
+        headers: { 'Content-Type': 'application/json' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      }) as any,
+      { params: { videoId: 'nonexistent' } },
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Video not found' });
+  });
+
+  it('returns 404 when deleting a video that does not exist', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getVideo.mockReturnValue(null);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await deleteVideo(new Request('http://localhost/api/videos/nonexistent', { method: 'DELETE' }) as any, {
+      params: { videoId: 'nonexistent' },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Video not found' });
   });
 });
