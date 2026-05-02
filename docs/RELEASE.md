@@ -14,7 +14,7 @@ This project uses **automated semantic versioning** with GitHub Actions. Every p
    - `BREAKING CHANGE:` footer → Major version bump (1.0.0 → 2.0.0)
    - `feat:` prefix → Minor version bump (1.0.0 → 1.1.0)
    - `fix:` prefix → Patch version bump (1.0.0 → 1.0.1)
-4. **package.json** is updated with the new version
+4. **package.json and package-lock.json** are updated with the new version
 5. **CHANGELOG.md** is updated with commit messages from `git log` since the last release
 6. **Git tag** is created (e.g., `v1.0.3`)
 7. **GitHub Release** is created with release notes containing commit history
@@ -93,8 +93,8 @@ The `CHANGELOG.md` file at the project root contains all release notes in revers
 #### How CHANGELOG.md is Generated
 
 The automated release workflow generates `CHANGELOG.md` entries from commit messages since the last tag:
-- Uses `git log $LAST_TAG..HEAD --oneline` to extract commits
-- Each entry shows the commit hash and message
+- Uses `git log` to extract commits since the last tag (format: `--oneline` showing commit hash and message)
+- The exact format may vary, but the result is a list of commits extracted from the repository history
 - These entries are prepended to the top of `CHANGELOG.md` with a version header and date
 
 #### Manual Changelog Organization
@@ -104,6 +104,8 @@ The organized `CHANGELOG.md` file (with Added/Changed/Fixed/Removed sections vis
 - The automated workflow generates release notes from raw git commits
 - When a release is created, the workflow prepends the git-derived entries to the manually-organized sections
 - Future releases will continue to add entries above your manual edits
+
+**Note on changelog structure**: The workflow skips the first 8 lines when appending old changelog content (using `tail -n +9`). This preserves existing changelog structure and avoids duplicating headers during the merge of new and old entries.
 
 ## Manual Release (Advanced)
 
@@ -296,14 +298,21 @@ This is an advanced scenario not covered by the current automation.
 
 ### Q: How do I create a pre-release (alpha, beta, rc)?
 
-**A**: Pre-releases are not supported by the current automation. All automated releases are production releases (`prerelease: false` is hardcoded in `.github/workflows/release.yml`).
+**A**: Pre-releases are not supported by the current automation. All automated releases are production releases (prerelease is hardcoded in `.github/workflows/release.yml`).
 
 To create a pre-release without modifying the workflow:
 1. Manually tag it: `git tag -a v1.0.0-rc.1 -m "Release v1.0.0-rc.1"`
 2. Push the tag: `git push origin v1.0.0-rc.1`
 3. Create the GitHub Release manually from the releases page and mark it as a pre-release
 
-To enable pre-releases in the automated workflow, modify `.github/workflows/release.yml` line 116 from `prerelease: false` to `prerelease: true` (or add logic to detect `-rc`, `-beta`, `-alpha` suffixes).
+To enable pre-releases in the automated workflow, modify `.github/workflows/release.yml` line 116:
+
+```yaml
+# Change this line in .github/workflows/release.yml (line 116):
+prerelease: false  # Change to: prerelease: true
+```
+
+This will mark all future automated releases as pre-releases. Alternatively, add logic to detect `-rc`, `-beta`, or `-alpha` suffixes in the version string and conditionally set `prerelease: true`.
 
 ## Troubleshooting
 
@@ -341,3 +350,23 @@ git tag -d v1.2.3          # Delete locally
 git push origin --delete v1.2.3  # Delete on GitHub
 # Fix the issue and try again
 ```
+
+### Workflow failed with error
+
+If the "Automated Release" workflow fails in GitHub Actions:
+
+1. Click the failed workflow run in the **Actions** tab of your GitHub repository
+2. Check which step failed (usually "Detect version bump", "Generate Changelog", or "Update package.json version")
+3. Review the error message — common issues and fixes:
+   - **`Failed to detect next version`**: Check that `package.json` has a valid `"version"` field in the correct format (e.g., `"1.0.2"`)
+   - **`No changes to commit`**: The workflow detected no changes to `package.json` or `CHANGELOG.md`. Ensure your commit was properly formatted with Conventional Commits prefix
+   - **`Tag already exists`**: The version was already released; check recent tags with `git tag -l | sort -V` and verify the last tag matches the detected version
+   - **`Failed to generate changelog`**: The `git log` command failed, possibly due to missing tags or commit history issues
+4. Fix the issue locally (update `package.json`, check commit format, clean up duplicate tags)
+5. Push again to `main` to trigger a new workflow run
+
+For debugging, you can run the version detection script locally:
+```bash
+bash .github/scripts/detect-version.sh
+```
+This outputs version detection results to stdout without modifying files.
