@@ -1,6 +1,6 @@
 # Video Playback & List Auto-Refresh Design
 
-**Date**: 2026-04-28  
+**Date**: 2026-04-28
 **Feature**: Add video preview/playback after upload and auto-update video list when uploads complete
 
 ## Overview
@@ -177,7 +177,7 @@ User clicks video
    - Add click handler to video cards
    - Render VideoModal
 
-6. **Add CSS** 
+6. **Add CSS**
    - VideoModal.module.css (modal styling)
    - Update VideoList.module.css (click cursor on cards)
 

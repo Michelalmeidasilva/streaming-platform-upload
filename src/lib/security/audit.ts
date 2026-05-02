@@ -22,4 +22,3 @@ export function recordSecurityEvent(event: AuditEvent) {
 
   console.info(JSON.stringify(payload));
 }
-

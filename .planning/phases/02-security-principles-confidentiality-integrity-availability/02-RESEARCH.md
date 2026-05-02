@@ -122,4 +122,3 @@ Thumbnails, fallback images, and video metadata can leak sensitive information. 
 - [AWS S3 replication tutorial](https://docs.aws.amazon.com/hands-on/latest/replicate-data-using-amazon-s3-replication/replicate-data-using-amazon-s3-replication.html)
 - [Next.js data security guide](https://nextjs.org/docs/app/guides/data-security)
 - [OWASP Denial of Service cheat sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)
-

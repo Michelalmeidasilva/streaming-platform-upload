@@ -117,4 +117,3 @@ Video listing and download endpoints should return only the fields needed by the
 - [Next.js CSP guide](https://nextjs.org/docs/app/guides/content-security-policy)
 - [Next.js `headers` configuration](https://nextjs.org/docs/pages/api-reference/config/next-config-js/headers)
 - [OWASP Denial of Service cheat sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html)
-

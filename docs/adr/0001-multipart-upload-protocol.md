@@ -1,6 +1,6 @@
 # ADR-0001: S3 Native Multipart Upload Protocol
 
-**Date:** 2026-04-26  
+**Date:** 2026-04-26
 **Status:** Accepted
 
 ---

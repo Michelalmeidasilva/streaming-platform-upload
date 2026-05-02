@@ -23,4 +23,3 @@ export function canEditVideo(role?: UserRole | null) {
 export function canDeleteVideo(role?: UserRole | null) {
   return role === 'ADMIN';
 }
-

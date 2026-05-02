@@ -16,4 +16,3 @@ export function resolveRoleFromEmail(email?: string | null): UserRole {
 
   return getAdminEmails().has(email.toLowerCase()) ? 'ADMIN' : 'MEMBER';
 }
-

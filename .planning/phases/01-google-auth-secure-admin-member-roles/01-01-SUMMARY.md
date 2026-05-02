@@ -24,4 +24,3 @@ Implemented a Google-authenticated login flow with server-resolved `ADMIN` / `ME
 
 - Google OAuth credentials and `ADMIN_EMAILS` must be configured in the environment before login can be used in production.
 - Member access is limited to view, search, and download actions; admin access includes upload, edit, and delete.
-

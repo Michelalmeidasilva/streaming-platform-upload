@@ -23,4 +23,3 @@ describe('rate limiting', () => {
     expect(evaluateRateLimit('route:ip', config, 1001).allowed).toBe(true);
   });
 });
-

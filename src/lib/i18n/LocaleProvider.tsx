@@ -69,4 +69,3 @@ export function useI18n() {
 }
 
 export { LOCALE_LABELS, DEFAULT_LOCALE };
-

@@ -26,4 +26,3 @@ describe('permission matrix', () => {
     expect(canDeleteVideo('MEMBER')).toBe(false);
   });
 });
-

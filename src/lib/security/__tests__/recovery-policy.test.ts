@@ -15,4 +15,3 @@ describe('recovery policy', () => {
     expect(getRecoveryPolicy()).toBe(PRODUCTION_RECOVERY_POLICY);
   });
 });
-

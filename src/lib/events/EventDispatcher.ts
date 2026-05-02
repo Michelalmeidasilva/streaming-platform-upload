@@ -8,7 +8,7 @@ export function initializeEventDispatcher() {
   if (isInitialized) {
     return;
   }
-  
+
   isInitialized = true;
 
   // Register Event Gateway Integration if URL is present

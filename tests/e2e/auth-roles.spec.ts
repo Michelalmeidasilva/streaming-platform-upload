@@ -7,4 +7,3 @@ test('anonymous users see sign-in guidance', async ({ page, request }) => {
   await page.goto('/');
   await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible();
 });
-

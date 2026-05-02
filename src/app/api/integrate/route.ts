@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        
+
         const integrationConfig: IntegrationConfig = {
           name: config.name,
           type: config.type,
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
           apiKey: config.apiKey,
           enabled: config.enabled ?? true,
         };
-        
+
         integrationLayer.register(integrationConfig);
-        
+
         return NextResponse.json({
           success: true,
           message: `Integration "${config.name}" registered`,
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        
+
         await integrationLayer.notify(event, videoId, data || {});
-        
+
         return NextResponse.json({
           success: true,
           message: 'Notification sent',
@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        
+
         const connected = await integrationLayer.testConnection(config.name);
-        
+
         return NextResponse.json({
           success: connected,
           message: connected ? 'Connection successful' : 'Connection failed',
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
       case 'list': {
         const connectors = integrationLayer.getConnectors();
-        
+
         return NextResponse.json({
           connectors,
         });
@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        
+
         integrationLayer.remove(config.name);
-        
+
         return NextResponse.json({
           success: true,
           message: `Integration "${config.name}" removed`,

@@ -1,7 +1,7 @@
 # Design: Add Semgrep to Pre-commit for streaming-platform-upload
 
-**Date:** 2026-05-02  
-**Service:** streaming-platform-upload (NextJS 14, TypeScript)  
+**Date:** 2026-05-02
+**Service:** streaming-platform-upload (NextJS 14, TypeScript)
 **Goal:** Enforce comprehensive security and code quality checks at commit time using custom semgrep rules
 
 ## Overview

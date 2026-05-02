@@ -11,4 +11,3 @@ export const PRODUCTION_RECOVERY_POLICY: RecoveryPolicy = {
 export function getRecoveryPolicy(): RecoveryPolicy {
   return PRODUCTION_RECOVERY_POLICY;
 }
-
