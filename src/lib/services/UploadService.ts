@@ -256,7 +256,6 @@ export class UploadService {
   async deleteVideo(videoId: string): Promise<void> {
     const video = this.videos.get(videoId);
     if (video) {
-      await this.storage.delete(video.filename);
       if (video.thumbnailUrl) {
         try {
           const thumbnailKey = `thumbnails/${video.id}.jpg`;
@@ -264,6 +263,11 @@ export class UploadService {
         } catch {
           // Thumbnail cleanup is best-effort.
         }
+      }
+      try {
+        await this.storage.delete(video.filename);
+      } catch {
+        // Primary object cleanup is best-effort for idempotent deletes.
       }
       this.videos.delete(videoId);
     }
