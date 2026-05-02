@@ -4,19 +4,19 @@ import { Video } from '@/types';
 import { VideoEventEmitter } from '@/lib/VideoEventEmitter';
 
 class MockStorageAdapter implements IStorageAdapter {
-  async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string) {
+  async upload(_file: Buffer, key: string, _contentType: string, _checksumSHA256?: string) {
     return `s3://bucket/${key}`;
   }
 
-  async getUploadPresignedUrl(key: string, contentType: string, expiresIn?: number) {
+  async getUploadPresignedUrl(key: string, _contentType: string, _expiresIn?: number) {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
-  async initiateMultipartUpload(key: string, contentType: string) {
+  async initiateMultipartUpload(key: string, _contentType: string) {
     return 'upload-id-123';
   }
 
-  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number, checksumSHA256?: string) {
+  async uploadPart(_chunk: Buffer, _key: string, uploadId: string, partNumber: number, _checksumSHA256?: string) {
     return 'etag-123';
   }
 
