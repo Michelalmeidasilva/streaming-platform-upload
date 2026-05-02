@@ -130,4 +130,219 @@ describe('video authorization', () => {
     expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video"');
     expect(response.headers.get('content-type')).toBe('video/mp4');
   });
+
+  it('lists all videos when search query is empty', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'video1.mp4',
+        title: 'First Video',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: '2',
+        filename: 'video2.mp4',
+        originalName: 'video2.mp4',
+        title: 'Second Video',
+        size: 2048,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(2);
+    expect(data.videos[0].title).toBe('First Video');
+    expect(data.videos[1].title).toBe('Second Video');
+  });
+
+  it('filters videos by title in search query', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'video1.mp4',
+        title: 'First Video',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: '2',
+        filename: 'video2.mp4',
+        originalName: 'video2.mp4',
+        title: 'Second Video',
+        size: 2048,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos?q=first') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(1);
+    expect(data.videos[0].title).toBe('First Video');
+  });
+
+  it('filters videos by originalName in search query', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'production.mp4',
+        title: 'First Video',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+      {
+        id: '2',
+        filename: 'video2.mp4',
+        originalName: 'demo.mp4',
+        title: 'Second Video',
+        size: 2048,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos?q=production') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(1);
+    expect(data.videos[0].originalName).toBe('production.mp4');
+  });
+
+  it('performs case-insensitive search on videos', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'Video.mp4',
+        title: 'My Video Content',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos?q=CONTENT') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(1);
+    expect(data.videos[0].title).toBe('My Video Content');
+  });
+
+  it('trims whitespace from search query', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'admin@example.com', role: 'ADMIN' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'video1.mp4',
+        title: 'Tutorial',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos?q=%20%20tutorial%20%20') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(1);
+    expect(data.videos[0].title).toBe('Tutorial');
+  });
+
+  it('returns empty array when search has no matches', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'member@example.com', role: 'MEMBER' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([
+      {
+        id: '1',
+        filename: 'video1.mp4',
+        originalName: 'video1.mp4',
+        title: 'First Video',
+        size: 1024,
+        status: 'ready',
+        progress: 100,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos?q=nonexistent') as any);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.videos).toHaveLength(0);
+  });
+
+  it('returns 403 when role without search permission attempts to list videos', async () => {
+    getCurrentSession.mockResolvedValue({
+      user: { email: 'guest@example.com', role: 'GUEST' },
+    });
+
+    uploadService.getAllVideos.mockReturnValue([]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await listVideos(new Request('http://localhost/api/videos') as any);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Forbidden' });
+  });
 });
