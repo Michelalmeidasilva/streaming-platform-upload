@@ -4,40 +4,44 @@ import { Video } from '@/types';
 import { VideoEventEmitter } from '@/lib/VideoEventEmitter';
 
 class MockStorageAdapter implements IStorageAdapter {
-  async listBuckets() {
-    return [];
-  }
-
-  async upload(buffer: Buffer, key: string, mimeType?: string) {
+  async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string) {
     return `s3://bucket/${key}`;
   }
 
-  async download(key: string) {
-    return Buffer.from('mock video content');
-  }
-
-  async getSignedUrl(key: string) {
+  async getUploadPresignedUrl(key: string, contentType: string, expiresIn?: number) {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
-  async delete(key: string) {
-    return true;
-  }
-
-  async initiateMultipartUpload(key: string, mimeType?: string) {
+  async initiateMultipartUpload(key: string, contentType: string) {
     return 'upload-id-123';
   }
 
-  async uploadPart(buffer: Buffer, key: string, uploadId: string, partNumber: number) {
+  async uploadPart(chunk: Buffer, key: string, uploadId: string, partNumber: number, checksumSHA256?: string) {
     return 'etag-123';
   }
 
-  async completeMultipartUpload(key: string, uploadId: string, parts: any[]) {
+  async getUploadPartPresignedUrl(key: string, uploadId: string, partNumber: number, expiresIn?: number) {
+    return `https://mock-storage.example.com/${key}?partNumber=${partNumber}&signature=...`;
+  }
+
+  async completeMultipartUpload(key: string, uploadId: string, parts: { PartNumber: number; ETag: string }[]) {
     return 'https://mock-storage.example.com/video';
   }
 
-  async abortMultipartUpload(key: string, uploadId: string) {
+  async delete(key: string) {
+    // No return value (Promise<void>)
+  }
+
+  async getSignedUrl(key: string, expiresIn?: number) {
+    return `https://mock-storage.example.com/${key}?signature=...`;
+  }
+
+  async exists(key: string) {
     return true;
+  }
+
+  async listObjects(prefix?: string) {
+    return [];
   }
 }
 
@@ -58,6 +62,7 @@ describe('ThumbnailExtractor', () => {
         id: 'test-video-123',
         filename: 'sample.mp4',
         originalName: 'Sample.mp4',
+        title: 'Sample Video',
         size: 1000000,
         status: 'uploading',
         progress: 100,
@@ -77,6 +82,7 @@ describe('ThumbnailExtractor', () => {
         id: 'test-video-concurrent',
         filename: 'sample.mp4',
         originalName: 'Sample.mp4',
+        title: 'Sample Video',
         size: 1000000,
         status: 'uploading',
         progress: 100,
@@ -107,6 +113,7 @@ describe('ThumbnailExtractor', () => {
         id: 'test-video-fallback-gen',
         filename: 'sample.mp4',
         originalName: 'Sample.mp4',
+        title: 'Sample Video',
         size: 1000000,
         status: 'uploading',
         progress: 100,
