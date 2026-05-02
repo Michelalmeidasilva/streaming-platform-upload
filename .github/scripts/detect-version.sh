@@ -8,7 +8,7 @@
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 
 # Get current version from package.json
-CURRENT_VERSION=$(grep '"version"' package.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+CURRENT_VERSION=$(grep '"version"' package.json | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
 # Get commits since last tag
 COMMITS=$(git log $LAST_TAG..HEAD --format=%B 2>/dev/null || git log --format=%B)
@@ -28,9 +28,13 @@ fi
 increment_version() {
   local version=$1
   local bump=$2
+  local IFS='.'
+
+  # Strip pre-release and build metadata
+  version="${version%%[-+]*}"
 
   # Split version into parts
-  IFS='.' read -r major minor patch <<< "$version"
+  read -r major minor patch <<< "$version"
 
   case $bump in
     major)
@@ -56,14 +60,17 @@ increment_version() {
 }
 
 # Calculate next version
-NEXT_VERSION=$(increment_version "$CURRENT_VERSION" "$BUMP_TYPE")
+NEXT_VERSION=$(increment_version "$CURRENT_VERSION" "$BUMP_TYPE") || {
+  echo "Error: Failed to calculate next version from $CURRENT_VERSION with bump type $BUMP_TYPE" >&2
+  exit 1
+}
 
 # Output as JSON for GitHub Actions
-if [[ -n "$GITHUB_OUTPUT" ]]; then
-  echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-  echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-  echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-  echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  echo "bump_type=$BUMP_TYPE" >> "${GITHUB_OUTPUT}"
+  echo "current_version=$CURRENT_VERSION" >> "${GITHUB_OUTPUT}"
+  echo "next_version=$NEXT_VERSION" >> "${GITHUB_OUTPUT}"
+  echo "last_tag=$LAST_TAG" >> "${GITHUB_OUTPUT}"
 fi
 
 # Also output to stdout for manual execution/testing

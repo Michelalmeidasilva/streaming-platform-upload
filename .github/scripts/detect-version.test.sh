@@ -53,9 +53,13 @@ assert_equals() {
 increment_version() {
   local version=$1
   local bump=$2
+  local IFS='.'
+
+  # Strip pre-release and build metadata
+  version="${version%%[-+]*}"
 
   # Split version into parts
-  IFS='.' read -r major minor patch <<< "$version"
+  read -r major minor patch <<< "$version"
 
   case $bump in
     major)
@@ -260,6 +264,24 @@ BREAKING CHANGE: API changed" > /dev/null 2>&1
   assert_equals "major" "$bump_type" "BREAKING CHANGE should take precedence over feat:"
 }
 
+# TEST 11: Test pre-release version parsing and stripping
+test_prerelease_version_parsing() {
+  local result=$(increment_version "1.0.0-alpha.1" "minor")
+  assert_equals "1.1.0" "$result" "Pre-release version should be stripped before incrementing"
+}
+
+# TEST 12: Test pre-release version with build metadata
+test_prerelease_with_build_metadata() {
+  local result=$(increment_version "1.0.0-beta.1+build.123" "major")
+  assert_equals "2.0.0" "$result" "Pre-release and build metadata should be stripped before incrementing"
+}
+
+# TEST 13: Test pre-release patch bump
+test_prerelease_patch_bump() {
+  local result=$(increment_version "1.5.7-rc.1" "patch")
+  assert_equals "1.5.8" "$result" "Patch bump should work with pre-release versions"
+}
+
 # Run all tests
 echo -e "\n${YELLOW}Running Version Detection Script Tests${NC}\n"
 
@@ -273,6 +295,9 @@ run_test "Detect major from BREAKING CHANGE" test_detect_major_breaking_change
 run_test "Detect minor from feat:" test_detect_minor_feature
 run_test "Detect patch from fix:" test_detect_patch_fix
 run_test "BREAKING CHANGE takes precedence" test_breaking_change_precedence
+run_test "Pre-release version parsing" test_prerelease_version_parsing
+run_test "Pre-release with build metadata" test_prerelease_with_build_metadata
+run_test "Pre-release patch bump" test_prerelease_patch_bump
 
 # Print summary
 echo -e "\n${YELLOW}Test Summary${NC}"
