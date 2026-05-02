@@ -168,7 +168,7 @@ Upload Request → Events → Handlers → Storage Layer
    - Generates 640×360 JPEG thumbnail using FFmpeg
    - Stores thumbnail in same S3/MinIO bucket under `/thumbnails/` prefix
    - Non-blocking: extraction happens asynchronously after upload completes
-   - **Fallback handling**: If extraction fails (timeout, unsupported codec, corrupted file, etc.), 
+   - **Fallback handling**: If extraction fails (timeout, unsupported codec, corrupted file, etc.),
      generates dynamic placeholder image with video filename and upload date
    - Publishes events: `video.thumbnail.generated` (success) or `video.thumbnail.fallback` (failure)
    - Client receives real-time updates via EventEmitter
@@ -264,3 +264,29 @@ CMAF (Common Media Application Format) is supported through:
 16. Thumbnail available in storage within 2 seconds of upload completion
 17. Client receives thumbnail events and updates UI in real-time
 18. Thumbnail extraction errors are logged for debugging
+
+## Security: Semgrep Pre-commit Hook
+
+Semgrep automatically scans code before each commit to catch security vulnerabilities, unsafe patterns, and type safety issues.
+
+**What it checks:**
+- OWASP Top 10 vulnerabilities (XSS, CSRF, injection, etc.)
+- Hardcoded secrets, unsafe crypto, dangerous patterns
+- TypeScript type safety violations
+- Node.js and Express-specific security issues
+- Test files are excluded to reduce noise
+
+**Configuration:** `.semgrep.yml` (custom rule sets)
+
+**To skip the hook (use sparingly):**
+```bash
+git commit --no-verify
+```
+
+**To run manually on all files:**
+```bash
+pre-commit run semgrep --all-files
+```
+
+**To update rules:**
+Edit `.semgrep.yml` and re-run pre-commit hooks.
