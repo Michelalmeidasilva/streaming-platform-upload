@@ -1,0 +1,100 @@
+name: Automated Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for commit scanning
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Detect version bump
+        id: version
+        run: bash .github/scripts/detect-version.sh
+
+      - name: Update package.json version
+        run: |
+          npm version ${{ steps.version.outputs.next_version }} --no-git-tag-version
+          echo "Version updated to: ${{ steps.version.outputs.next_version }}"
+
+      - name: Generate Changelog
+        id: changelog_builder
+        uses: mikepenz/changelog-builder-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sinceTag: ${{ steps.version.outputs.last_tag }}
+          untilTag: v${{ steps.version.outputs.next_version }}
+          outputFile: RELEASE_NOTES.md
+        continue-on-error: true
+
+      - name: Update CHANGELOG.md
+        run: |
+          # Read the release notes if generated
+          RELEASE_NOTES=""
+          if [ -f RELEASE_NOTES.md ]; then
+            RELEASE_NOTES=$(cat RELEASE_NOTES.md)
+          else
+            RELEASE_NOTES="No changes detected in commits"
+          fi
+
+          # Create new changelog entry with current date
+          DATE=$(date +%Y-%m-%d)
+          cat > CHANGELOG_NEW.md << EOF
+          ## [${{ steps.version.outputs.next_version }}] - $DATE
+
+          $RELEASE_NOTES
+
+          EOF
+
+          # Append old changelog starting from line 9 (skip header and first sections)
+          tail -n +9 CHANGELOG.md >> CHANGELOG_NEW.md
+
+          # Replace old changelog
+          mv CHANGELOG_NEW.md CHANGELOG.md
+
+      - name: Commit version and changelog
+        run: |
+          git add package.json package-lock.json CHANGELOG.md
+          git commit -m "chore: release v${{ steps.version.outputs.next_version }}"
+
+      - name: Create Git Tag
+        run: |
+          git tag -a v${{ steps.version.outputs.next_version }} -m "Release v${{ steps.version.outputs.next_version }}"
+
+      - name: Push commits and tags
+        run: |
+          git push origin main
+          git push origin v${{ steps.version.outputs.next_version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ steps.version.outputs.next_version }}
+          name: Release v${{ steps.version.outputs.next_version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
