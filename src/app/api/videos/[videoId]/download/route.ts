@@ -39,7 +39,7 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const video = uploadService.getVideo(params.videoId);
+  const video = await uploadService.getVideo(params.videoId);
   if (!video) {
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }

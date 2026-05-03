@@ -24,7 +24,7 @@ describe('Videos API Route', () => {
   it('returns all videos when authenticated', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canSearchVideos as unknown as jest.Mock).mockReturnValue(true);
-    (uploadService.getAllVideos as jest.Mock).mockReturnValue([
+    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([
       { id: '1', originalName: 'v1.mp4', createdAt: new Date(), updatedAt: new Date(), size: 10, status: 'completed' },
     ]);
 
@@ -39,9 +39,8 @@ describe('Videos API Route', () => {
   it('filters videos by query', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canSearchVideos as unknown as jest.Mock).mockReturnValue(true);
-    (uploadService.getAllVideos as jest.Mock).mockReturnValue([
+    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([
       { id: '1', originalName: 'foo.mp4', createdAt: new Date(), updatedAt: new Date(), size: 10, status: 'completed' },
-      { id: '2', originalName: 'bar.mp4', createdAt: new Date(), updatedAt: new Date(), size: 10, status: 'completed' },
     ]);
 
     const req = mockReq('http://test.com/api/videos?q=foo');
@@ -50,6 +49,7 @@ describe('Videos API Route', () => {
 
     expect(data.videos).toHaveLength(1);
     expect(data.videos[0].originalName).toBe('foo.mp4');
+    expect(uploadService.getAllVideos).toHaveBeenCalledWith('foo');
   });
 
   it('returns 401 for unauthenticated', async () => {

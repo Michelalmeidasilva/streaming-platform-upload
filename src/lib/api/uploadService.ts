@@ -1,4 +1,5 @@
 import { createStorageAdapter } from '@/lib/storage';
+import { IngestUploadStateClient, type UploadStateStore } from '@/lib/persistence/IngestUploadStateClient';
 import { UploadService } from '@/lib/services/UploadService';
 import { initializeEventDispatcher } from '@/lib/events/EventDispatcher';
 import { getRecoveryPolicy } from '@/lib/security/recovery-policy';
@@ -10,9 +11,10 @@ initializeEventDispatcher();
 declare global {
   // eslint-disable-next-line no-var
   var __uploadServiceSingleton__:
-    | {
+      | {
         uploadService: UploadService;
         storageAdapter: ReturnType<typeof createStorageAdapter>;
+        uploadStateStore: UploadStateStore;
       }
     | undefined;
 }
@@ -62,10 +64,13 @@ function resolveStorageConfig() {
 
 function createSingletons() {
   const storage = createStorageAdapter(resolveStorageConfig());
+  const uploadStateStore = new IngestUploadStateClient();
 
   return {
     storageAdapter: storage,
+    uploadStateStore,
     uploadService: new UploadService(storage, {
+      stateStore: uploadStateStore,
       storage: storagePolicy,
       recovery: getRecoveryPolicy(),
     }),
@@ -80,3 +85,4 @@ if (!globalThis.__uploadServiceSingleton__) {
 
 export const uploadService = singletons.uploadService;
 export const storageAdapter = singletons.storageAdapter;
+export const uploadStateStore = singletons.uploadStateStore;
