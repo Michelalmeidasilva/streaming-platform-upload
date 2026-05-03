@@ -70,7 +70,7 @@ export default function VideoList() {
       setLoading(true);
       setLoadError(null);
       const url = query ? `/api/videos?q=${encodeURIComponent(query)}` : '/api/videos';
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
 
       if (response.status === 401) {
         setVideos([]);
@@ -141,6 +141,7 @@ export default function VideoList() {
     try {
       const response = await fetch(`/api/videos/${videoId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {

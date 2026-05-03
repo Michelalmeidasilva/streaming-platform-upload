@@ -117,6 +117,7 @@ export default function UploadArea() {
           // 1. Initiate upload session
           const initRes = await fetch('/api/upload', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filename: file.name, size: file.size, mimeType: file.type }),
           });
@@ -137,6 +138,7 @@ export default function UploadArea() {
                 })
               : await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
                   method: 'POST',
+                  credentials: 'include',
                   body: chunkBlob,
                 });
             if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
@@ -153,6 +155,7 @@ export default function UploadArea() {
           const thumbnailBase64 = await thumbnailPromise;
           const completeRes = await fetch('/api/upload/complete', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId, etags, thumbnail: thumbnailBase64 }),
           });

@@ -401,7 +401,9 @@ describe('VideoList', () => {
     });
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenLastCalledWith('/api/videos?q=cats');
+      expect(global.fetch).toHaveBeenLastCalledWith('/api/videos?q=cats', {
+        credentials: 'include',
+      });
     });
 
     jest.useRealTimers();

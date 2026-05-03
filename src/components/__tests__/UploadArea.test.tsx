@@ -241,6 +241,24 @@ describe('UploadArea', () => {
       expect(getByText('upload.uploadStatus.processing')).toBeDefined();
     });
 
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/upload',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    );
+
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      3,
+      '/api/upload/complete',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    );
+
     act(() => {
       jest.advanceTimersByTime(2000);
     });
@@ -320,6 +338,7 @@ describe('UploadArea', () => {
         3,
         '/api/upload/complete',
         expect.objectContaining({
+          credentials: 'include',
           body: expect.stringContaining('"thumbnail":null'),
         }),
       );
@@ -436,6 +455,7 @@ describe('UploadArea', () => {
         3,
         '/api/upload/complete',
         expect.objectContaining({
+          credentials: 'include',
           body: expect.stringContaining('"thumbnail":null'),
         }),
       );

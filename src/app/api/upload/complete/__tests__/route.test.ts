@@ -74,6 +74,10 @@ describe('POST /api/upload/complete', () => {
     }) as never);
 
     expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      success: true,
+      ingestNotificationStatus: 'sent',
+    }));
     expect(notifyIngestStorageCompletion).toHaveBeenCalledWith(
       's3',
       expect.objectContaining({
@@ -155,7 +159,52 @@ describe('POST /api/upload/complete', () => {
     }) as never);
 
     expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      success: true,
+      ingestNotificationStatus: 'skipped',
+    }));
     expect(notifyIngestStorageCompletion).not.toHaveBeenCalled();
+  });
+
+  it('keeps upload completion successful when ingest notification fails', async () => {
+    getCurrentSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'admin@example.com' } });
+    canUploadVideo.mockReturnValue(true);
+    completeUpload.mockResolvedValue({
+      id: 'vid-5',
+      title: 'video.mp4',
+      originalName: 'video.mp4',
+      filename: 'vid-5/video.mp4',
+      size: 222,
+      status: 'processing',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      thumbnailUrl: null,
+      thumbnailStatus: 'pending',
+    });
+    notifyIngestStorageCompletion.mockRejectedValue(new Error('webhook offline'));
+
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { POST } = await import('../route');
+
+    const response = await POST(new Request('http://localhost/api/upload/complete', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId: 'session-5',
+        etags: [{ PartNumber: 1, ETag: 'etag-1' }],
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as never);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      success: true,
+      ingestNotificationStatus: 'failed',
+    }));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to notify ingest after upload completion:',
+      expect.any(Error),
+    );
+    consoleSpy.mockRestore();
   });
 
   it('returns 500 for generic internal errors', async () => {

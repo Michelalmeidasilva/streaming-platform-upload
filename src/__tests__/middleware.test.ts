@@ -18,7 +18,7 @@ jest.mock('@/lib/security/audit', () => ({
 describe('Middleware', () => {
   const mockRequest = (pathname: string, method = 'GET') => {
     const req = {
-      nextUrl: { pathname },
+      nextUrl: { pathname, protocol: 'http:' },
       method,
       headers: {
         get: jest.fn().mockReturnValue(null),
@@ -46,6 +46,37 @@ describe('Middleware', () => {
     (getToken as jest.Mock).mockResolvedValue(null);
     const response = await middleware(req);
     expect(response?.status).toBe(401);
+  });
+
+  it('reads non-secure auth cookies for local http requests', async () => {
+    const req = mockRequest('/api/upload');
+    (getToken as jest.Mock).mockResolvedValue(null);
+
+    await middleware(req);
+
+    expect(getToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        secret: expect.any(String),
+        secureCookie: false,
+      }),
+    );
+  });
+
+  it('reads secure auth cookies for https requests', async () => {
+    const req = mockRequest('/api/upload');
+    (req.headers.get as unknown as jest.Mock).mockImplementation(
+      (key: string) => key === 'x-forwarded-proto' ? 'https' : null
+    );
+    (getToken as jest.Mock).mockResolvedValue(null);
+
+    await middleware(req);
+
+    expect(getToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        secret: expect.any(String),
+        secureCookie: true,
+      }),
+    );
   });
 
   it('blocks admin mutations for non-admin users', async () => {

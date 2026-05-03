@@ -47,6 +47,28 @@ A modern video upload service built with **NextJS 14** and **TypeScript**, desig
    docker compose up --build
    ```
 
+## Vercel Environment Variables
+
+When deploying this app to Vercel, keep these values in the server-side environment only:
+
+- `EVENT_GATEWAY_URL`
+- `NEXTAUTH_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `E2E_AUTH_ENABLED`
+- `E2E_ADMIN_EMAIL`
+- `ADMIN_EMAILS`
+
+For local development:
+
+- `EVENT_GATEWAY_URL=http://localhost:8080/api/v1`
+
+For production with AWS Lambda Function URL:
+
+- `EVENT_GATEWAY_URL=https://<function-id>.lambda-url.<region>.on.aws`
+
+If the Lambda Function URL uses `AWS_IAM`, the current Event Gateway connector must be extended to sign requests with SigV4. As-is, the connector performs a normal `fetch`, so `NONE` is the compatible auth type today.
+
 ### Development
 
 ```bash
@@ -219,14 +241,35 @@ npx jest --coverage
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `STORAGE_PROVIDER` | `minio` | Storage backend: `s3` or `minio` |
-| `STORAGE_BUCKET` | `videos` | Bucket/folder name for uploads |
-| `MINIO_ENDPOINT` | `http://localhost:9000` | MinIO server endpoint |
-| `MINIO_ACCESS_KEY` | `admin` | MinIO access key |
-| `MINIO_SECRET_KEY` | `password123` | MinIO secret key |
-| `NODE_ENV` | `development` | Environment: `development`, `production` |
+| Variable | Default | Scope | Description |
+|----------|---------|-------|-------------|
+| `STORAGE_PROVIDER` | `minio` | Server | Storage backend: `s3` or `minio` |
+| `STORAGE_BUCKET` | `videos` | Server | Bucket/folder name for uploads |
+| `STORAGE_SIGNED_URL_TTL_SECONDS` | `3600` | Server | Signed URL lifetime in seconds |
+| `STORAGE_ENCRYPTION_ENABLED` | `true` | Server | Enables storage encryption policy |
+| `STORAGE_ENCRYPTION_MODE` | `AES256` | Server | Storage encryption mode |
+| `STORAGE_CHECKSUM_ALGORITHM` | `SHA256` | Server | Storage checksum algorithm |
+| `UPLOAD_CHUNK_SIZE_BYTES` | `104857600` | Server | Chunk size used during multipart uploads |
+| `MINIO_ENDPOINT` | `http://localhost:9000` | Server | MinIO server endpoint |
+| `MINIO_ACCESS_KEY` | `admin` | Server | MinIO access key |
+| `MINIO_SECRET_KEY` | `password123` | Server | MinIO secret key |
+| `AWS_REGION` | `us-east-1` | Server | AWS region for S3 and related services |
+| `AWS_ACCESS_KEY_ID` | - | Server | AWS access key for S3 uploads |
+| `AWS_SECRET_ACCESS_KEY` | - | Server | AWS secret access key for S3 uploads |
+| `S3_ENDPOINT` | - | Server | Custom S3 endpoint, if used |
+| `S3_FORCE_PATH_STYLE` | `false` | Server | Forces path-style S3 requests |
+| `EVENT_GATEWAY_URL` | `http://localhost:8080/api/v1` | Server | Event gateway endpoint, or Lambda Function URL in production |
+| `NODE_ENV` | `development` | Server | Environment: `development`, `production` |
+| `PORT` | `3000` | Server | App port |
+| `NEXTAUTH_SECRET` | `development-secret` | Server | NextAuth JWT secret |
+| `GOOGLE_CLIENT_ID` | `missing-google-client-id` | Server | Google OAuth client id |
+| `GOOGLE_CLIENT_SECRET` | `missing-google-client-secret` | Server | Google OAuth client secret |
+| `ADMIN_EMAILS` | `admin@example.com,owner@example.com` | Server | Comma-separated admin emails |
+| `E2E_AUTH_ENABLED` | `0` | Server | Enables E2E credentials login |
+| `E2E_ADMIN_EMAIL` | - | Server | E2E admin email |
+| `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Client | Enables direct upload in the browser |
+| `NEXT_PUBLIC_E2E_AUTH_ENABLED` | `0` | Client | Enables E2E auth UI in the browser |
+| `NEXT_PUBLIC_E2E_ADMIN_EMAIL` | - | Client | E2E admin email exposed to browser for tests |
 
 ## Documentation
 

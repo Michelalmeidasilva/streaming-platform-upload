@@ -10,6 +10,15 @@ function getClientKey(request: NextRequest, tokenEmail?: string | null) {
   return tokenEmail || ip;
 }
 
+function usesSecureCookies(request: NextRequest) {
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  if (forwardedProto) {
+    return forwardedProto.split(',')[0].trim() === 'https';
+  }
+
+  return request.nextUrl.protocol === 'https:';
+}
+
 function rateLimitFor(pathname: string) {
   if (pathname.startsWith('/api/auth')) {
     return { limit: 10, windowMs: 60_000 };
@@ -45,7 +54,11 @@ export async function middleware(request: NextRequest) {
   const e2eEmail = isE2EAuthEnabled() ? request.cookies.get(E2E_AUTH_COOKIE)?.value : undefined;
   const token = e2eEmail
     ? { email: e2eEmail, role: createE2ESession(e2eEmail).user.role }
-    : await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET || 'development-secret' });
+    : await getToken({
+        req: request,
+        secret: process.env.NEXTAUTH_SECRET || 'development-secret',
+        secureCookie: usesSecureCookies(request),
+      });
   const key = `${pathname}:${method}:${getClientKey(request, token?.email || null)}`;
   const rateLimit = evaluateRateLimit(key, rateLimitFor(pathname));
 
