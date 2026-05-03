@@ -1,10 +1,6 @@
-## [1.1.0] - 2026-05-03
+## [1.1.1] - 2026-05-03
 
-536a0eb feat: migrate direct uploads to s3 (#5)
-
-3a95a05 docs: add release process documentation
-89e95df test: improve PATCH/DELETE /api/videos/[videoId] coverage to 80%+
-66ab897 test: improve GET /api/videos endpoint coverage to 80%+
+b259cae Fix local auth cookie detection in protected API flows (#6)
 
   - Non-blocking: extraction happens asynchronously after upload completes
   - Graceful fallback to dynamic placeholder images if extraction fails
