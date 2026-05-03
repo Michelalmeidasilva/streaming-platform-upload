@@ -49,6 +49,11 @@ export class S3Adapter implements IStorageAdapter {
       credentials: config.accessKeyId && config.secretAccessKey
         ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
         : undefined,
+      // AWS SDK v3 >= 3.500 enables flexible checksums by default, which injects
+      // x-amz-checksum-crc32 into presigned URLs. The browser cannot compute or
+      // supply this header during direct PUT uploads, causing S3 to reject with 400.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
     this.bucket = config.bucket;
   }

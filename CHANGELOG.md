@@ -1,4 +1,18 @@
+<<<<<<< HEAD
+## [Unreleased] 2026-05-03
+### Fixed
+- S3 direct browser uploads were rejected by AWS with HTTP 400 due to AWS SDK v3 >= 3.500
+  injecting `x-amz-checksum-crc32=AAAAAA==` into presigned URLs by default. The browser
+  `fetch` PUT cannot compute or supply a CRC32 header, so S3 refused every upload.
+  Fixed by setting `requestChecksumCalculation: 'WHEN_REQUIRED'` and
+  `responseChecksumValidation: 'WHEN_REQUIRED'` on the `S3Client` constructor in `S3Adapter`.
+
+---
+
+## [1.1.1] - 2026-05-03
+=======
 ## [1.1.2] - 2026-05-03
+>>>>>>> 058124ded43b5e7108955753a8751d5e0fda5cb0
 
 1f610c3 Feature/state videos (#7)
 
