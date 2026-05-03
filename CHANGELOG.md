@@ -1,11 +1,7 @@
-## [1.1.1] - 2026-05-03
+## [1.1.2] - 2026-05-03
 
-b259cae Fix local auth cookie detection in protected API flows (#6)
+1f610c3 Feature/state videos (#7)
 
-  - Non-blocking: extraction happens asynchronously after upload completes
-  - Graceful fallback to dynamic placeholder images if extraction fails
-  - Emits `video.thumbnail.generated` and `video.thumbnail.fallback` events
-  - Client receives real-time updates via EventEmitter
 - New `thumbnailStatus` field on Video model (pending | ready | failed)
 - `ThumbnailExtractor` service for FFmpeg integration and thumbnail orchestration
 - `FallbackGenerator` for dynamic placeholder image creation
