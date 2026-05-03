@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -55,22 +55,22 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     root.style.colorScheme = effective;
   };
 
-  const setThemeValue = (newTheme: Theme) => {
+  const setThemeValue = useCallback((newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-  };
+  }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const newTheme: Theme = effectiveTheme === 'light' ? 'dark' : 'light';
     setThemeValue(newTheme);
-  };
+  }, [effectiveTheme, setThemeValue]);
 
   const value = useMemo(() => ({
     theme,
     effectiveTheme,
     setTheme: setThemeValue,
     toggleTheme,
-  }), [theme, effectiveTheme]);
+  }), [theme, effectiveTheme, setThemeValue, toggleTheme]);
 
   // Sempre renderizar com contexto (evita erro de context missing)
   return (

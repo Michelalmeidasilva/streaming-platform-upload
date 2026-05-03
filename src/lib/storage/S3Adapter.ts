@@ -43,6 +43,8 @@ export class S3Adapter implements IStorageAdapter {
   constructor(config: StorageConfig) {
     this.policy = resolveStoragePolicy(config);
     this.client = new S3Client({
+      endpoint: config.endpoint || undefined,
+      forcePathStyle: config.forcePathStyle || false,
       region: config.region || 'us-east-1',
       credentials: config.accessKeyId && config.secretAccessKey
         ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
@@ -106,7 +108,6 @@ export class S3Adapter implements IStorageAdapter {
       Key: key,
       ContentType: contentType,
       ...getEncryptionOptions(this.policy),
-      ChecksumAlgorithm: this.policy.checksumAlgorithm,
     }));
     return response.UploadId || '';
   }

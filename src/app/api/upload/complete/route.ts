@@ -3,6 +3,7 @@ import { uploadService } from '@/lib/api/uploadService';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
+import { notifyIngestStorageCompletion } from '@/lib/integration/storageWebhookBridge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +41,16 @@ export async function POST(request: NextRequest) {
     }
 
     const video = await uploadService.completeUpload(sessionId, etags || [], thumbnail);
+    const storageProvider = (process.env.STORAGE_PROVIDER as 's3' | 'minio' | 'memory') || 'minio';
+
+    if (storageProvider === 's3') {
+      await notifyIngestStorageCompletion(storageProvider, {
+        key: video.filename,
+        size: video.size,
+        occurredAt: new Date(),
+        multipart: Array.isArray(etags) && etags.length > 0,
+      });
+    }
 
     return NextResponse.json({
       success: true,
