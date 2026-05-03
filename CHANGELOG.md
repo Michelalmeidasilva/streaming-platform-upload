@@ -1,11 +1,11 @@
-## [1.0.2] - 2026-05-02
+## [1.1.0] - 2026-05-03
 
-6fbccac fix: enable variable expansion in changelog generation
+536a0eb feat: migrate direct uploads to s3 (#5)
 
-- **Automatic thumbnail generation** from uploaded videos
-  - Extracts frame at 2-second mark using FFmpeg
-  - Generates 640×360 JPEG thumbnail for all uploads
-  - Stores thumbnails in S3/MinIO under `/thumbnails/` prefix
+3a95a05 docs: add release process documentation
+89e95df test: improve PATCH/DELETE /api/videos/[videoId] coverage to 80%+
+66ab897 test: improve GET /api/videos endpoint coverage to 80%+
+
   - Non-blocking: extraction happens asynchronously after upload completes
   - Graceful fallback to dynamic placeholder images if extraction fails
   - Emits `video.thumbnail.generated` and `video.thumbnail.fallback` events

@@ -12,11 +12,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "🔍 Running pre-commit checks..."
 echo ""
 
-# Run Jest unit tests
-echo "🧪 Running unit tests..."
+# Run Jest unit tests with coverage
+echo "🧪 Running unit tests with coverage..."
 cd "$PROJECT_ROOT"
-if ! npm test -- --forceExit 2>&1; then
-    echo "❌ Tests failed. Commit aborted."
+if ! npm test -- --coverage --forceExit 2>&1; then
+    echo "❌ Tests failed or coverage threshold not met. Commit aborted."
     exit 1
 fi
 echo "✅ Unit tests passed"

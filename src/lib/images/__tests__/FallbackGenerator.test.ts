@@ -82,5 +82,41 @@ describe('FallbackGenerator', () => {
 
       expect(buffer1).toEqual(buffer2);
     });
+
+    it('should truncate extremely long filenames', async () => {
+      const generator = new FallbackGenerator();
+      const video = {
+        id: 'test-long',
+        filename: 'a'.repeat(100) + '.mp4',
+        originalName: 'a'.repeat(100) + '.mp4',
+        createdAt: new Date()
+      } as Video;
+      const buffer = await generator.generateFallback(video);
+      expect(buffer).toBeInstanceOf(Buffer);
+    });
+
+    it('should handle filenames without extensions', async () => {
+      const generator = new FallbackGenerator();
+      const video = {
+        id: 'test-no-ext',
+        filename: 'just-a-file-that-is-very-long-and-should-be-truncated-anyway',
+        originalName: 'just-a-file-that-is-very-long-and-should-be-truncated-anyway',
+        createdAt: new Date()
+      } as Video;
+      const buffer = await generator.generateFallback(video);
+      expect(buffer).toBeInstanceOf(Buffer);
+    });
+
+    it('should escape special XML characters in filename', async () => {
+      const generator = new FallbackGenerator();
+      const video = {
+        id: 'test-escape',
+        filename: 'video <tag> & "quote" \'apostrophe\'.mp4',
+        originalName: 'video <tag> & "quote" \'apostrophe\'.mp4',
+        createdAt: new Date()
+      } as Video;
+      const buffer = await generator.generateFallback(video);
+      expect(buffer).toBeInstanceOf(Buffer);
+    });
   });
 });

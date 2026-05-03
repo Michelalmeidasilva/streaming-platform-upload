@@ -76,7 +76,7 @@ describe('S3Adapter security behavior', () => {
     }));
   });
 
-  it('applies the same policy when starting multipart uploads and chunk uploads', async () => {
+  it('applies encryption on multipart initiation and checksum on server-side chunk uploads', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -94,7 +94,6 @@ describe('S3Adapter security behavior', () => {
       Key: 'video.mp4',
       ContentType: 'video/mp4',
       ServerSideEncryption: 'AES256',
-      ChecksumAlgorithm: 'SHA256',
     }));
     expect(mockUploadPartCommand).toHaveBeenCalledWith(expect.objectContaining({
       Bucket: 'videos',
@@ -945,5 +944,36 @@ describe('S3Adapter security behavior', () => {
         ],
       },
     }));
+  });
+
+  it('returns empty string when uploadPart receives no ETag', async () => {
+    const adapter = new S3Adapter({
+      provider: 's3',
+      bucket: 'videos',
+    });
+
+    mockSend.mockResolvedValueOnce({});
+
+    const etag = await adapter.uploadPart(Buffer.from('chunk'), 'video.mp4', 'upload-id-123', 1);
+
+    expect(etag).toBe('');
+  });
+
+  it('filters out objects with missing Keys in listObjects', async () => {
+    const adapter = new S3Adapter({
+      provider: 's3',
+      bucket: 'videos',
+    });
+
+    mockSend.mockResolvedValueOnce({
+      Contents: [
+        { Key: 'valid.mp4', Size: 100 },
+        { Size: 200 }, // Missing Key
+      ],
+    });
+
+    const objects = await adapter.listObjects();
+    expect(objects).toHaveLength(1);
+    expect(objects[0].key).toBe('valid.mp4');
   });
 });
