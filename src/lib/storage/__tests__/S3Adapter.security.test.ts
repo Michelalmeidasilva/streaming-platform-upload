@@ -5,9 +5,9 @@ const mockPutObjectCommand = jest.fn((input) => ({ input, command: 'PutObjectCom
 const mockCreateMultipartUploadCommand = jest.fn((input) => ({ input, command: 'CreateMultipartUploadCommand' }));
 const mockUploadPartCommand = jest.fn((input) => ({ input, command: 'UploadPartCommand' }));
 const mockCompleteMultipartUploadCommand = jest.fn((input) => ({ input, command: 'CompleteMultipartUploadCommand' }));
-const mockListPartsCommand = jest.fn((input) => ({ input, command: 'ListPartsCommand' }));
 const mockDeleteObjectCommand = jest.fn((input) => ({ input, command: 'DeleteObjectCommand' }));
 const mockGetObjectCommand = jest.fn((input) => ({ input, command: 'GetObjectCommand' }));
+const mockHeadObjectCommand = jest.fn((input) => ({ input, command: 'HeadObjectCommand' }));
 const mockListObjectsV2Command = jest.fn((input) => ({ input, command: 'ListObjectsV2Command' }));
 
 jest.mock('@aws-sdk/client-s3', () => ({
@@ -15,10 +15,10 @@ jest.mock('@aws-sdk/client-s3', () => ({
   PutObjectCommand: mockPutObjectCommand,
   DeleteObjectCommand: mockDeleteObjectCommand,
   GetObjectCommand: mockGetObjectCommand,
+  HeadObjectCommand: mockHeadObjectCommand,
   CreateMultipartUploadCommand: mockCreateMultipartUploadCommand,
   UploadPartCommand: mockUploadPartCommand,
   CompleteMultipartUploadCommand: mockCompleteMultipartUploadCommand,
-  ListPartsCommand: mockListPartsCommand,
   ListObjectsV2Command: mockListObjectsV2Command,
 }));
 
@@ -32,16 +32,6 @@ describe('S3Adapter security behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return {
-          Parts: [
-            { PartNumber: 1, ETag: '"listed-etag-1"' },
-            { PartNumber: 2, ETag: '"listed-etag-2"' },
-          ],
-          IsTruncated: false,
-        };
-      }
-
       if (command.command === 'CreateMultipartUploadCommand') {
         return { UploadId: 'upload-id-123' };
       }
@@ -104,7 +94,7 @@ describe('S3Adapter security behavior', () => {
     }));
   });
 
-  it('uses storage-listed multipart etags before completion', async () => {
+  it('uses provided etags to complete multipart upload, sorted and normalized', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -125,8 +115,8 @@ describe('S3Adapter security behavior', () => {
       UploadId: 'upload-id-123',
       MultipartUpload: {
         Parts: [
-          { PartNumber: 1, ETag: '"listed-etag-1"' },
-          { PartNumber: 2, ETag: '"listed-etag-2"' },
+          { PartNumber: 1, ETag: '"etag-1"' },
+          { PartNumber: 2, ETag: '"etag-2"' },
         ],
       },
     }));
@@ -325,12 +315,12 @@ describe('S3Adapter security behavior', () => {
       signedUrlTtlSeconds: 3600,
     });
 
-    mockSend.mockResolvedValueOnce({ Body: 'file-content' });
+    mockSend.mockResolvedValueOnce({ ContentLength: 1024 });
 
     const exists = await adapter.exists('video.mp4');
 
     expect(exists).toBe(true);
-    expect(mockGetObjectCommand).toHaveBeenCalledWith({
+    expect(mockHeadObjectCommand).toHaveBeenCalledWith({
       Bucket: 'videos',
       Key: 'video.mp4',
     });
@@ -618,7 +608,7 @@ describe('S3Adapter security behavior', () => {
     expect(uploadId).toBe('');
   });
 
-  it('handles pagination when listing uploaded parts', async () => {
+  it('completes multipart upload with provided parts sorted by PartNumber', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -628,36 +618,12 @@ describe('S3Adapter security behavior', () => {
       signedUrlTtlSeconds: 3600,
     });
 
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        if (command.input.PartNumberMarker === undefined) {
-          return {
-            Parts: [
-              { PartNumber: 1, ETag: '"etag-1"' },
-              { PartNumber: 2, ETag: '"etag-2"' },
-            ],
-            IsTruncated: true,
-            NextPartNumberMarker: '2',
-          };
-        } else {
-          return {
-            Parts: [
-              { PartNumber: 3, ETag: '"etag-3"' },
-              { PartNumber: 4, ETag: '"etag-4"' },
-            ],
-            IsTruncated: false,
-          };
-        }
-      }
-
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
-    });
-
-    await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', []);
+    await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', [
+      { PartNumber: 4, ETag: '"etag-4"' },
+      { PartNumber: 2, ETag: '"etag-2"' },
+      { PartNumber: 1, ETag: '"etag-1"' },
+      { PartNumber: 3, ETag: '"etag-3"' },
+    ]);
 
     expect(mockCompleteMultipartUploadCommand).toHaveBeenCalledWith(expect.objectContaining({
       MultipartUpload: {
@@ -671,7 +637,7 @@ describe('S3Adapter security behavior', () => {
     }));
   });
 
-  it('handles parts with missing PartNumber or ETag during listing', async () => {
+  it('completes multipart upload with provided parts directly (no extra ListParts call)', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -681,70 +647,17 @@ describe('S3Adapter security behavior', () => {
       signedUrlTtlSeconds: 3600,
     });
 
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return {
-          Parts: [
-            { PartNumber: 1, ETag: '"etag-1"' },
-            { ETag: '"etag-2"' },
-            { PartNumber: 3 },
-            { PartNumber: 4, ETag: '"etag-4"' },
-          ],
-          IsTruncated: false,
-        };
-      }
+    await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', [
+      { PartNumber: 1, ETag: 'etag-1' },
+      { PartNumber: 2, ETag: 'etag-2' },
+    ]);
 
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
-    });
-
-    await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', []);
-
+    expect(mockCompleteMultipartUploadCommand).toHaveBeenCalledTimes(1);
     expect(mockCompleteMultipartUploadCommand).toHaveBeenCalledWith(expect.objectContaining({
       MultipartUpload: {
         Parts: [
           { PartNumber: 1, ETag: '"etag-1"' },
-          { PartNumber: 4, ETag: '"etag-4"' },
-        ],
-      },
-    }));
-  });
-
-  it('uses fallback parts when listUploadedParts returns empty', async () => {
-    const adapter = new S3Adapter({
-      provider: 's3',
-      bucket: 'videos',
-      encryptionEnabled: true,
-      encryptionMode: 'AES256',
-      checksumAlgorithm: 'SHA256',
-      signedUrlTtlSeconds: 3600,
-    });
-
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return { Parts: [], IsTruncated: false };
-      }
-
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
-    });
-
-    await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', [
-      { PartNumber: 1, ETag: 'fallback-etag-1' },
-      { PartNumber: 2, ETag: 'fallback-etag-2' },
-    ]);
-
-    expect(mockCompleteMultipartUploadCommand).toHaveBeenCalledWith(expect.objectContaining({
-      MultipartUpload: {
-        Parts: [
-          { PartNumber: 1, ETag: '"fallback-etag-1"' },
-          { PartNumber: 2, ETag: '"fallback-etag-2"' },
+          { PartNumber: 2, ETag: '"etag-2"' },
         ],
       },
     }));
@@ -795,18 +708,6 @@ describe('S3Adapter security behavior', () => {
       encryptionMode: 'AES256',
       checksumAlgorithm: 'SHA256',
       signedUrlTtlSeconds: 3600,
-    });
-
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return { Parts: [], IsTruncated: false };
-      }
-
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
     });
 
     await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', [
@@ -873,7 +774,7 @@ describe('S3Adapter security behavior', () => {
     expect(objects[1].size).toBe(2048000);
   });
 
-  it('handles listUploadedParts with undefined Parts array', async () => {
+  it('completes multipart upload with a single provided part', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -881,18 +782,6 @@ describe('S3Adapter security behavior', () => {
       encryptionMode: 'AES256',
       checksumAlgorithm: 'SHA256',
       signedUrlTtlSeconds: 3600,
-    });
-
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return { IsTruncated: false };
-      }
-
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
     });
 
     await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', [
@@ -908,7 +797,7 @@ describe('S3Adapter security behavior', () => {
     }));
   });
 
-  it('handles listUploadedParts with no NextPartNumberMarker when IsTruncated is false', async () => {
+  it('completes multipart upload with empty parts list', async () => {
     const adapter = new S3Adapter({
       provider: 's3',
       bucket: 'videos',
@@ -918,31 +807,13 @@ describe('S3Adapter security behavior', () => {
       signedUrlTtlSeconds: 3600,
     });
 
-    mockSend.mockImplementation(async (command) => {
-      if (command.command === 'ListPartsCommand') {
-        return {
-          Parts: [
-            { PartNumber: 1, ETag: '"etag-1"' },
-          ],
-          IsTruncated: false,
-        };
-      }
-
-      if (command.command === 'CompleteMultipartUploadCommand') {
-        return {};
-      }
-
-      return {};
-    });
-
     await adapter.completeMultipartUpload('video.mp4', 'upload-id-123', []);
 
     expect(mockCompleteMultipartUploadCommand).toHaveBeenCalledWith(expect.objectContaining({
-      MultipartUpload: {
-        Parts: [
-          { PartNumber: 1, ETag: '"etag-1"' },
-        ],
-      },
+      Bucket: 'videos',
+      Key: 'video.mp4',
+      UploadId: 'upload-id-123',
+      MultipartUpload: { Parts: [] },
     }));
   });
 

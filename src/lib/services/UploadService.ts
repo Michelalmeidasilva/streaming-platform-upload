@@ -131,15 +131,12 @@ export class UploadService {
       presignedUrls.push(url);
     } else {
       uploadId = await this.storage.initiateMultipartUpload(key, contentType);
-      for (let i = 1; i <= totalChunks; i++) {
-        const url = await this.storage.getUploadPartPresignedUrl(
-          key,
-          uploadId,
-          i,
-          this.storagePolicy.signedUrlTtlSeconds,
-        );
-        presignedUrls.push(url);
-      }
+      const partUrls = await Promise.all(
+        Array.from({ length: totalChunks }, (_, i) =>
+          this.storage.getUploadPartPresignedUrl(key, uploadId, i + 1, this.storagePolicy.signedUrlTtlSeconds),
+        ),
+      );
+      presignedUrls.push(...partUrls);
     }
 
     const session: UploadSession = {
