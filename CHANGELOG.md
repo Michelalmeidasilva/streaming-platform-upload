@@ -1,11 +1,7 @@
-## [Unreleased] 2026-05-04
-### Changed
-- Mobile UX overhaul: sidebar replaced by fixed bottom nav on mobile (≤640px) with safe-area-inset support
-- Topbar simplified on mobile: logo mark, role badge, ThemeToggle and sign-out only
-- Video cards switch to single-column horizontal layout on mobile; delete and status badge hidden (accessible via modal)
-- Play button always visible on touch devices (`@media (hover: none)`)
-- Video modal goes full-screen on mobile (100dvh, no border-radius, safe-area-inset-top on header)
-- Modal player fills all available space (height: 95dvh on desktop)
+## [1.2.0] - 2026-05-05
+
+4fe1670 feat: mobile UX overhaul — responsive layout, accessibility & modal (#9)
+
 - Download button shows spinner loading state before browser starts download; double-click guard via ref
 - Modal footer: download left, title input + save/delete right on desktop; stacked full-width on mobile
 
