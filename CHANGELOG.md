@@ -1,11 +1,7 @@
-## [1.2.0] - 2026-05-05
+## [1.2.1] - 2026-05-05
 
-4fe1670 feat: mobile UX overhaul — responsive layout, accessibility & modal (#9)
+2c2fd20 fix(upload): parallelize S3 multipart chunks and remove redundant API calls (#10)
 
-- Download button shows spinner loading state before browser starts download; double-click guard via ref
-- Modal footer: download left, title input + save/delete right on desktop; stacked full-width on mobile
-
-### Added
 - `useE2ESession` shared hook — eliminates duplicated e2e cookie logic from page, UploadArea and VideoList
 - Global `:focus-visible` ring for keyboard/switch-access navigation
 - `touch-action: manipulation` and `-webkit-tap-highlight-color: transparent` on interactive elements
