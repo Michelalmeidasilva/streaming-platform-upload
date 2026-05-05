@@ -15,6 +15,19 @@ jest.mock('@/lib/services/UploadService', () => ({
   }),
 }));
 
+jest.mock('@/lib/persistence/IngestUploadStateClient', () => ({
+  IngestUploadStateClient: jest.fn(function () {
+    this.saveState = jest.fn();
+    this.getState = jest.fn();
+    this.deleteSession = jest.fn();
+    this.saveVideo = jest.fn();
+    this.getVideo = jest.fn();
+    this.listVideos = jest.fn();
+    this.updateVideo = jest.fn();
+    this.deleteVideo = jest.fn();
+  }),
+}));
+
 jest.mock('@/lib/events/EventDispatcher', () => ({
   initializeEventDispatcher: jest.fn(),
 }));
@@ -68,6 +81,11 @@ describe('uploadService', () => {
 
   it('provides storageAdapter singleton', () => {
     expect(storageAdapter).toBeDefined();
+  });
+
+  it('provides upload state store singleton', async () => {
+    const mod = await import('../uploadService');
+    expect(mod.uploadStateStore).toBeDefined();
   });
 
   it('uploadService and storageAdapter are singletons', () => {
@@ -145,12 +163,14 @@ describe('uploadService', () => {
     (globalThis as any).__uploadServiceSingleton__ = {
       uploadService: { existing: true },
       storageAdapter: { existing: true },
+      uploadStateStore: { existing: true },
     };
 
     const { mod, storageModule } = await loadFreshModule({}, { resetSingleton: false });
 
     expect(mod.uploadService).toEqual({ existing: true });
     expect(mod.storageAdapter).toEqual({ existing: true });
+    expect(mod.uploadStateStore).toEqual({ existing: true });
     expect(storageModule.createStorageAdapter).not.toHaveBeenCalled();
   });
 });

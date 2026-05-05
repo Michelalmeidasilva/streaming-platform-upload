@@ -52,6 +52,7 @@ A modern video upload service built with **NextJS 14** and **TypeScript**, desig
 When deploying this app to Vercel, keep these values in the server-side environment only:
 
 - `EVENT_GATEWAY_URL`
+- `INGEST_PERSISTENCE_BASE_URL`
 - `NEXTAUTH_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
@@ -62,10 +63,12 @@ When deploying this app to Vercel, keep these values in the server-side environm
 For local development:
 
 - `EVENT_GATEWAY_URL=http://localhost:8080/api/v1`
+- `INGEST_PERSISTENCE_BASE_URL=http://localhost:8080/api/v1`
 
 For production with AWS Lambda Function URL:
 
 - `EVENT_GATEWAY_URL=https://<function-id>.lambda-url.<region>.on.aws`
+- `INGEST_PERSISTENCE_BASE_URL=https://<function-id>.lambda-url.<region>.on.aws`
 
 If the Lambda Function URL uses `AWS_IAM`, the current Event Gateway connector must be extended to sign requests with SigV4. As-is, the connector performs a normal `fetch`, so `NONE` is the compatible auth type today.
 
@@ -259,6 +262,7 @@ npx jest --coverage
 | `S3_ENDPOINT` | - | Server | Custom S3 endpoint, if used |
 | `S3_FORCE_PATH_STYLE` | `false` | Server | Forces path-style S3 requests |
 | `EVENT_GATEWAY_URL` | `http://localhost:8080/api/v1` | Server | Event gateway endpoint, or Lambda Function URL in production |
+| `INGEST_PERSISTENCE_BASE_URL` | `http://localhost:8080/api/v1` | Server | HTTP base URL used by the upload app to persist sessions and video metadata in `streaming-ingest` |
 | `NODE_ENV` | `development` | Server | Environment: `development`, `production` |
 | `PORT` | `3000` | Server | App port |
 | `NEXTAUTH_SECRET` | `development-secret` | Server | NextAuth JWT secret |

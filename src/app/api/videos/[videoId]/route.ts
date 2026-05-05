@@ -47,7 +47,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const video = uploadService.getVideo(params.videoId);
+  const video = await uploadService.getVideo(params.videoId);
   if (!video) {
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }
@@ -83,7 +83,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
   }
 
-  const updated = uploadService.updateVideoTitle(params.videoId, title);
+  const updated = await uploadService.updateVideoTitle(params.videoId, title);
   if (!updated) {
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }
@@ -113,7 +113,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const video = uploadService.getVideo(params.videoId);
+  const video = await uploadService.getVideo(params.videoId);
   if (!video) {
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }

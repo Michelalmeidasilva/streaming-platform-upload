@@ -8,7 +8,7 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || 'missing-google-c
 const e2eAuthEnabled = process.env.E2E_AUTH_ENABLED === '1';
 
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || 'development-secret',
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
   },

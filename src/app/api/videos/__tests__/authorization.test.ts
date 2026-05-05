@@ -65,7 +65,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.updateVideoTitle.mockReturnValue({
+    uploadService.updateVideoTitle.mockResolvedValue({
       id: '1',
       title: 'New title',
       originalName: 'Old title',
@@ -94,7 +94,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video',
       originalName: 'Video',
@@ -127,7 +127,7 @@ describe('video authorization', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''Video");
     expect(response.headers.get('content-type')).toBe('video/mp4');
   });
 
@@ -136,7 +136,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
+    uploadService.getAllVideos.mockResolvedValue([
       {
         id: '1',
         filename: 'video1.mp4',
@@ -176,7 +176,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
+    uploadService.getAllVideos.mockResolvedValue([
       {
         id: '1',
         filename: 'video1.mp4',
@@ -188,17 +188,6 @@ describe('video authorization', () => {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       },
-      {
-        id: '2',
-        filename: 'video2.mp4',
-        originalName: 'video2.mp4',
-        title: 'Second Video',
-        size: 2048,
-        status: 'ready',
-        progress: 100,
-        createdAt: new Date('2026-01-02T00:00:00.000Z'),
-        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
-      },
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -208,6 +197,7 @@ describe('video authorization', () => {
     expect(response.status).toBe(200);
     expect(data.videos).toHaveLength(1);
     expect(data.videos[0].title).toBe('First Video');
+    expect(uploadService.getAllVideos).toHaveBeenCalledWith('first');
   });
 
   it('filters videos by originalName in search query', async () => {
@@ -215,7 +205,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
+    uploadService.getAllVideos.mockResolvedValue([
       {
         id: '1',
         filename: 'video1.mp4',
@@ -227,17 +217,6 @@ describe('video authorization', () => {
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       },
-      {
-        id: '2',
-        filename: 'video2.mp4',
-        originalName: 'demo.mp4',
-        title: 'Second Video',
-        size: 2048,
-        status: 'ready',
-        progress: 100,
-        createdAt: new Date('2026-01-02T00:00:00.000Z'),
-        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
-      },
     ]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -247,6 +226,7 @@ describe('video authorization', () => {
     expect(response.status).toBe(200);
     expect(data.videos).toHaveLength(1);
     expect(data.videos[0].originalName).toBe('production.mp4');
+    expect(uploadService.getAllVideos).toHaveBeenCalledWith('production');
   });
 
   it('performs case-insensitive search on videos', async () => {
@@ -254,7 +234,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
+    uploadService.getAllVideos.mockResolvedValue([
       {
         id: '1',
         filename: 'video1.mp4',
@@ -282,7 +262,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
+    uploadService.getAllVideos.mockResolvedValue([
       {
         id: '1',
         filename: 'video1.mp4',
@@ -310,19 +290,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([
-      {
-        id: '1',
-        filename: 'video1.mp4',
-        originalName: 'video1.mp4',
-        title: 'First Video',
-        size: 1024,
-        status: 'ready',
-        progress: 100,
-        createdAt: new Date('2026-01-01T00:00:00.000Z'),
-        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-      },
-    ]);
+    uploadService.getAllVideos.mockResolvedValue([]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await listVideos(new Request('http://localhost/api/videos?q=nonexistent') as any);
@@ -330,6 +298,7 @@ describe('video authorization', () => {
 
     expect(response.status).toBe(200);
     expect(data.videos).toHaveLength(0);
+    expect(uploadService.getAllVideos).toHaveBeenCalledWith('nonexistent');
   });
 
   it('returns 403 when role without search permission attempts to list videos', async () => {
@@ -337,7 +306,7 @@ describe('video authorization', () => {
       user: { email: 'guest@example.com', role: 'GUEST' },
     });
 
-    uploadService.getAllVideos.mockReturnValue([]);
+    uploadService.getAllVideos.mockResolvedValue([]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await listVideos(new Request('http://localhost/api/videos') as any);
@@ -383,7 +352,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video to delete',
       originalName: 'video.mp4',
@@ -410,7 +379,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Test Video',
       originalName: 'test.mp4',
@@ -448,7 +417,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue(null);
+    uploadService.getVideo.mockResolvedValue(null);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await getVideo(new Request('http://localhost/api/videos/nonexistent') as any, {
@@ -502,7 +471,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.updateVideoTitle.mockReturnValue(null);
+    uploadService.updateVideoTitle.mockResolvedValue(null);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await updateVideo(
@@ -524,7 +493,7 @@ describe('video authorization', () => {
       user: { email: 'admin@example.com', role: 'ADMIN' },
     });
 
-    uploadService.getVideo.mockReturnValue(null);
+    uploadService.getVideo.mockResolvedValue(null);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await deleteVideo(new Request('http://localhost/api/videos/nonexistent', { method: 'DELETE' }) as any, {
@@ -552,7 +521,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue(null);
+    uploadService.getVideo.mockResolvedValue(null);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await downloadVideo(new Request('http://localhost/api/videos/nonexistent/download') as any, {
@@ -568,7 +537,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video',
       originalName: 'Video.mp4',
@@ -600,7 +569,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video',
       originalName: 'Video.mp4',
@@ -633,7 +602,7 @@ describe('video authorization', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('application/octet-stream');
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video.mp4"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''Video.mp4");
   });
 
   it('returns 403 when a GUEST role tries to download a video', async () => {
@@ -669,7 +638,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video',
       originalName: 'Video.mp4',
@@ -694,7 +663,7 @@ describe('video authorization', () => {
       user: { email: 'member@example.com', role: 'MEMBER' },
     });
 
-    uploadService.getVideo.mockReturnValue({
+    uploadService.getVideo.mockResolvedValue({
       id: '1',
       title: 'Video',
       originalName: 'test-video.mp4',
@@ -728,6 +697,6 @@ describe('video authorization', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-length')).toBe('');
     expect(response.headers.get('content-type')).toBe('video/mp4');
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="test-video.mp4"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''test-video.mp4");
   });
 });

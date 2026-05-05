@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { IStorageAdapter } from '@/lib/storage';
+import type { UploadStateStore } from '@/lib/persistence/IngestUploadStateClient';
 import { videoEvents } from '@/lib/VideoEventEmitter';
 import {
+  PersistedUploadState,
   RecoveryPolicy,
   SecurityPosture,
   StorageSecurityPolicy,
@@ -10,6 +12,12 @@ import {
   UploadSession,
   VideoStatus,
 } from '@/types';
+import {
+  EventType,
+  EventData,
+  VideoThumbnailGeneratedEvent,
+  VideoThumbnailFallbackEvent,
+} from '@/lib/events';
 import { ThumbnailExtractor } from './ThumbnailExtractor';
 import { getRecoveryPolicy } from '@/lib/security/recovery-policy';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
@@ -27,44 +35,62 @@ function resolveChunkSize() {
 }
 
 export class UploadService {
-  private storage: IStorageAdapter;
-  private videos: Map<string, Video> = new Map();
-  private sessions: Map<string, UploadSession> = new Map();
-  private thumbnailExtractor: ThumbnailExtractor;
-  private storagePolicy: StorageSecurityPolicy;
-  private recoveryPolicy: RecoveryPolicy;
-  private securityPosture: SecurityPosture;
+  private readonly storage: IStorageAdapter;
+  private readonly stateStore: UploadStateStore;
+  private readonly thumbnailExtractor: ThumbnailExtractor;
+  private readonly storagePolicy: StorageSecurityPolicy;
+  private readonly recoveryPolicy: RecoveryPolicy;
+  private readonly securityPosture: SecurityPosture;
 
-  constructor(storage: IStorageAdapter, securityPosture?: SecurityPosture) {
+  constructor(
+    storage: IStorageAdapter,
+    config: Partial<SecurityPosture> & { stateStore: UploadStateStore },
+  ) {
     this.storage = storage;
-    this.storagePolicy = securityPosture?.storage || resolveStoragePolicy();
-    this.recoveryPolicy = securityPosture?.recovery || getRecoveryPolicy();
-    this.securityPosture = securityPosture || {
+    this.stateStore = config.stateStore;
+    this.storagePolicy = config.storage || resolveStoragePolicy();
+    this.recoveryPolicy = config.recovery || getRecoveryPolicy();
+    this.securityPosture = {
       storage: this.storagePolicy,
       recovery: this.recoveryPolicy,
     };
     this.thumbnailExtractor = new ThumbnailExtractor(storage, videoEvents);
 
-    // Listen for thumbnail events and update video (using NodeEventEmitter base methods)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    videoEvents.on('video.thumbnail.generated' as any, (data: any) => {
-      const video = this.videos.get(data.videoId);
-      if (video) {
-        video.thumbnailUrl = data.thumbnailUrl;
+    videoEvents.on('video.thumbnail.generated' as EventType, (data: EventData) => {
+      const event = data as VideoThumbnailGeneratedEvent;
+      void this.persistVideoMutation(event.videoId, (video) => {
+        video.thumbnailUrl = event.thumbnailUrl;
         video.thumbnailStatus = 'ready';
         video.updatedAt = new Date();
-      }
+      });
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    videoEvents.on('video.thumbnail.fallback' as any, (data: any) => {
-      const video = this.videos.get(data.videoId);
-      if (video) {
-        video.thumbnailUrl = data.thumbnailUrl;
+    videoEvents.on('video.thumbnail.fallback' as EventType, (data: EventData) => {
+      const event = data as VideoThumbnailFallbackEvent;
+      void this.persistVideoMutation(event.videoId, (video) => {
+        video.thumbnailUrl = event.thumbnailUrl;
         video.thumbnailStatus = 'failed';
         video.updatedAt = new Date();
-      }
+      });
     });
+  }
+
+  private async persistVideoMutation(videoId: string, mutate: (video: Video) => void) {
+    const video = await this.stateStore.getVideo(videoId);
+    if (!video) {
+      return;
+    }
+
+    mutate(video);
+    await this.stateStore.saveVideo(video);
+  }
+
+  private async getStateOrThrow(sessionId: string): Promise<PersistedUploadState> {
+    const state = await this.stateStore.getState(sessionId);
+    if (!state) {
+      throw new Error('Invalid session');
+    }
+    return state;
   }
 
   async initiateUpload(
@@ -130,19 +156,14 @@ export class UploadService {
       securityPosture: this.securityPosture,
     };
 
-    this.videos.set(videoId, video);
-    this.sessions.set(sessionId, session);
+    await this.stateStore.saveState({ session, video });
     videoEvents.emitUploadStarted(videoId, filename);
 
     return { sessionId, videoId, chunkSize, totalChunks, presignedUrls };
   }
 
   async uploadChunk(sessionId: string, chunkIndex: number, chunk: Buffer): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (!session) throw new Error('Invalid session');
-
-    const video = this.videos.get(session.videoId);
-    if (!video) throw new Error('Video not found');
+    const { session, video } = await this.getStateOrThrow(sessionId);
 
     const checksumSHA256 = createHash('sha256').update(chunk).digest('base64');
 
@@ -171,6 +192,7 @@ export class UploadService {
     video.updatedAt = new Date();
     video.securityPosture = this.securityPosture;
     session.securityPosture = this.securityPosture;
+    await this.stateStore.saveState({ session, video });
 
     videoEvents.emitUploadProgress({
       videoId: session.videoId,
@@ -186,11 +208,7 @@ export class UploadService {
     etags: { PartNumber: number; ETag: string }[] = [],
     thumbnailBase64?: string,
   ): Promise<Video> {
-    const session = this.sessions.get(sessionId);
-    if (!session) throw new Error('Invalid session');
-
-    const video = this.videos.get(session.videoId);
-    if (!video) throw new Error('Video not found');
+    const { session, video } = await this.getStateOrThrow(sessionId);
 
     const parts = etags.length > 0 ? etags : session.etags;
     const url = session.totalChunks === 1
@@ -205,6 +223,7 @@ export class UploadService {
     video.updatedAt = new Date();
     video.securityPosture = this.securityPosture;
     session.securityPosture = this.securityPosture;
+    await this.stateStore.saveVideo(video);
 
     videoEvents.emitUploadCompleted(session.videoId, video.originalName, video.size, url);
     videoEvents.emitVideoProcessing(session.videoId, 'processing');
@@ -224,6 +243,7 @@ export class UploadService {
         video.thumbnailUrl = thumbnailUrl;
         video.thumbnailStatus = 'ready';
         videoEvents.emitThumbnailGenerated(video.id, thumbnailUrl, new Date().toISOString());
+        await this.stateStore.saveVideo(video);
       } catch (err) {
         console.error('Failed to upload client-provided thumbnail', err);
         this.thumbnailExtractor.extract(video);
@@ -234,27 +254,26 @@ export class UploadService {
     }
 
     const readyTimer = setTimeout(() => {
-      video.status = 'ready';
-      videoEvents.emitVideoReady(session.videoId);
+      void this.updateVideoStatus(video.id, 'ready')
+        .then(() => videoEvents.emitVideoReady(session.videoId))
+        .catch((error) => console.error('Failed to persist ready status:', error));
     }, 2000);
     readyTimer.unref?.();
 
-    this.sessions.delete(sessionId);
+    await this.stateStore.deleteSession(sessionId);
     return video;
   }
 
-  getVideo(videoId: string): Video | undefined {
-    return this.videos.get(videoId);
+  async getVideo(videoId: string): Promise<Video | undefined> {
+    return (await this.stateStore.getVideo(videoId)) || undefined;
   }
 
-  getAllVideos(): Video[] {
-    return Array.from(this.videos.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+  async getAllVideos(query?: string): Promise<Video[]> {
+    return this.stateStore.listVideos(query);
   }
 
   async deleteVideo(videoId: string): Promise<void> {
-    const video = this.videos.get(videoId);
+    const video = await this.stateStore.getVideo(videoId);
     if (video) {
       if (video.thumbnailUrl) {
         try {
@@ -269,27 +288,19 @@ export class UploadService {
       } catch {
         // Primary object cleanup is best-effort for idempotent deletes.
       }
-      this.videos.delete(videoId);
+      await this.stateStore.deleteVideo(videoId);
     }
   }
 
-  updateVideoTitle(videoId: string, title: string): Video | undefined {
-    const video = this.videos.get(videoId);
-    if (!video) {
-      return undefined;
-    }
-
-    video.title = title;
-    video.updatedAt = new Date();
-    video.securityPosture = this.securityPosture;
-    return video;
+  async updateVideoTitle(videoId: string, title: string): Promise<Video | undefined> {
+    const updated = await this.stateStore.updateVideo(videoId, {
+      title,
+      updatedAt: new Date(),
+    });
+    return updated || undefined;
   }
 
-  updateVideoStatus(videoId: string, status: VideoStatus): void {
-    const video = this.videos.get(videoId);
-    if (video) {
-      video.status = status;
-      video.updatedAt = new Date();
-    }
+  async updateVideoStatus(videoId: string, status: VideoStatus): Promise<void> {
+    await this.stateStore.updateVideo(videoId, { status, updatedAt: new Date() });
   }
 }

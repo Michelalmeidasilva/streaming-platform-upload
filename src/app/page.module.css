@@ -1,89 +1,23 @@
+/* ─── APP SHELL ──────────────────────────────────────────────────────────── */
 .app {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* dynamic viewport — handles mobile browser chrome */
   overflow: hidden;
   background: var(--color-bg);
 }
 
+/* ─── LOADING SCREEN ─────────────────────────────────────────────────────── */
 .loadingScreen {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px;
   background: var(--color-bg);
 }
 
-.loadingPanel {
-  width: min(100%, 480px);
-  padding: 48px 40px;
-  border-radius: var(--radius-2xl);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-lg);
-  display: grid;
-  gap: 16px;
-  text-align: center;
-}
-
-.loadingEyebrow {
-  font-size: 12px;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.loadingTitle {
-  font-size: clamp(28px, 4vw, 42px);
-  line-height: 1.2;
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.loadingCopy {
-  color: var(--color-text-secondary);
-  max-width: 38ch;
-  margin: 0 auto;
-  line-height: 1.6;
-}
-
-.loadingIndicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.loadingDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--color-primary);
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-.loadingDot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.loadingDot:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes pulse {
-  0%, 80%, 100% {
-    opacity: 0.4;
-    transform: scale(0.9);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* --- SIDEBAR --- */
+/* ─── SIDEBAR (desktop only) ─────────────────────────────────────────────── */
 .sidebar {
   width: 56px;
   background: var(--color-surface);
@@ -124,6 +58,9 @@
   transition: background var(--transition), color var(--transition);
   color: var(--color-text-muted);
   position: relative;
+  border: none;
+  padding: 0;
+  background: transparent;
 }
 
 .navItem:hover {
@@ -151,15 +88,17 @@
   flex: 1;
 }
 
-/* --- MAIN AREA --- */
+/* ─── MAIN AREA ──────────────────────────────────────────────────────────── */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background: var(--color-bg);
+  min-width: 0;
 }
 
+/* ─── TOPBAR ─────────────────────────────────────────────────────────────── */
 .topbar {
   height: 56px;
   background: var(--color-surface);
@@ -169,21 +108,27 @@
   justify-content: space-between;
   padding: 0 32px;
   flex-shrink: 0;
-  gap: 20px;
+  gap: 16px;
 }
 
 .topbarLeft {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
-.topbarActions {
-  display: flex;
+/* Logo mark shown in topbar on mobile (sidebar is hidden) */
+.topbarLogo {
+  display: none;
+  width: 28px;
+  height: 28px;
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
 }
 
 .topbarTitle {
@@ -192,24 +137,38 @@
   letter-spacing: 0.8px;
   color: var(--color-text-secondary);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .roleBadge {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.4px;
-  padding: 6px 10px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: var(--color-primary-muted);
   color: var(--color-primary);
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .authStatus {
   color: var(--color-text-muted);
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
 }
 
+/* ─── LOCALE SELECT ──────────────────────────────────────────────────────── */
 .localeSelectWrap {
   position: relative;
   display: inline-flex;
@@ -235,6 +194,7 @@
   outline: none;
   border-color: var(--color-primary);
   background: var(--color-surface-2);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
 }
 
 .localeSelectWrap::after {
@@ -249,6 +209,7 @@
   pointer-events: none;
 }
 
+/* ─── SR-ONLY ────────────────────────────────────────────────────────────── */
 .srOnly {
   position: absolute;
   width: 1px;
@@ -261,16 +222,18 @@
   border: 0;
 }
 
+/* ─── BUTTONS ────────────────────────────────────────────────────────────── */
 .authButton,
 .primaryButton,
 .secondaryButton {
   border: 1px solid transparent;
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 7px 16px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2px;
   transition: all var(--transition);
+  white-space: nowrap;
 }
 
 .authButton,
@@ -297,6 +260,7 @@
   background: var(--color-primary-hover);
 }
 
+/* ─── CONTENT AREA ───────────────────────────────────────────────────────── */
 .content {
   flex: 1;
   overflow-y: auto;
@@ -304,6 +268,9 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+  /* Smooth momentum scroll on iOS */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .content::-webkit-scrollbar { width: 6px; }
@@ -311,12 +278,11 @@
 .content::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 .content::-webkit-scrollbar-thumb:hover { background: var(--color-border-subtle); }
 
-/* --- SECTION DIVIDER --- */
+/* ─── SECTION DIVIDER ────────────────────────────────────────────────────── */
 .sectionHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
 }
 
 .sectionLabel {
@@ -334,81 +300,99 @@
   background: var(--color-border);
 }
 
-.hero,
-.statusPanel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  padding: 40px;
-  box-shadow: var(--shadow-md);
+/* ─── MOBILE BOTTOM NAV ──────────────────────────────────────────────────── */
+.mobileNav {
+  display: none; /* hidden on desktop */
 }
 
-.hero {
-  display: grid;
-  gap: 12px;
-  max-width: 720px;
-}
-
-.heroEyebrow,
-.statusLabel {
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.heroTitle {
-  font-size: clamp(32px, 5vw, 48px);
-  line-height: 1.1;
-  max-width: 24ch;
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.heroCopy,
-.statusValue {
-  color: var(--color-text-secondary);
-  max-width: 68ch;
-  line-height: 1.6;
-}
-
-.heroActions {
+.mobileNavItem {
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 24px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-lg);
+  transition: color var(--transition), background var(--transition);
+  /* Minimum 44×44 touch target */
+  min-height: 44px;
 }
 
-.statusPanel {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+.mobileNavItem:hover,
+.mobileNavItem:active {
+  background: var(--color-surface-2);
 }
 
-@media (max-width: 768px) {
-  .sidebar { width: 48px; padding: 12px 0; gap: 4px; }
-  .navItem { width: 36px; height: 36px; }
-  .sidebarLogo { width: 32px; height: 32px; margin-bottom: 8px; }
-  .content { padding: 24px 20px; gap: 24px; }
+.mobileNavItemActive {
+  color: var(--color-primary);
+}
+
+.mobileNavLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* ─── TABLET ─────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .topbar { padding: 0 24px; }
+  .content { padding: 32px 32px; }
+}
+
+/* ─── MOBILE (≤ 640px) ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Hide the vertical sidebar — replaced by the bottom nav */
+  .sidebar { display: none; }
+
+  /* Topbar: compact single row */
   .topbar {
-    height: auto;
-    min-height: 52px;
-    padding: 12px 20px;
-    gap: 12px;
-    flex-wrap: wrap;
+    height: 52px;
+    padding: 0 16px;
+    gap: 10px;
   }
 
-  .hero { padding: 24px 20px; gap: 10px; }
-  .statusPanel {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 24px 20px;
+  /* Show inline logo mark since sidebar is hidden */
+  .topbarLogo { display: flex; }
+
+  /* "LIBRARY" label wastes space — the logo is enough context */
+  .topbarTitle { display: none; }
+
+  /* Username text is redundant alongside the role badge */
+  .authStatus { display: none; }
+
+  /* Locale selector moved out of topbar on mobile — too cramped */
+  .localeSelectWrap { display: none; }
+
+  /* Shrink role badge slightly */
+  .roleBadge {
+    font-size: 10px;
+    padding: 3px 8px;
   }
 
-  .localeSelect {
-    min-width: 0;
+  /* Content: less padding, extra bottom room for the fixed nav bar */
+  .content {
+    padding: 20px 16px calc(72px + env(safe-area-inset-bottom, 0px));
+    gap: 20px;
   }
 
-  .sectionHeader { gap: 8px; }
+  /* Bottom nav — fixed to viewport, safe-area aware (iPhone notch) */
+  .mobileNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    align-items: center;
+    justify-content: space-around;
+    z-index: 100;
+    /* Subtle shadow so it reads above content */
+    box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.06);
+  }
 }

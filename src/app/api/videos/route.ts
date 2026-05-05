@@ -52,18 +52,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.trim().toLowerCase();
-  const videos = uploadService
-    .getAllVideos()
-    .filter(video => {
-      if (!query) {
-        return true;
-      }
-
-      return [video.title, video.originalName]
-        .filter(Boolean)
-        .some(value => value.toLowerCase().includes(query));
-    })
-    .map(toVideoDto);
+  const videos = (await uploadService.getAllVideos(query || undefined)).map(toVideoDto);
 
   return NextResponse.json({ videos });
 }

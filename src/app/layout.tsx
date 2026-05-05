@@ -24,7 +24,7 @@ export default function RootLayout({
   const initialLocale = getInitialLocale();
 
   return (
-    <html lang={initialLocale}>
+    <html lang={initialLocale} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

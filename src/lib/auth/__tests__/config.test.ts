@@ -24,9 +24,9 @@ describe('Auth Config', () => {
     jest.clearAllMocks();
   });
 
-  it('uses development secret when NEXTAUTH_SECRET is missing', () => {
+  it('uses undefined secret when NEXTAUTH_SECRET is missing (no insecure fallback)', () => {
     delete process.env.NEXTAUTH_SECRET;
-    expect(authOptions.secret).toBe('development-secret');
+    expect(authOptions.secret).toBeUndefined();
   });
 
   it('uses environment NEXTAUTH_SECRET when provided', () => {

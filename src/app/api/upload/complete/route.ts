@@ -43,17 +43,26 @@ export async function POST(request: NextRequest) {
     const video = await uploadService.completeUpload(sessionId, etags || [], thumbnail);
     const storageProvider = (process.env.STORAGE_PROVIDER as 's3' | 'minio' | 'memory') || 'minio';
 
+    let ingestNotificationStatus: 'sent' | 'failed' | 'skipped' = 'skipped';
+
     if (storageProvider === 's3') {
-      await notifyIngestStorageCompletion(storageProvider, {
-        key: video.filename,
-        size: video.size,
-        occurredAt: new Date(),
-        multipart: Array.isArray(etags) && etags.length > 0,
-      });
+      try {
+        await notifyIngestStorageCompletion(storageProvider, {
+          key: video.filename,
+          size: video.size,
+          occurredAt: new Date(),
+          multipart: Array.isArray(etags) && etags.length > 0,
+        });
+        ingestNotificationStatus = 'sent';
+      } catch (notificationError) {
+        ingestNotificationStatus = 'failed';
+        console.error('Failed to notify ingest after upload completion:', notificationError);
+      }
     }
 
     return NextResponse.json({
       success: true,
+      ingestNotificationStatus,
       video: {
         id: video.id,
         title: video.title,

@@ -1,5 +1,7 @@
 import { POST } from '../route';
 import { integrationLayer } from '@/lib/integration';
+import { getCurrentSession } from '@/lib/auth/session';
+import { canEditVideo } from '@/lib/auth/permissions';
 import { NextRequest } from 'next/server';
 
 jest.mock('@/lib/integration', () => ({
@@ -12,10 +14,15 @@ jest.mock('@/lib/integration', () => ({
   },
 }));
 
+jest.mock('@/lib/auth/session');
+jest.mock('@/lib/auth/permissions');
+
 describe('Integrate API Route', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     jest.spyOn(console, 'error').mockImplementation();
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN', email: 'admin@test.com' } });
+    (canEditVideo as unknown as jest.Mock).mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -27,6 +34,23 @@ describe('Integrate API Route', () => {
       json: jest.fn().mockResolvedValue(body),
     } as unknown as NextRequest;
   };
+
+  describe('authentication', () => {
+    it('returns 401 when not authenticated', async () => {
+      (getCurrentSession as jest.Mock).mockResolvedValue(null);
+      const req = mockRequest({ action: 'list' });
+      const response = await POST(req);
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 403 when authenticated but not admin', async () => {
+      (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'MEMBER' } });
+      (canEditVideo as unknown as jest.Mock).mockReturnValue(false);
+      const req = mockRequest({ action: 'list' });
+      const response = await POST(req);
+      expect(response.status).toBe(403);
+    });
+  });
 
   describe('register action', () => {
     it('registers integration successfully with all config', async () => {

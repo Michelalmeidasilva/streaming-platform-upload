@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import VideoModal from '../VideoModal';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
@@ -140,6 +140,41 @@ describe('VideoModal', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('shows loading state while download is initiating', async () => {
+    jest.useFakeTimers();
+
+    const { getByText } = render(<VideoModal {...mockProps} />);
+    const downloadBtn = getByText('modal.download').closest('button')!;
+
+    fireEvent.click(downloadBtn);
+
+    expect(getByText('modal.downloading')).toBeDefined();
+    expect(downloadBtn).toBeDisabled();
+
+    await act(async () => { jest.runAllTimers(); });
+
+    expect(getByText('modal.download')).toBeDefined();
+    expect(downloadBtn).not.toBeDisabled();
+
+    jest.useRealTimers();
+  });
+
+  it('does not start a second download while one is in progress', () => {
+    const { getByText } = render(<VideoModal {...mockProps} />);
+
+    const appendSpy = jest.spyOn(document.body, 'appendChild');
+
+    // First click — download starts, anchor appended once
+    fireEvent.click(getByText('modal.download').closest('button')!);
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+
+    // Button is disabled; second click must not append another anchor
+    fireEvent.click(getByText('modal.downloading').closest('button')!);
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+
+    appendSpy.mockRestore();
   });
 
   it('resets the editable title when the selected video changes', () => {

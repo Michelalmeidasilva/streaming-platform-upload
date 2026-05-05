@@ -11,12 +11,12 @@ export type EffectiveSession = Session & {
 };
 
 export function isE2EAuthEnabled() {
-  return process.env.E2E_AUTH_ENABLED === '1' || process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
+  if (process.env.NODE_ENV === 'production') return false;
+  return process.env.E2E_AUTH_ENABLED === '1';
 }
 
 export function createE2ESession(email: string, name = 'E2E Admin'): EffectiveSession {
   const configuredAdminEmail = (
-    process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL ||
     process.env.E2E_ADMIN_EMAIL ||
     process.env.ADMIN_EMAILS?.split(/[,\n]/)[0]
   )?.trim().toLowerCase();

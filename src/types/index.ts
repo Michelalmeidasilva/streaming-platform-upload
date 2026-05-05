@@ -70,6 +70,11 @@ export interface UploadCompleteRequest {
   videoId: string;
 }
 
+export interface PersistedUploadState {
+  session: UploadSession;
+  video: Video;
+}
+
 export interface VideoCreateInput {
   filename: string;
   originalName: string;

@@ -1,0 +1,5 @@
+# Findings in security documentation (revoked credentials used as evidence in vulnerability report)
+docs/SECURITY_VULNERABILITIES.md:aws-access-token:13
+docs/SECURITY_VULNERABILITIES.md:generic-api-key:15
+docs/SECURITY_VULNERABILITIES.md:aws-access-token:17
+docs/SECURITY_VULNERABILITIES.md:aws-access-token:22
