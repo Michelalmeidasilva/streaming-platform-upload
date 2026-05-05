@@ -56,7 +56,7 @@ describe('Middleware', () => {
 
     expect(getToken).toHaveBeenCalledWith(
       expect.objectContaining({
-        secret: expect.any(String),
+        secret: process.env.NEXTAUTH_SECRET,
         secureCookie: false,
       }),
     );
@@ -73,7 +73,7 @@ describe('Middleware', () => {
 
     expect(getToken).toHaveBeenCalledWith(
       expect.objectContaining({
-        secret: expect.any(String),
+        secret: process.env.NEXTAUTH_SECRET,
         secureCookie: true,
       }),
     );

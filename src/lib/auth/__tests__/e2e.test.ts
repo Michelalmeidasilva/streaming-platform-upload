@@ -27,34 +27,35 @@ describe('E2E Auth Utility', () => {
       expect(isE2EAuthEnabled()).toBe(true);
     });
 
-    it('returns true when NEXT_PUBLIC_E2E_AUTH_ENABLED=1', () => {
+    it('returns false when E2E_AUTH_ENABLED is unset', () => {
       delete process.env.E2E_AUTH_ENABLED;
-      process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '1';
-      expect(isE2EAuthEnabled()).toBe(true);
-    });
-
-    it('returns true when either env var is 1', () => {
-      process.env.E2E_AUTH_ENABLED = '1';
-      process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '1';
-      expect(isE2EAuthEnabled()).toBe(true);
-    });
-
-    it('returns false when both are unset', () => {
-      delete process.env.E2E_AUTH_ENABLED;
-      delete process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED;
       expect(isE2EAuthEnabled()).toBe(false);
     });
 
     it('returns false when E2E_AUTH_ENABLED is not 1', () => {
       process.env.E2E_AUTH_ENABLED = '0';
-      process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '0';
       expect(isE2EAuthEnabled()).toBe(false);
+    });
+
+    it('returns false in production regardless of E2E_AUTH_ENABLED', () => {
+      process.env.E2E_AUTH_ENABLED = '1';
+      const env = process.env as Record<string, string | undefined>;
+      env.NODE_ENV = 'production';
+      expect(isE2EAuthEnabled()).toBe(false);
+      env.NODE_ENV = 'test';
+    });
+
+    it('ignores NEXT_PUBLIC_E2E_AUTH_ENABLED to prevent client bundle exposure', () => {
+      delete process.env.E2E_AUTH_ENABLED;
+      process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '1';
+      expect(isE2EAuthEnabled()).toBe(false);
+      delete process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED;
     });
   });
 
   describe('createE2ESession', () => {
-    it('creates session with ADMIN role when email matches NEXT_PUBLIC_E2E_ADMIN_EMAIL', () => {
-      process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL = 'admin@e2e.com';
+    it('creates session with ADMIN role when email matches E2E_ADMIN_EMAIL', () => {
+      process.env.E2E_ADMIN_EMAIL = 'admin@e2e.com';
       const session = createE2ESession('admin@e2e.com');
       expect(session.user.email).toBe('admin@e2e.com');
       expect(session.user.role).toBe('ADMIN');
@@ -120,11 +121,12 @@ describe('E2E Auth Utility', () => {
       expect(session.user).toHaveProperty('role');
     });
 
-    it('prioritizes NEXT_PUBLIC_E2E_ADMIN_EMAIL over E2E_ADMIN_EMAIL', () => {
+    it('ignores NEXT_PUBLIC_E2E_ADMIN_EMAIL to prevent client bundle exposure', () => {
       process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL = 'public@e2e.com';
-      process.env.E2E_ADMIN_EMAIL = 'private@e2e.com';
+      delete process.env.E2E_ADMIN_EMAIL;
       const session = createE2ESession('public@e2e.com');
-      expect(session.user.role).toBe('ADMIN');
+      expect(session.user.role).not.toBe('ADMIN');
+      delete process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL;
     });
 
     it('prioritizes E2E_ADMIN_EMAIL over ADMIN_EMAILS', () => {

@@ -63,6 +63,36 @@ describe('Upload API Route', () => {
     expect(response.status).toBe(400);
   });
 
+  it('returns 400 for unsupported file extension', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    const req = mockReq({ filename: 'shell.php', size: 1000, mimeType: 'application/x-php' });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('Unsupported file format');
+  });
+
+  it('returns 400 for unsupported MIME type with valid extension', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    const req = mockReq({ filename: 'video.mp4', size: 1000, mimeType: 'application/x-php' });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('Unsupported MIME type');
+  });
+
+  it('returns 400 for file exceeding 5 GB', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    const req = mockReq({ filename: 'video.mp4', size: 6 * 1024 * 1024 * 1024 });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('5 GB');
+  });
+
   it('handles internal errors', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);

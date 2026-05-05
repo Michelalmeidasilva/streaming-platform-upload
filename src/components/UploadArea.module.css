@@ -4,6 +4,7 @@
   gap: 0;
 }
 
+/* ─── LOCKED / EMPTY STATES ──────────────────────────────────────────────── */
 .lockedState {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -36,7 +37,7 @@
   line-height: 1.6;
 }
 
-/* DROP ZONE */
+/* ─── DROP ZONE ──────────────────────────────────────────────────────────── */
 .dropzone {
   background: var(--color-surface);
   border: 2px dashed var(--color-border);
@@ -48,10 +49,20 @@
   cursor: pointer;
   transition: all var(--transition);
   position: relative;
-  min-height: 240px;
+  min-height: 220px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .dropzone:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-muted);
+}
+
+/* Keyboard focus on the dropzone div[role=button] */
+.dropzone:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
   border-color: var(--color-primary);
   background: var(--color-primary-muted);
 }
@@ -62,7 +73,9 @@
   box-shadow: var(--shadow-lg);
 }
 
-.fileInput { display: none; }
+.fileInput {
+  display: none;
+}
 
 .dropzoneContent {
   display: flex;
@@ -71,6 +84,7 @@
   gap: 16px;
   width: 100%;
   text-align: center;
+  pointer-events: none; /* clicks fall through to the dropzone */
 }
 
 .iconWrap {
@@ -144,7 +158,7 @@
   color: var(--color-primary);
 }
 
-/* UPLOAD QUEUE */
+/* ─── UPLOAD QUEUE ───────────────────────────────────────────────────────── */
 .uploadsList {
   display: flex;
   flex-direction: column;
@@ -217,7 +231,7 @@
 .uploadActions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -237,18 +251,60 @@
 .statusBadge.error { background: rgba(239, 68, 68, 0.12); color: var(--color-error); }
 
 .removeBtn {
+  /* 44×44 minimum touch target */
+  min-width: 44px;
+  min-height: 44px;
   background: none;
   border: none;
   color: var(--color-text-muted);
-  padding: 4px 6px;
   border-radius: var(--radius-md);
   transition: all var(--transition);
   display: flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
+  padding: 0;
 }
 
 .removeBtn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
+}
+
+/* ─── MOBILE ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .lockedState {
+    padding: 32px 24px;
+    border-radius: var(--radius-xl);
+  }
+
+  /* On touch devices, drop isn't possible — present as a tap target */
+  .dropzone {
+    padding: 36px 24px;
+    min-height: 180px;
+    border-radius: var(--radius-xl);
+  }
+
+  .iconWrap {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dropzoneText h3 { font-size: 15px; }
+
+  .uploadCard {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  /* Status badge hidden on mobile — too small to read alongside filename */
+  .statusBadge {
+    display: none;
+  }
+
+  /* Only show status via progress bar color */
+  .fileIcon {
+    width: 36px;
+    height: 36px;
+  }
 }

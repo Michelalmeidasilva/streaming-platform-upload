@@ -127,7 +127,7 @@ describe('video authorization', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''Video");
     expect(response.headers.get('content-type')).toBe('video/mp4');
   });
 
@@ -602,7 +602,7 @@ describe('video authorization', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('application/octet-stream');
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="Video.mp4"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''Video.mp4");
   });
 
   it('returns 403 when a GUEST role tries to download a video', async () => {
@@ -697,6 +697,6 @@ describe('video authorization', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-length')).toBe('');
     expect(response.headers.get('content-type')).toBe('video/mp4');
-    expect(response.headers.get('content-disposition')).toBe('attachment; filename="test-video.mp4"');
+    expect(response.headers.get('content-disposition')).toBe("attachment; filename*=UTF-8''test-video.mp4");
   });
 });

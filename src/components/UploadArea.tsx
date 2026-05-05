@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useRef, useCallback } from 'react';
 import styles from './UploadArea.module.css';
 import Skeleton from './Skeleton';
 import { validateCMAFFile } from '@/lib/cmaf';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
-import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 interface UploadProgress {
@@ -62,30 +61,7 @@ export default function UploadArea() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useI18n();
   const { emitUploadComplete } = useVideoEvents();
-  const { data: session, status } = useSession();
-  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
-  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
-    e2eAuthEnabled ? undefined : null,
-  );
-
-  useEffect(() => {
-    if (!e2eAuthEnabled) {
-      setE2ESession(null);
-      return;
-    }
-
-    const cookieValue = document.cookie
-      .split('; ')
-      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
-      ?.split('=')
-      .slice(1)
-      .join('=');
-
-    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
-  }, [e2eAuthEnabled]);
-
-  const effectiveSession = e2eSession ?? session;
-  const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
+  const { effectiveSession, effectiveStatus } = useE2ESession();
   const isAdmin = canUploadVideo(effectiveSession?.user?.role);
 
   const setStatus = useCallback(
@@ -133,14 +109,14 @@ export default function UploadArea() {
 
             const chunkRes = directUploadEnabled
               ? await fetch(presignedUrls[i], {
-                  method: 'PUT',
-                  body: chunkBlob,
-                })
+                method: 'PUT',
+                body: chunkBlob,
+              })
               : await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
-                  method: 'POST',
-                  credentials: 'include',
-                  body: chunkBlob,
-                });
+                method: 'POST',
+                credentials: 'include',
+                body: chunkBlob,
+              });
             if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
 
             const etag = chunkRes.headers.get('ETag');
@@ -196,6 +172,16 @@ export default function UploadArea() {
 
   const handleClick = useCallback(() => fileInputRef.current?.click(), []);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      }
+    },
+    [],
+  );
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
@@ -219,18 +205,6 @@ export default function UploadArea() {
     );
   }
 
-  if (!effectiveSession) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.lockedState}>
-          <p className={styles.lockedLabel}>{t('auth.signInRequiredCopy')}</p>
-          <h3>{t('auth.uploadProtected')}</h3>
-          <p>{t('auth.uploadProtectedCopy')}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!isAdmin) {
     return (
       <div className={styles.container}>
@@ -245,12 +219,15 @@ export default function UploadArea() {
 
   return (
     <div className={styles.container}>
-      <div
+      <button
+        type="button"
         className={`${styles.dropzone} ${isDragging ? styles.dragging : ''}`}
+        aria-label={t('upload.dropzone.idleTitle')}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
       >
         <input
           ref={fileInputRef}
@@ -259,6 +236,8 @@ export default function UploadArea() {
           multiple
           onChange={handleInputChange}
           className={styles.fileInput}
+          aria-hidden="true"
+          tabIndex={-1}
         />
         <div className={styles.dropzoneContent}>
           <div className={styles.iconWrap}>
@@ -280,7 +259,7 @@ export default function UploadArea() {
             <span className={styles.formatBadge}>WEBM</span>
           </div>
         </div>
-      </div>
+      </button>
 
       {uploads.length > 0 && (
         <div className={styles.uploadsList}>
@@ -305,6 +284,7 @@ export default function UploadArea() {
                   {upload.status === 'error' && t('upload.uploadStatus.error')}
                 </span>
                 <button
+                  type="button"
                   className={styles.removeBtn}
                   onClick={e => { e.stopPropagation(); removeUpload(upload.videoId); }}
                   aria-label={t('upload.actions.remove')}

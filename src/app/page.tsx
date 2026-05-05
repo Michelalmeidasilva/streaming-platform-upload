@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { useCallback, useEffect } from 'react';
+import { signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import UploadArea from '@/components/UploadArea';
@@ -9,76 +9,55 @@ import VideoList from '@/components/VideoList';
 import ThemeToggle from '@/components/ThemeToggle';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { VideoEventProvider } from '@/lib/context/VideoEventContext';
-import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 export default function Home() {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const { locale, setLocale, t } = useI18n();
+  const { effectiveSession, effectiveStatus, activateE2ESession } = useE2ESession();
+
   const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
   const e2eEmail = process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL || 'admin-e2e@example.com';
-  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
-    e2eAuthEnabled ? undefined : null,
-  );
 
-  // Redirecionar usuários não autenticados para login
   useEffect(() => {
-    if (status === 'unauthenticated' && !e2eSession) {
+    if (effectiveStatus === 'unauthenticated') {
       router.push('/auth/login');
     }
-  }, [status, e2eSession, router]);
+  }, [effectiveStatus, router]);
 
   useEffect(() => {
     document.title = t('metadata.title');
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute('content', t('metadata.description'));
-    }
+    document.querySelector('meta[name="description"]')?.setAttribute('content', t('metadata.description'));
   }, [t, locale]);
 
-  useEffect(() => {
-    if (!e2eAuthEnabled) {
-      setE2ESession(null);
-      return;
-    }
-
-    const cookieValue = document.cookie
-      .split('; ')
-      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
-      ?.split('=')
-      .slice(1)
-      .join('=');
-
-    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
-  }, [e2eAuthEnabled]);
-
-  const effectiveSession = e2eSession ?? session;
-  const effectiveStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : status;
-  const role = effectiveSession?.user?.role;
-  const isSessionLoading = effectiveStatus === 'loading';
-  const roleLabel = role === 'ADMIN'
-    ? t('roles.admin')
-    : role === 'MEMBER'
-      ? t('roles.member')
-      : '';
-  const signInAsE2EAdmin = async () => {
+  const signInAsE2EAdmin = useCallback(() => {
     document.cookie = `${E2E_AUTH_COOKIE}=${encodeURIComponent(e2eEmail)}; path=/; SameSite=Lax`;
-    setE2ESession(createE2ESession(e2eEmail));
+    activateE2ESession(e2eEmail);
     window.location.href = '/';
-  };
-  const handleSignOut = () => {
-    if (e2eSession) {
+  }, [e2eEmail, activateE2ESession]);
+
+  // Read the cookie at call time — no need to mirror it as state.
+  const handleSignOut = useCallback(() => {
+    const hasE2ECookie = document.cookie
+      .split('; ')
+      .some(row => row.startsWith(`${E2E_AUTH_COOKIE}=`));
+    if (hasE2ECookie) {
       document.cookie = `${E2E_AUTH_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
       window.location.href = '/';
       return;
     }
-
     void signOut({ callbackUrl: '/' });
-  };
+  }, []);
 
-  if (isSessionLoading) {
+  const role = effectiveSession?.user?.role;
+  let roleLabel = '';
+  if (role === 'ADMIN') roleLabel = t('roles.admin');
+  else if (role === 'MEMBER') roleLabel = t('roles.member');
+
+  if (effectiveStatus === 'loading') {
     return (
       <VideoEventProvider>
         <div className={styles.loadingScreen}>
@@ -91,31 +70,48 @@ export default function Home() {
   return (
     <VideoEventProvider>
       <div className={styles.app}>
-        <nav className={styles.sidebar}>
-          <div className={styles.sidebarLogo}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="white">
+        <nav className={styles.sidebar} aria-label={t('app.sidebar.library')}>
+          <div className={styles.sidebarLogo} aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="white" aria-hidden="true">
               <path d="M6 4L13 9L6 14V4Z" />
             </svg>
           </div>
 
-          <div className={`${styles.navItem} ${styles.navItemActive}`} title={t('app.sidebar.library')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <button
+            className={`${styles.navItem} ${styles.navItemActive}`}
+            type="button"
+            aria-label={t('app.sidebar.library')}
+            aria-current="page"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
             </svg>
-          </div>
+          </button>
+
           <div className={styles.sidebarSpacer} />
-          <div className={styles.navItem} title={t('app.sidebar.settings')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+
+          <button
+            className={styles.navItem}
+            type="button"
+            aria-label={t('app.sidebar.settings')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
-          </div>
+          </button>
         </nav>
 
         <div className={styles.main}>
-          <div className={styles.topbar}>
+          <header className={styles.topbar}>
             <div className={styles.topbarLeft}>
+              {/* Logo mark visible on mobile (sidebar is hidden there) */}
+              <div className={styles.topbarLogo} aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 18 18" fill="white">
+                  <path d="M6 4L13 9L6 14V4Z" />
+                </svg>
+              </div>
               <span className={styles.topbarTitle}>{t('app.topbar.library')}</span>
               <span className={styles.roleBadge}>
                 {effectiveSession ? roleLabel : t('auth.signInRequired')}
@@ -124,6 +120,7 @@ export default function Home() {
 
             <div className={styles.topbarActions}>
               <ThemeToggle />
+
               <label className={styles.localeSelectWrap}>
                 <span className={styles.srOnly}>{t('locale.label')}</span>
                 <select
@@ -132,9 +129,9 @@ export default function Home() {
                   onChange={(e) => setLocale(e.target.value as Locale)}
                   aria-label={t('locale.label')}
                 >
-                  <option value="en">{LOCALE_LABELS.en}</option>
-                  <option value="es">{LOCALE_LABELS.es}</option>
-                  <option value="pt">{LOCALE_LABELS.pt}</option>
+                  {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
                 </select>
               </label>
 
@@ -143,36 +140,63 @@ export default function Home() {
                   <span className={styles.authStatus}>
                     {effectiveSession.user?.name || effectiveSession.user?.email}
                   </span>
-                  <button className={styles.authButton} onClick={handleSignOut}>
+                  <button type="button" className={styles.authButton} onClick={handleSignOut}>
                     {t('auth.signOut')}
                   </button>
                 </>
               ) : (
                 <>
-                  <button className={styles.authButton} onClick={() => signIn('google')}>
+                  <button type="button" className={styles.authButton} onClick={() => signIn('google')}>
                     {t('auth.signInWithGoogle')}
                   </button>
-                  {e2eAuthEnabled ? (
-                    <button className={styles.authButton} onClick={signInAsE2EAdmin}>
+                  {e2eAuthEnabled && (
+                    <button type="button" className={styles.authButton} onClick={signInAsE2EAdmin}>
                       {t('auth.signInAsE2EAdmin')}
                     </button>
-                  ) : null}
+                  )}
                 </>
               )}
             </div>
-          </div>
+          </header>
 
-          <div className={styles.content}>
+          <main className={styles.content}>
             <UploadArea />
 
             <div className={styles.sectionHeader}>
               <span className={styles.sectionLabel}>{t('upload.sectionLabel')}</span>
-              <div className={styles.sectionLine} />
+              <div className={styles.sectionLine} aria-hidden="true" />
             </div>
 
             <VideoList />
-          </div>
+          </main>
         </div>
+
+        {/* Bottom navigation — visible only on mobile (CSS-controlled) */}
+        <nav className={styles.mobileNav} aria-label={t('app.sidebar.library')}>
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${styles.mobileNavItemActive}`}
+            aria-label={t('app.sidebar.library')}
+            aria-current="page"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <path d="M8 21h8M12 17v4" />
+            </svg>
+            <span className={styles.mobileNavLabel}>{t('app.sidebar.library')}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.mobileNavItem}
+            aria-label={t('app.sidebar.settings')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span className={styles.mobileNavLabel}>{t('app.sidebar.settings')}</span>
+          </button>
+        </nav>
       </div>
     </VideoEventProvider>
   );

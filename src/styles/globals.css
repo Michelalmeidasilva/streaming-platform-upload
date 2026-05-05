@@ -113,11 +113,22 @@ button {
   font-family: inherit;
   cursor: pointer;
   border: none;
+  /* Remove tap flash on iOS */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 input, textarea, select {
   font-family: inherit;
   border: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keyboard / switch-access focus ring (never on mouse click) */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 a {

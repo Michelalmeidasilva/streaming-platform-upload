@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
 import styles from './VideoList.module.css';
 import Skeleton from './Skeleton';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
-import { createE2ESession, E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
+import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
 interface Video {
@@ -25,31 +24,8 @@ interface Video {
 }
 
 export default function VideoList() {
-  const { data: session, status: sessionStatus } = useSession();
+  const { effectiveSession, effectiveStatus: effectiveSessionStatus } = useE2ESession();
   const { t, formatDate } = useI18n();
-  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
-  const [e2eSession, setE2ESession] = useState<ReturnType<typeof createE2ESession> | null | undefined>(
-    e2eAuthEnabled ? undefined : null,
-  );
-
-  useEffect(() => {
-    if (!e2eAuthEnabled) {
-      setE2ESession(null);
-      return;
-    }
-
-    const cookieValue = document.cookie
-      .split('; ')
-      .find(cookie => cookie.startsWith(`${E2E_AUTH_COOKIE}=`))
-      ?.split('=')
-      .slice(1)
-      .join('=');
-
-    setE2ESession(cookieValue ? createE2ESession(decodeURIComponent(cookieValue)) : null);
-  }, [e2eAuthEnabled]);
-
-  const effectiveSession = e2eSession ?? session;
-  const effectiveSessionStatus = e2eSession === undefined ? 'loading' : e2eSession ? 'authenticated' : sessionStatus;
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -83,7 +59,9 @@ export default function VideoList() {
       }
 
       const data = await response.json();
-      setVideos(data.videos || []);
+      const raw: Video[] = data.videos || [];
+      const seen = new Set<string>();
+      setVideos(raw.filter(v => seen.has(v.id) ? false : seen.add(v.id) as unknown as true));
     } catch (error) {
       console.error('Failed to fetch videos:', error);
       setLoadError('generic');
@@ -130,33 +108,27 @@ export default function VideoList() {
     []
   );
 
-  const formatSize = (bytes: number) => {
+  const formatSize = useCallback((bytes: number) => {
     if (bytes < 1024) return `${bytes} ${t('library.formats.sizeBytes')}`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} ${t('library.formats.sizeKilobytes')}`;
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} ${t('library.formats.sizeMegabytes')}`;
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} ${t('library.formats.sizeGigabytes')}`;
-  };
+  }, [t]);
 
-  const handleDelete = async (videoId: string) => {
+  const handleDelete = useCallback(async (videoId: string) => {
     try {
       const response = await fetch(`/api/videos/${videoId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
-
-      if (!response.ok) {
-        throw new Error(`Delete failed (${response.status})`);
-      }
-
+      if (!response.ok) throw new Error(`Delete failed (${response.status})`);
       setVideos(prev => prev.filter(v => v.id !== videoId));
     } catch (error) {
       console.error('Failed to delete video:', error);
     }
-  };
+  }, []);
 
-  const handleCloseModal = () => {
-    setSelectedVideo(null);
-  };
+  const handleCloseModal = useCallback(() => setSelectedVideo(null), []);
 
   if (effectiveSessionStatus === 'loading') {
     return (
@@ -243,8 +215,12 @@ export default function VideoList() {
           {videos.map(video => (
             <div
               key={video.id}
+              role="button"
+              tabIndex={0}
               className={styles.card}
               onClick={() => setSelectedVideo(video)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedVideo(video); } }}
+              aria-label={video.title}
             >
               <div className={styles.thumbnail}>
                 {video.thumbnailUrl ? (
@@ -284,6 +260,7 @@ export default function VideoList() {
                   </span>
                   {canManageVideos ? (
                     <button
+                      type="button"
                       className={styles.deleteBtn}
                       onClick={(e) => {
                         e.stopPropagation();

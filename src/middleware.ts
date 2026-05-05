@@ -5,9 +5,9 @@ import { evaluateRateLimit } from '@/lib/security/rate-limit';
 import { recordSecurityEvent } from '@/lib/security/audit';
 
 function getClientKey(request: NextRequest, tokenEmail?: string | null) {
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown-ip';
-  return tokenEmail || ip;
+  if (tokenEmail) return tokenEmail;
+  // For unauthenticated requests use the infrastructure-set IP, not X-Forwarded-For which clients can spoof
+  return request.ip || request.headers.get('x-real-ip') || 'unknown-ip';
 }
 
 function usesSecureCookies(request: NextRequest) {
@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
     ? { email: e2eEmail, role: createE2ESession(e2eEmail).user.role }
     : await getToken({
         req: request,
-        secret: process.env.NEXTAUTH_SECRET || 'development-secret',
+        secret: process.env.NEXTAUTH_SECRET,
         secureCookie: usesSecureCookies(request),
       });
   const key = `${pathname}:${method}:${getClientKey(request, token?.email || null)}`;

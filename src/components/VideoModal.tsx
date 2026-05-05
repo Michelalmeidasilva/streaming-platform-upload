@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './VideoModal.module.css';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 
@@ -36,16 +36,20 @@ export default function VideoModal({
 }: VideoModalProps) {
   const [title, setTitle] = useState(video.title);
   const [saving, setSaving] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const downloadingRef = useRef(false);
   const { t } = useI18n();
 
   useEffect(() => {
     setTitle(video.title);
   }, [video.title]);
 
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+  const handleDialogClick = useCallback((e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target === e.currentTarget) onClose();
+  }, [onClose]);
+
+  const handleDialogKeyDown = useCallback((e: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (e.key === 'Escape') onClose();
   }, [onClose]);
 
   const handleSave = useCallback(async () => {
@@ -70,6 +74,22 @@ export default function VideoModal({
     }
   }, [onUpdated, title, video.id]);
 
+  const handleDownload = useCallback(() => {
+    if (downloadingRef.current) return;
+    downloadingRef.current = true;
+    setDownloading(true);
+    const a = document.createElement('a');
+    a.href = video.downloadUrl;
+    a.download = video.originalName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => {
+      downloadingRef.current = false;
+      setDownloading(false);
+    }, 1500);
+  }, [video.downloadUrl, video.originalName]);
+
   const handleDelete = useCallback(async () => {
     try {
       const response = await fetch(`/api/videos/${video.id}`, {
@@ -89,8 +109,10 @@ export default function VideoModal({
   if (!isOpen) return null;
 
   return (
-    <div className={styles.backdrop} onClick={handleBackdropClick}>
+    <dialog open className={styles.backdrop} onClick={handleDialogClick} onKeyDown={handleDialogKeyDown} aria-label={video.title}>
       <div className={styles.modal}>
+        {/* Drag handle — visible on mobile bottom sheet only */}
+        <div className={styles.dragHandle} aria-hidden="true" />
         <div className={styles.header}>
           <div className={styles.headerCopy}>
             <h2 className={styles.title}>{canManageVideos ? t('modal.manageVideo') : video.title}</h2>
@@ -116,10 +138,31 @@ export default function VideoModal({
           />
         </div>
         <div className={styles.footer}>
-          <a className={styles.downloadButton} href={video.downloadUrl} download={video.originalName}>
-            {t('modal.download')}
-          </a>
-          {canManageVideos ? (
+          <button
+            type="button"
+            className={styles.downloadButton}
+            onClick={handleDownload}
+            disabled={downloading}
+            aria-live="polite"
+          >
+            {downloading ? (
+              <>
+                <span className={styles.downloadSpinner} aria-hidden="true" />
+                {t('modal.downloading')}
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                {t('modal.download')}
+              </>
+            )}
+          </button>
+
+          {canManageVideos && (
             <div className={styles.manageGroup}>
               <input
                 className={styles.titleInput}
@@ -127,16 +170,18 @@ export default function VideoModal({
                 onChange={(e) => setTitle(e.target.value)}
                 aria-label={t('modal.titleLabel')}
               />
-              <button className={styles.secondaryButton} onClick={handleSave} disabled={saving}>
-                {saving ? t('modal.saving') : t('modal.saveTitle')}
-              </button>
-              <button className={styles.dangerButton} onClick={handleDelete}>
-                {t('modal.delete')}
-              </button>
+              <div className={styles.manageActions}>
+                <button type="button" className={styles.secondaryButton} onClick={handleSave} disabled={saving}>
+                  {saving ? t('modal.saving') : t('modal.saveTitle')}
+                </button>
+                <button type="button" className={styles.dangerButton} onClick={handleDelete}>
+                  {t('modal.delete')}
+                </button>
+              </div>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

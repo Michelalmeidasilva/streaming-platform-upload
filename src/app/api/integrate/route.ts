@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { IntegrationConfig } from '@/types';
 import { integrationLayer } from '@/lib/integration';
+import { getCurrentSession } from '@/lib/auth/session';
+import { canEditVideo } from '@/lib/auth/permissions';
 
 export async function POST(request: NextRequest) {
+  const session = await getCurrentSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!canEditVideo(session.user.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { action, config, event, videoId, data } = body;

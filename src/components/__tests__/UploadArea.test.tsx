@@ -74,10 +74,10 @@ describe('UploadArea', () => {
     expect(getAllByTestId('skeleton').length).toBeGreaterThan(0);
   });
 
-  it('renders sign in required when not authenticated', () => {
+  it('renders locked state when not authenticated', () => {
     (useSession as jest.Mock).mockReturnValue({ status: 'unauthenticated', data: null });
     const { getByText } = render(<UploadArea />);
-    expect(getByText('auth.uploadProtected')).toBeDefined();
+    expect(getByText('auth.uploadsAdminOnly')).toBeDefined();
   });
 
   it('renders restricted access when not an admin', () => {
@@ -97,6 +97,57 @@ describe('UploadArea', () => {
 
     const { getByText } = render(<UploadArea />);
     expect(getByText('upload.dropzone.idleTitle')).toBeDefined();
+  });
+
+  it('opens file picker on Enter key in dropzone', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByRole } = render(<UploadArea />);
+    const dropzone = getByRole('button', { name: 'upload.dropzone.idleTitle' });
+    const input = dropzone.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = jest.spyOn(input, 'click').mockImplementation(() => {});
+
+    fireEvent.keyDown(dropzone, { key: 'Enter' });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    clickSpy.mockRestore();
+  });
+
+  it('opens file picker on Space key in dropzone', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByRole } = render(<UploadArea />);
+    const dropzone = getByRole('button', { name: 'upload.dropzone.idleTitle' });
+    const input = dropzone.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = jest.spyOn(input, 'click').mockImplementation(() => {});
+
+    fireEvent.keyDown(dropzone, { key: ' ' });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    clickSpy.mockRestore();
+  });
+
+  it('ignores other keys in dropzone', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByRole } = render(<UploadArea />);
+    const dropzone = getByRole('button', { name: 'upload.dropzone.idleTitle' });
+    const input = dropzone.querySelector('input[type="file"]') as HTMLInputElement;
+    const clickSpy = jest.spyOn(input, 'click').mockImplementation(() => {});
+
+    fireEvent.keyDown(dropzone, { key: 'Tab' });
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    clickSpy.mockRestore();
   });
 
   it('handles drag and drop', () => {
