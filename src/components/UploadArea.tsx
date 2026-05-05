@@ -100,9 +100,12 @@ export default function UploadArea() {
           if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
           const { sessionId, chunkSize, totalChunks, presignedUrls } = await initRes.json();
 
-          // 2. Upload each chunk sequentially
+          // 2. Upload chunks in parallel (max 6 concurrent)
+          const CONCURRENCY = 6;
           const etags: { PartNumber: number; ETag: string }[] = [];
-          for (let i = 0; i < totalChunks; i++) {
+          let completedChunks = 0;
+
+          const uploadChunk = async (i: number) => {
             const start = i * chunkSize;
             const end = Math.min(start + chunkSize, file.size);
             const chunkBlob = file.slice(start, end);
@@ -124,7 +127,13 @@ export default function UploadArea() {
               etags.push({ PartNumber: i + 1, ETag: etag.replace(/"/g, '') });
             }
 
-            setStatus(videoId, { progress: ((i + 1) / totalChunks) * 100 });
+            completedChunks += 1;
+            setStatus(videoId, { progress: (completedChunks / totalChunks) * 100 });
+          };
+
+          const indices = Array.from({ length: totalChunks }, (_, i) => i);
+          for (let offset = 0; offset < indices.length; offset += CONCURRENCY) {
+            await Promise.all(indices.slice(offset, offset + CONCURRENCY).map(uploadChunk));
           }
 
           // 3. Complete upload

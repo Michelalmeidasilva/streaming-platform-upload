@@ -3,10 +3,10 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
-  ListPartsCommand,
   ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -56,32 +56,6 @@ export class S3Adapter implements IStorageAdapter {
       responseChecksumValidation: 'WHEN_REQUIRED',
     });
     this.bucket = config.bucket;
-  }
-
-  private async listUploadedParts(key: string, uploadId: string) {
-    const parts: { PartNumber: number; ETag: string }[] = [];
-    let partNumberMarker: number | undefined;
-
-    do {
-      const response = await this.client.send(new ListPartsCommand({
-        Bucket: this.bucket,
-        Key: key,
-        UploadId: uploadId,
-        PartNumberMarker: partNumberMarker?.toString(),
-      }));
-
-      for (const part of response.Parts || []) {
-        if (part.PartNumber && part.ETag) {
-          parts.push({ PartNumber: part.PartNumber, ETag: part.ETag });
-        }
-      }
-
-      partNumberMarker = response.IsTruncated && response.NextPartNumberMarker
-        ? Number(response.NextPartNumberMarker)
-        : undefined;
-    } while (partNumberMarker);
-
-    return normalizeCompletedParts(parts);
   }
 
   async upload(file: Buffer, key: string, contentType: string, checksumSHA256?: string): Promise<string> {
@@ -151,16 +125,12 @@ export class S3Adapter implements IStorageAdapter {
     uploadId: string,
     parts: { PartNumber: number; ETag: string }[],
   ): Promise<string> {
-    const completedParts = await this.listUploadedParts(key, uploadId);
-    const fallbackParts = normalizeCompletedParts(parts);
-    const multipartParts = completedParts.length > 0 ? completedParts : fallbackParts;
-
     await this.client.send(new CompleteMultipartUploadCommand({
       Bucket: this.bucket,
       Key: key,
       UploadId: uploadId,
       MultipartUpload: {
-        Parts: multipartParts,
+        Parts: normalizeCompletedParts(parts),
       },
     }));
     return this.getSignedUrl(key);
@@ -181,7 +151,7 @@ export class S3Adapter implements IStorageAdapter {
 
   async exists(key: string): Promise<boolean> {
     try {
-      await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
       return true;
     } catch {
       return false;
