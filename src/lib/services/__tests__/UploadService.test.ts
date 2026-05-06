@@ -5,7 +5,7 @@ import type { UploadStateStore } from '@/lib/persistence/IngestUploadStateClient
 import { videoEvents } from '@/lib/VideoEventEmitter';
 
 const MB = 1024 * 1024;
-const CHUNK_SIZE = 10 * MB;
+const CHUNK_SIZE = 5 * MB;
 
 jest.mock('../ThumbnailExtractor', () => ({
   ThumbnailExtractor: jest.fn().mockImplementation(() => ({
@@ -121,7 +121,7 @@ describe('UploadService persistence-backed flow', () => {
   it('creates persisted session and video during initiation', async () => {
     const { service, stateStore, storage } = makeService();
 
-    const result = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const result = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
     const state = await stateStore.getState(result.sessionId);
 
     expect(result.totalChunks).toBe(3);
@@ -164,7 +164,7 @@ describe('UploadService persistence-backed flow', () => {
 
   it('uploads multipart chunks and persists progress', async () => {
     const { service, stateStore, storage } = makeService();
-    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
 
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
@@ -202,11 +202,11 @@ describe('UploadService persistence-backed flow', () => {
 
   it('completes upload, persists final video, and deletes the session', async () => {
     const { service, stateStore, storage } = makeService();
-    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
 
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
-    await service.uploadChunk(sessionId, 2, Buffer.alloc(5 * MB));
+    await service.uploadChunk(sessionId, 2, Buffer.alloc(2 * MB));
 
     const video = await service.completeUpload(sessionId);
 
@@ -223,10 +223,10 @@ describe('UploadService persistence-backed flow', () => {
 
   it('prefers explicit etags passed at completion time', async () => {
     const { service, storage } = makeService();
-    const { sessionId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
-    await service.uploadChunk(sessionId, 2, Buffer.alloc(5 * MB));
+    await service.uploadChunk(sessionId, 2, Buffer.alloc(2 * MB));
 
     await service.completeUpload(sessionId, [
       { PartNumber: 1, ETag: 'etag-1' },

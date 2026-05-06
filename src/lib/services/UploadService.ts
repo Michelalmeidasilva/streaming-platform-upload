@@ -23,7 +23,7 @@ import { getRecoveryPolicy } from '@/lib/security/recovery-policy';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
 const MIN_MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024;
-const DEFAULT_CHUNK_SIZE = 10 * 1024 * 1024;
+const DEFAULT_CHUNK_SIZE = MIN_MULTIPART_CHUNK_SIZE;
 
 function resolveChunkSize() {
   const parsed = Number.parseInt(process.env.UPLOAD_CHUNK_SIZE_BYTES || '', 10);

@@ -254,7 +254,7 @@ npx jest --coverage
 | `STORAGE_ENCRYPTION_ENABLED` | `true` | Server | Enables storage encryption policy |
 | `STORAGE_ENCRYPTION_MODE` | `AES256` | Server | Storage encryption mode |
 | `STORAGE_CHECKSUM_ALGORITHM` | `SHA256` | Server | Storage checksum algorithm |
-| `UPLOAD_CHUNK_SIZE_BYTES` | `104857600` | Server | Chunk size used during multipart uploads |
+| `UPLOAD_CHUNK_SIZE_BYTES` | `5242880` | Server | Chunk size used during multipart uploads |
 | `MINIO_ENDPOINT` | `http://localhost:9000` | Server | MinIO server endpoint |
 | `MINIO_ACCESS_KEY` | `admin` | Server | MinIO access key |
 | `MINIO_SECRET_KEY` | `password123` | Server | MinIO secret key |
