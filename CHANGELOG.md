@@ -1,11 +1,7 @@
-## [1.2.1] - 2026-05-05
+## [1.2.2] - 2026-05-06
 
-2c2fd20 fix(upload): parallelize S3 multipart chunks and remove redundant API calls (#10)
+76337dd Fix/upload area (#12)
 
-- `useE2ESession` shared hook — eliminates duplicated e2e cookie logic from page, UploadArea and VideoList
-- Global `:focus-visible` ring for keyboard/switch-access navigation
-- `touch-action: manipulation` and `-webkit-tap-highlight-color: transparent` on interactive elements
-- Keyboard support (Enter/Space) on UploadArea dropzone
 - All touch targets enlarged to 44×44px minimum (Apple HIG)
 - `modal.downloading` translation key in EN, ES and PT
 
