@@ -1,11 +1,7 @@
-## [1.2.2] - 2026-05-06
+## [1.2.3] - 2026-05-06
 
-76337dd Fix/upload area (#12)
+a9c3dc9 fix(upload): fall back to server upload when S3 CORS blocks localhost (#11)
 
-- All touch targets enlarged to 44×44px minimum (Apple HIG)
-- `modal.downloading` translation key in EN, ES and PT
-
-### Fixed
 - `height: 100dvh` replaces `100vh` — prevents layout jump when mobile browser chrome appears/disappears
 - iOS auto-zoom on input focus prevented with `font-size: 16px` on search and title inputs
 
