@@ -94,6 +94,8 @@ npm run build
 npm start
 ```
 
+Hot reload is configured with webpack polling in development so file changes are detected reliably in Docker bind mounts, remote workspaces, and other environments where native filesystem events are inconsistent.
+
 ## Architecture
 
 ### Project Structure
@@ -271,7 +273,7 @@ npx jest --coverage
 | `ADMIN_EMAILS` | `admin@example.com,owner@example.com` | Server | Comma-separated admin emails |
 | `E2E_AUTH_ENABLED` | `0` | Server | Enables E2E credentials login |
 | `E2E_ADMIN_EMAIL` | - | Server | E2E admin email |
-| `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Client | Enables direct upload in the browser |
+| `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Client | Enables direct upload in the browser only when explicitly set to `true`; otherwise uploads fall back to the server route, which avoids localhost S3 CORS issues |
 | `NEXT_PUBLIC_E2E_AUTH_ENABLED` | `0` | Client | Enables E2E auth UI in the browser |
 | `NEXT_PUBLIC_E2E_ADMIN_EMAIL` | - | Client | E2E admin email exposed to browser for tests |
 
