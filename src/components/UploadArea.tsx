@@ -143,7 +143,6 @@ export default function UploadArea() {
                 body: chunkBlob,
               });
             }
-
             if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
 
             const etag = chunkRes.headers.get('ETag');
