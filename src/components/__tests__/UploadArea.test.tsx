@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import UploadArea from '../UploadArea';
 import { useSession } from 'next-auth/react';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
