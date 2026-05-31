@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     let ingestNotificationStatus: 'sent' | 'failed' | 'skipped' = 'skipped';
 
-    if (storageProvider === 's3') {
+    if (storageProvider === 's3' || storageProvider === 'minio') {
       try {
         await notifyIngestStorageCompletion(storageProvider, {
           key: video.filename,

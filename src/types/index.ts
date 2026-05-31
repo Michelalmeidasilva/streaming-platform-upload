@@ -39,9 +39,72 @@ export interface Video {
   mimeType?: string;
   duration?: number;
   securityPosture?: SecurityPosture;
+  processingStatus?: ProcessingStatus;
+  source?: VideoSource;
+  mediaInfo?: MediaInfo;
+  transcode?: TranscodeInfo;
+  playback?: PlaybackInfo;
+  metrics?: VideoMetrics;
 }
 
 export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'error';
+export type ProcessingStatus = 'queued' | 'transcoding' | 'packaging' | 'ready' | 'failed';
+
+export interface VideoSource {
+  bucket?: string;
+  key?: string;
+  provider?: string;
+  size?: number;
+  mimeType?: string;
+  etag?: string;
+  version?: string;
+}
+
+export interface MediaInfo {
+  durationSeconds?: number;
+  width?: number;
+  height?: number;
+  fps?: number;
+  videoCodec?: string;
+  audioCodec?: string;
+  bitrateKbps?: number;
+}
+
+export interface Rendition {
+  name: string;
+  width?: number;
+  height?: number;
+  resolution?: string;
+  codec?: string;
+  bitrateKbps?: number;
+  manifestPath?: string;
+}
+
+export interface TranscodeInfo {
+  jobId?: string;
+  profile?: string;
+  attempt?: number;
+  fingerprint?: string;
+  startedAt?: string;
+  completedAt?: string;
+  error?: unknown;
+}
+
+export interface PlaybackInfo {
+  hlsManifestPath?: string;
+  dashManifestPath?: string;
+  renditions?: Rendition[];
+}
+
+export interface VideoMetrics {
+  rtf?: number;
+  elapsedSeconds?: number;
+  outputSizeMb?: number;
+  vmaf?: number;
+  ssim?: number;
+  psnr?: number;
+  metricsPath?: string;
+}
 
 export interface UploadSession {
   id: string;

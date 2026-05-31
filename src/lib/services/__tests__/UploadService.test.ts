@@ -130,6 +130,23 @@ describe('UploadService persistence-backed flow', () => {
     expect(storage.initiateMultipartUpload).toHaveBeenCalled();
   });
 
+  it('can write uploads to the canonical raw prefix when enabled', async () => {
+    const original = process.env.UPLOAD_RAW_PREFIX_ENABLED;
+    process.env.UPLOAD_RAW_PREFIX_ENABLED = 'true';
+
+    const { service, stateStore } = makeService();
+    const result = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
+    const state = await stateStore.getState(result.sessionId);
+
+    expect(state?.video.filename).toBe(`raw/${result.videoId}/video.mp4`);
+
+    if (original === undefined) {
+      delete process.env.UPLOAD_RAW_PREFIX_ENABLED;
+    } else {
+      process.env.UPLOAD_RAW_PREFIX_ENABLED = original;
+    }
+  });
+
   it('enforces the minimum multipart chunk size from env', async () => {
     const originalChunkSize = process.env.UPLOAD_CHUNK_SIZE_BYTES;
     process.env.UPLOAD_CHUNK_SIZE_BYTES = String(MB);
@@ -296,8 +313,20 @@ describe('UploadService persistence-backed flow', () => {
     expect((await stateStore.getVideo(videoId))?.thumbnailStatus).toBe('ready');
   });
 
-  it('updates status asynchronously through the persistence store', async () => {
+  it('keeps videos processing after upload completion while waiting for transcode', async () => {
+    const { service, stateStore } = makeService();
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
+
+    await service.uploadChunk(sessionId, 0, Buffer.alloc(4 * MB));
+    await service.completeUpload(sessionId);
+
+    expect((await stateStore.getVideo(videoId))?.status).toBe('processing');
+  });
+
+  it('supports legacy auto-ready mode when explicitly enabled', async () => {
     jest.useFakeTimers();
+    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
     const { service, stateStore } = makeService();
     const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
 
@@ -306,6 +335,7 @@ describe('UploadService persistence-backed flow', () => {
     await jest.advanceTimersByTimeAsync(2000);
 
     expect((await stateStore.getVideo(videoId))?.status).toBe('ready');
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
     jest.useRealTimers();
   });
 
@@ -343,6 +373,8 @@ describe('UploadService persistence-backed flow', () => {
 
   it('swallows ready-transition persistence failures', async () => {
     jest.useFakeTimers();
+    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
     const { service, stateStore } = makeService();
     stateStore.failUpdate = true;
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -354,6 +386,7 @@ describe('UploadService persistence-backed flow', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to persist ready status:', expect.any(Error));
     consoleErrorSpy.mockRestore();
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
     jest.useRealTimers();
   });
 });

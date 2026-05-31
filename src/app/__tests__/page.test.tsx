@@ -3,14 +3,13 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import Home from '../page';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 import { createE2ESession } from '@/lib/auth/e2e';
 
 jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
-  signIn: jest.fn(),
   signOut: jest.fn(),
 }));
 
@@ -75,8 +74,11 @@ describe('Home Page', () => {
 
   it('redirects to login when unauthenticated', () => {
     (useSession as jest.Mock).mockReturnValue({ status: 'unauthenticated', data: null });
-    render(<Home />);
+    const { getByTestId, queryByTestId } = render(<Home />);
     expect(mockRouter.push).toHaveBeenCalledWith('/auth/login');
+    expect(getByTestId('loading-spinner')).toBeDefined();
+    expect(queryByTestId('upload-area')).toBeNull();
+    expect(queryByTestId('video-list')).toBeNull();
   });
 
   it('updates document metadata from translations', async () => {
@@ -112,16 +114,6 @@ describe('Home Page', () => {
     expect(setLocale).toHaveBeenCalledWith('pt');
   });
 
-  it('calls signIn for regular users when the sign-in button is clicked', () => {
-    (useSession as jest.Mock).mockReturnValue({ status: 'unauthenticated', data: null });
-
-    const { getByText } = render(<Home />);
-
-    fireEvent.click(getByText('auth.signInWithGoogle'));
-
-    expect(signIn).toHaveBeenCalledWith('google');
-  });
-
   it('calls signOut for regular authenticated users', () => {
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',
@@ -133,21 +125,6 @@ describe('Home Page', () => {
     fireEvent.click(getByText('auth.signOut'));
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' });
-  });
-
-  it('supports the e2e admin sign-in flow', async () => {
-    process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '1';
-    process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL = 'admin-e2e@example.com';
-    (useSession as jest.Mock).mockReturnValue({ status: 'unauthenticated', data: null });
-
-    const { getByText } = render(<Home />);
-
-    fireEvent.click(getByText('auth.signInAsE2EAdmin'));
-
-    await waitFor(() => {
-      expect(document.cookie).toContain('e2e-session=admin-e2e%40example.com');
-      expect(createE2ESession).toHaveBeenCalledWith('admin-e2e@example.com');
-    });
   });
 
   it('clears the e2e cookie when signing out from an e2e session', async () => {

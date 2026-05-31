@@ -25,6 +25,10 @@ import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 const MIN_MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024;
 const DEFAULT_CHUNK_SIZE = MIN_MULTIPART_CHUNK_SIZE;
 
+function autoReadyAfterUploadEnabled() {
+  return process.env.AUTO_READY_AFTER_UPLOAD_ENABLED === 'true';
+}
+
 function resolveChunkSize() {
   const parsed = Number.parseInt(process.env.UPLOAD_CHUNK_SIZE_BYTES || '', 10);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -32,6 +36,18 @@ function resolveChunkSize() {
   }
 
   return Math.max(parsed, MIN_MULTIPART_CHUNK_SIZE);
+}
+
+function rawUploadPrefixEnabled() {
+  return process.env.UPLOAD_RAW_PREFIX_ENABLED === 'true';
+}
+
+function buildObjectKey(videoId: string, filename: string) {
+  const normalizedFilename = filename.replace(/^\/+/, '');
+  if (rawUploadPrefixEnabled()) {
+    return `raw/${videoId}/${normalizedFilename}`;
+  }
+  return `${videoId}/${normalizedFilename}`;
 }
 
 export class UploadService {
@@ -102,7 +118,7 @@ export class UploadService {
     const videoId = uuidv4();
     const sessionId = uuidv4();
     const totalChunks = Math.ceil(size / chunkSize);
-    const key = `${videoId}/${filename}`;
+    const key = buildObjectKey(videoId, filename);
     const contentType = mimeType || 'application/octet-stream';
 
     const video: Video = {
@@ -222,7 +238,12 @@ export class UploadService {
     session.securityPosture = this.securityPosture;
     await this.stateStore.saveVideo(video);
 
-    videoEvents.emitUploadCompleted(session.videoId, video.originalName, video.size, url);
+    videoEvents.emitUploadCompleted(session.videoId, video.filename, video.size, url, {
+      originalName: video.originalName,
+      objectKey: video.filename,
+      provider: process.env.STORAGE_PROVIDER || 'minio',
+      bucket: process.env.STORAGE_BUCKET || 'videos',
+    });
     videoEvents.emitVideoProcessing(session.videoId, 'processing');
 
     if (thumbnailBase64) {
@@ -250,12 +271,14 @@ export class UploadService {
       this.thumbnailExtractor.extract(video);
     }
 
-    const readyTimer = setTimeout(() => {
-      void this.updateVideoStatus(video.id, 'ready')
-        .then(() => videoEvents.emitVideoReady(session.videoId))
-        .catch((error) => console.error('Failed to persist ready status:', error));
-    }, 2000);
-    readyTimer.unref?.();
+    if (autoReadyAfterUploadEnabled()) {
+      const readyTimer = setTimeout(() => {
+        void this.updateVideoStatus(video.id, 'ready')
+          .then(() => videoEvents.emitVideoReady(session.videoId))
+          .catch((error) => console.error('Failed to persist ready status:', error));
+      }, 2000);
+      readyTimer.unref?.();
+    }
 
     await this.stateStore.deleteSession(sessionId);
     return video;

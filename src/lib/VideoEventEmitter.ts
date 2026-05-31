@@ -55,9 +55,14 @@ export class VideoEventEmitter extends NodeEventEmitter {
     this.emit('upload.progress', data);
   }
 
-  emitUploadCompleted(videoId: string, filename: string, size: number, url: string): void {
-    console.log("upload.completed", { videoId, filename, size, url })
-    this.emit('upload.completed', { videoId, filename, size, url });
+  emitUploadCompleted(
+    videoId: string,
+    filename: string,
+    size: number,
+    url: string,
+    metadata: { originalName?: string; objectKey?: string; provider?: string; bucket?: string } = {},
+  ): void {
+    this.emit('upload.completed', { videoId, filename, size, url, ...metadata });
   }
 
   emitUploadFailed(videoId: string, filename: string, error: string): void {

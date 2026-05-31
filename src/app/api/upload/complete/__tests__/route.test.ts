@@ -133,7 +133,7 @@ describe('POST /api/upload/complete', () => {
     await expect(response.json()).resolves.toEqual({ error: 'Invalid session' });
   });
 
-  it('skips webhook notification for non-s3 providers', async () => {
+  it('notifies ingest after completing a minio upload', async () => {
     process.env.STORAGE_PROVIDER = 'minio';
     getCurrentSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'admin@example.com' } });
     canUploadVideo.mockReturnValue(true);
@@ -161,9 +161,16 @@ describe('POST /api/upload/complete', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(expect.objectContaining({
       success: true,
-      ingestNotificationStatus: 'skipped',
+      ingestNotificationStatus: 'sent',
     }));
-    expect(notifyIngestStorageCompletion).not.toHaveBeenCalled();
+    expect(notifyIngestStorageCompletion).toHaveBeenCalledWith(
+      'minio',
+      expect.objectContaining({
+        key: 'vid-2/video.mp4',
+        size: 111,
+        multipart: false,
+      }),
+    );
   });
 
   it('keeps upload completion successful when ingest notification fails', async () => {
@@ -272,7 +279,9 @@ describe('POST /api/upload/complete', () => {
       headers: { 'Content-Type': 'application/json' },
     }) as never);
 
-    // Should not notify ingest because it's not 's3' (it defaulted to 'minio')
-    expect(notifyIngestStorageCompletion).not.toHaveBeenCalled();
+    expect(notifyIngestStorageCompletion).toHaveBeenCalledWith(
+      'minio',
+      expect.objectContaining({ key: 'vid-4/video.mp4' }),
+    );
   });
 });
