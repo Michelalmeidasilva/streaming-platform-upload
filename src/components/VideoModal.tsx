@@ -44,12 +44,19 @@ export default function VideoModal({
     setTitle(video.title);
   }, [video.title]);
 
-  const handleDialogClick = useCallback((e: React.MouseEvent<HTMLDialogElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const handleDialogKeyDown = useCallback((e: React.KeyboardEvent<HTMLDialogElement>) => {
-    if (e.key === 'Escape') onClose();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onClose();
   }, [onClose]);
 
   const handleSave = useCallback(async () => {
@@ -109,7 +116,13 @@ export default function VideoModal({
   if (!isOpen) return null;
 
   return (
-    <dialog open className={styles.backdrop} onClick={handleDialogClick} onKeyDown={handleDialogKeyDown} aria-label={video.title}>
+    <div
+      className={styles.backdrop}
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label={video.title}
+    >
       <div className={styles.modal}>
         {/* Drag handle — visible on mobile bottom sheet only */}
         <div className={styles.dragHandle} aria-hidden="true" />
@@ -182,6 +195,6 @@ export default function VideoModal({
           )}
         </div>
       </div>
-    </dialog>
+    </div>
   );
 }

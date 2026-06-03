@@ -323,6 +323,164 @@ describe('UploadArea', () => {
     jest.useRealTimers();
   });
 
+  it('falls back to server upload when direct S3 upload fails', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const videoElement: Record<string, any> = {
+      preload: '',
+      muted: false,
+      playsInline: false,
+      duration: 4,
+      videoWidth: 1280,
+      videoHeight: 720,
+    };
+    Object.defineProperty(videoElement, 'currentTime', {
+      get: () => 1,
+      set: () => {
+        if (videoElement.onseeked) {
+          videoElement.onseeked();
+        }
+      },
+    });
+    const canvasElement = {
+      width: 0,
+      height: 0,
+      getContext: jest.fn().mockReturnValue({ drawImage: jest.fn() }),
+      toDataURL: jest.fn().mockReturnValue('data:image/jpeg;base64,thumb'),
+    };
+    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'video') {
+        return videoElement as any;
+      }
+      if (tagName === 'canvas') {
+        return canvasElement as any;
+      }
+      return document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as any;
+    }) as typeof document.createElement);
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          sessionId: 'session-fallback',
+          chunkSize: 5,
+          totalChunks: 1,
+          presignedUrls: ['https://upload.example/part-1'],
+        }),
+      })
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true, headers: { get: jest.fn().mockReturnValue(null) } })
+      .mockResolvedValueOnce({ ok: true });
+
+    const { container } = render(<UploadArea />);
+    const input = container.querySelector('input[type="file"]')!;
+    const file = new File(['hello'], 'fallback.mp4', { type: 'video/mp4' });
+
+    fireEvent.change(input, { target: { files: [file] } });
+    videoElement.onloadeddata();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        3,
+        '/api/upload/chunk?sessionId=session-fallback&chunkIndex=0',
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+        }),
+      );
+    });
+
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      4,
+      '/api/upload/complete',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+      }),
+    );
+    expect(warnSpy).toHaveBeenCalled();
+
+    createElementSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('uses server upload path by default when direct upload is not explicitly enabled', async () => {
+    process.env.NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED = 'false';
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const videoElement: Record<string, any> = {
+      preload: '',
+      muted: false,
+      playsInline: false,
+      duration: 4,
+      videoWidth: 1280,
+      videoHeight: 720,
+    };
+    Object.defineProperty(videoElement, 'currentTime', {
+      get: () => 1,
+      set: () => {
+        if (videoElement.onseeked) {
+          videoElement.onseeked();
+        }
+      },
+    });
+    const canvasElement = {
+      width: 0,
+      height: 0,
+      getContext: jest.fn().mockReturnValue({ drawImage: jest.fn() }),
+      toDataURL: jest.fn().mockReturnValue('data:image/jpeg;base64,thumb'),
+    };
+    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'video') {
+        return videoElement as any;
+      }
+      if (tagName === 'canvas') {
+        return canvasElement as any;
+      }
+      return document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as any;
+    }) as typeof document.createElement);
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          sessionId: 'session-server',
+          chunkSize: 5,
+          totalChunks: 1,
+          presignedUrls: ['https://upload.example/part-1'],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, headers: { get: jest.fn().mockReturnValue(null) } })
+      .mockResolvedValueOnce({ ok: true });
+
+    const { container } = render(<UploadArea />);
+    const input = container.querySelector('input[type="file"]')!;
+    const file = new File(['hello'], 'server-default.mp4', { type: 'video/mp4' });
+
+    fireEvent.change(input, { target: { files: [file] } });
+    videoElement.onloadeddata();
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        2,
+        '/api/upload/chunk?sessionId=session-server&chunkIndex=0',
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+        }),
+      );
+    });
+
+    createElementSpy.mockRestore();
+  });
+
   it('falls back to a null thumbnail when canvas context is unavailable', async () => {
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',

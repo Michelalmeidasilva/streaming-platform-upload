@@ -1,19 +1,7 @@
-## [1.2.0] - 2026-05-05
+## [1.2.3] - 2026-05-06
 
-4fe1670 feat: mobile UX overhaul — responsive layout, accessibility & modal (#9)
+a9c3dc9 fix(upload): fall back to server upload when S3 CORS blocks localhost (#11)
 
-- Download button shows spinner loading state before browser starts download; double-click guard via ref
-- Modal footer: download left, title input + save/delete right on desktop; stacked full-width on mobile
-
-### Added
-- `useE2ESession` shared hook — eliminates duplicated e2e cookie logic from page, UploadArea and VideoList
-- Global `:focus-visible` ring for keyboard/switch-access navigation
-- `touch-action: manipulation` and `-webkit-tap-highlight-color: transparent` on interactive elements
-- Keyboard support (Enter/Space) on UploadArea dropzone
-- All touch targets enlarged to 44×44px minimum (Apple HIG)
-- `modal.downloading` translation key in EN, ES and PT
-
-### Fixed
 - `height: 100dvh` replaces `100vh` — prevents layout jump when mobile browser chrome appears/disappears
 - iOS auto-zoom on input focus prevented with `font-size: 16px` on search and title inputs
 

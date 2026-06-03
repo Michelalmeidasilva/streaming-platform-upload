@@ -16,6 +16,10 @@ interface UploadProgress {
   status: 'uploading' | 'processing' | 'ready' | 'error';
 }
 
+function isDirectUploadEnabled() {
+  return process.env.NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED === 'true';
+}
+
 const generateThumbnail = (file: File): Promise<string | null> => {
   return new Promise((resolve) => {
     const video = document.createElement('video');
@@ -55,7 +59,7 @@ const generateThumbnail = (file: File): Promise<string | null> => {
 };
 
 export default function UploadArea() {
-  const directUploadEnabled = process.env.NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED !== 'false';
+  const directUploadEnabled = isDirectUploadEnabled();
   const [isDragging, setIsDragging] = useState(false);
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,31 +104,59 @@ export default function UploadArea() {
           if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
           const { sessionId, chunkSize, totalChunks, presignedUrls } = await initRes.json();
 
-          // 2. Upload each chunk sequentially
+          // 2. Upload chunks in parallel (max 6 concurrent)
+          const CONCURRENCY = 6;
           const etags: { PartNumber: number; ETag: string }[] = [];
-          for (let i = 0; i < totalChunks; i++) {
+          let completedChunks = 0;
+          let useServerUpload = !directUploadEnabled;
+
+          const uploadChunk = async (i: number) => {
             const start = i * chunkSize;
             const end = Math.min(start + chunkSize, file.size);
             const chunkBlob = file.slice(start, end);
 
-            const chunkRes = directUploadEnabled
-              ? await fetch(presignedUrls[i], {
-                method: 'PUT',
-                body: chunkBlob,
-              })
-              : await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
+            let chunkRes: Response;
+
+            if (!useServerUpload) {
+              try {
+                chunkRes = await fetch(presignedUrls[i], {
+                  method: 'PUT',
+                  body: chunkBlob,
+                });
+
+                if (!chunkRes.ok) {
+                  throw new Error(`Direct upload failed with status ${chunkRes.status}`);
+                }
+              } catch (error) {
+                console.warn('Direct S3 upload failed, falling back to server upload', error);
+                useServerUpload = true;
+                chunkRes = await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
+                  method: 'POST',
+                  credentials: 'include',
+                  body: chunkBlob,
+                });
+              }
+            } else {
+              chunkRes = await fetch(`/api/upload/chunk?sessionId=${encodeURIComponent(sessionId)}&chunkIndex=${i}`, {
                 method: 'POST',
                 credentials: 'include',
                 body: chunkBlob,
               });
+            }
             if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
 
             const etag = chunkRes.headers.get('ETag');
-            if (directUploadEnabled && etag) {
+            if (!useServerUpload && etag) {
               etags.push({ PartNumber: i + 1, ETag: etag.replace(/"/g, '') });
             }
 
-            setStatus(videoId, { progress: ((i + 1) / totalChunks) * 100 });
+            completedChunks += 1;
+            setStatus(videoId, { progress: (completedChunks / totalChunks) * 100 });
+          };
+
+          const indices = Array.from({ length: totalChunks }, (_, i) => i);
+          for (let offset = 0; offset < indices.length; offset += CONCURRENCY) {
+            await Promise.all(indices.slice(offset, offset + CONCURRENCY).map(uploadChunk));
           }
 
           // 3. Complete upload
