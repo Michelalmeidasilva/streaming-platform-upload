@@ -223,15 +223,13 @@ export default function VideoList() {
               aria-label={video.title}
             >
               <div className={styles.thumbnail}>
-                {video.thumbnailUrl ? (
-                  <Image
-                    src={video.thumbnailUrl}
-                    alt={video.title}
-                    fill
-                    className={styles.thumbnailImage}
-                    style={{ objectFit: 'cover' }}
-                  />
-                ) : null}
+                <Image
+                  src={video.thumbnailUrl || '/default-thumbnail.png'}
+                  alt={video.title}
+                  fill
+                  className={styles.thumbnailImage}
+                  style={{ objectFit: 'cover' }}
+                />
                 <div className={styles.playBtn}>
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="white">
                     <path d="M4 2L9 6L4 10V2z" />
