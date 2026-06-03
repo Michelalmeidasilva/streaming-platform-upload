@@ -21,6 +21,7 @@ interface Video {
   downloadUrl: string;
   thumbnailUrl?: string;
   thumbnailStatus?: string;
+  processingStatus?: string;
 }
 
 export default function VideoList() {
@@ -97,6 +98,31 @@ export default function VideoList() {
 
     return () => clearTimeout(timer);
   }, [effectiveSessionStatus, search, fetchVideos]);
+
+  useEffect(() => {
+    if (effectiveSessionStatus !== 'authenticated') return;
+    const es = new EventSource('/api/videos/stream', { withCredentials: true });
+    es.addEventListener('video-updated', (e) => {
+      const u = JSON.parse((e as MessageEvent).data) as {
+        id: string; status: string; processingStatus: string | null;
+        thumbnailStatus: string | null; thumbnailUrl: string | null;
+      };
+      setVideos((prev) =>
+        prev.map((v) =>
+          v.id === u.id
+            ? {
+                ...v,
+                status: u.status,
+                processingStatus: u.processingStatus ?? v.processingStatus,
+                thumbnailStatus: u.thumbnailStatus ?? v.thumbnailStatus,
+                thumbnailUrl: u.thumbnailUrl ?? v.thumbnailUrl,
+              }
+            : v,
+        ),
+      );
+    });
+    return () => es.close();
+  }, [effectiveSessionStatus, setVideos]);
 
   const initialLoadingSkeletonIds = useMemo(
     () => Array.from({ length: 4 }, () => crypto.randomUUID()),

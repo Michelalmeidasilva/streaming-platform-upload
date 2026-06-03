@@ -54,6 +54,10 @@ describe('VideoList', () => {
       user: { email, role: 'ADMIN', name: 'E2E Admin' },
     }));
     global.fetch = jest.fn();
+    (global as any).EventSource = jest.fn().mockImplementation(() => ({
+      addEventListener: jest.fn(),
+      close: jest.fn(),
+    }));
     document.cookie = '';
   });
 
@@ -592,5 +596,79 @@ describe('VideoList', () => {
     await waitFor(() => {
       expect(queryByTestId('video-modal')).toBeNull();
     });
+  });
+
+  it('merges SSE video-updated events into the rendered list', async () => {
+    let capturedListener: ((e: MessageEvent) => void) | undefined;
+    const mockClose = jest.fn();
+    (global as any).EventSource = jest.fn().mockImplementation(() => ({
+      addEventListener: jest.fn((_: string, handler: (e: MessageEvent) => void) => {
+        capturedListener = handler;
+      }),
+      close: mockClose,
+    }));
+
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({
+        videos: [{ id: '1', title: 'Video 1', status: 'processing', size: 100, createdAt: '2023-01-01' }],
+      }),
+    });
+
+    const { getByText } = render(<VideoList />);
+
+    await waitFor(() => {
+      expect(getByText('Video 1')).toBeDefined();
+      expect(getByText('library.status.processing')).toBeDefined();
+    });
+
+    act(() => {
+      capturedListener?.({
+        data: JSON.stringify({
+          id: '1',
+          status: 'ready',
+          processingStatus: 'done',
+          thumbnailStatus: 'ready',
+          thumbnailUrl: '/thumb.jpg',
+        }),
+      } as MessageEvent);
+    });
+
+    await waitFor(() => {
+      expect(getByText('library.status.ready')).toBeDefined();
+    });
+  });
+
+  it('closes the EventSource on unmount when authenticated', async () => {
+    const mockClose = jest.fn();
+    (global as any).EventSource = jest.fn().mockImplementation(() => ({
+      addEventListener: jest.fn(),
+      close: mockClose,
+    }));
+
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({ videos: [] }),
+    });
+
+    const { unmount } = render(<VideoList />);
+
+    await waitFor(() => {
+      expect((global as any).EventSource).toHaveBeenCalled();
+    });
+
+    unmount();
+
+    expect(mockClose).toHaveBeenCalled();
   });
 });
