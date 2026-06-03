@@ -27,6 +27,10 @@ export interface UploadProgressEvent {
 export interface UploadCompletedEvent {
   videoId: string;
   filename: string;
+  originalName?: string;
+  objectKey?: string;
+  provider?: string;
+  bucket?: string;
   size: number;
   url: string;
 }

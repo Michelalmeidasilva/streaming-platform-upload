@@ -13,7 +13,7 @@ interface UploadProgress {
   videoId: string;
   filename: string;
   progress: number;
-  status: 'uploading' | 'processing' | 'ready' | 'error';
+  status: 'uploading' | 'processing' | 'queued' | 'transcoding' | 'packaging' | 'ready' | 'error';
 }
 
 function isDirectUploadEnabled() {
@@ -143,6 +143,7 @@ export default function UploadArea() {
                 body: chunkBlob,
               });
             }
+
             if (!chunkRes.ok) throw new Error(t('upload.errors.chunk', { index: i + 1 }));
 
             const etag = chunkRes.headers.get('ETag');
@@ -170,10 +171,7 @@ export default function UploadArea() {
           if (!completeRes.ok) throw new Error(t('upload.errors.complete'));
 
           setStatus(videoId, { progress: 100, status: 'processing' });
-          setTimeout(() => {
-            setStatus(videoId, { status: 'ready' });
-            emitUploadComplete();
-          }, 2000);
+          emitUploadComplete();
         } catch (error) {
           console.error('Upload flow failed:', error);
           setStatus(videoId, { status: 'error' });

@@ -58,7 +58,7 @@ export default defineConfig({
       MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY || 'password123',
       STORAGE_ENCRYPTION_MODE: process.env.STORAGE_ENCRYPTION_MODE || 'AES256',
       STORAGE_CHECKSUM_ALGORITHM: process.env.STORAGE_CHECKSUM_ALGORITHM || 'SHA256',
-      UPLOAD_CHUNK_SIZE_BYTES: process.env.UPLOAD_CHUNK_SIZE_BYTES || '104857600',
+      UPLOAD_CHUNK_SIZE_BYTES: process.env.UPLOAD_CHUNK_SIZE_BYTES || '5242880',
     },
     url: e2eBaseUrl,
     reuseExistingServer: false,

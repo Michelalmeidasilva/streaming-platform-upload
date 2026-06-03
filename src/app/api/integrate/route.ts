@@ -3,8 +3,9 @@ import { IntegrationConfig } from '@/types';
 import { integrationLayer } from '@/lib/integration';
 import { getCurrentSession } from '@/lib/auth/session';
 import { canEditVideo } from '@/lib/auth/permissions';
+import { withMetrics } from '@/lib/metrics';
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const session = await getCurrentSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -112,3 +113,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withMetrics('/api/integrate', postHandler);

@@ -5,7 +5,7 @@ import type { UploadStateStore } from '@/lib/persistence/IngestUploadStateClient
 import { videoEvents } from '@/lib/VideoEventEmitter';
 
 const MB = 1024 * 1024;
-const CHUNK_SIZE = 10 * MB;
+const CHUNK_SIZE = 5 * MB;
 
 jest.mock('../ThumbnailExtractor', () => ({
   ThumbnailExtractor: jest.fn().mockImplementation(() => ({
@@ -121,13 +121,30 @@ describe('UploadService persistence-backed flow', () => {
   it('creates persisted session and video during initiation', async () => {
     const { service, stateStore, storage } = makeService();
 
-    const result = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const result = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
     const state = await stateStore.getState(result.sessionId);
 
     expect(result.totalChunks).toBe(3);
     expect(state?.session.videoId).toBe(result.videoId);
     expect(state?.video.originalName).toBe('video.mp4');
     expect(storage.initiateMultipartUpload).toHaveBeenCalled();
+  });
+
+  it('can write uploads to the canonical raw prefix when enabled', async () => {
+    const original = process.env.UPLOAD_RAW_PREFIX_ENABLED;
+    process.env.UPLOAD_RAW_PREFIX_ENABLED = 'true';
+
+    const { service, stateStore } = makeService();
+    const result = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
+    const state = await stateStore.getState(result.sessionId);
+
+    expect(state?.video.filename).toBe(`raw/${result.videoId}/video.mp4`);
+
+    if (original === undefined) {
+      delete process.env.UPLOAD_RAW_PREFIX_ENABLED;
+    } else {
+      process.env.UPLOAD_RAW_PREFIX_ENABLED = original;
+    }
   });
 
   it('enforces the minimum multipart chunk size from env', async () => {
@@ -164,7 +181,7 @@ describe('UploadService persistence-backed flow', () => {
 
   it('uploads multipart chunks and persists progress', async () => {
     const { service, stateStore, storage } = makeService();
-    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
 
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
@@ -202,11 +219,11 @@ describe('UploadService persistence-backed flow', () => {
 
   it('completes upload, persists final video, and deletes the session', async () => {
     const { service, stateStore, storage } = makeService();
-    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
 
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
-    await service.uploadChunk(sessionId, 2, Buffer.alloc(5 * MB));
+    await service.uploadChunk(sessionId, 2, Buffer.alloc(2 * MB));
 
     const video = await service.completeUpload(sessionId);
 
@@ -223,10 +240,10 @@ describe('UploadService persistence-backed flow', () => {
 
   it('prefers explicit etags passed at completion time', async () => {
     const { service, storage } = makeService();
-    const { sessionId } = await service.initiateUpload('video.mp4', 25 * MB, 'video/mp4');
+    const { sessionId } = await service.initiateUpload('video.mp4', 12 * MB, 'video/mp4');
     await service.uploadChunk(sessionId, 0, Buffer.alloc(CHUNK_SIZE));
     await service.uploadChunk(sessionId, 1, Buffer.alloc(CHUNK_SIZE));
-    await service.uploadChunk(sessionId, 2, Buffer.alloc(5 * MB));
+    await service.uploadChunk(sessionId, 2, Buffer.alloc(2 * MB));
 
     await service.completeUpload(sessionId, [
       { PartNumber: 1, ETag: 'etag-1' },
@@ -296,8 +313,20 @@ describe('UploadService persistence-backed flow', () => {
     expect((await stateStore.getVideo(videoId))?.thumbnailStatus).toBe('ready');
   });
 
-  it('updates status asynchronously through the persistence store', async () => {
+  it('keeps videos processing after upload completion while waiting for transcode', async () => {
+    const { service, stateStore } = makeService();
+    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
+
+    await service.uploadChunk(sessionId, 0, Buffer.alloc(4 * MB));
+    await service.completeUpload(sessionId);
+
+    expect((await stateStore.getVideo(videoId))?.status).toBe('processing');
+  });
+
+  it('supports legacy auto-ready mode when explicitly enabled', async () => {
     jest.useFakeTimers();
+    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
     const { service, stateStore } = makeService();
     const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
 
@@ -306,6 +335,7 @@ describe('UploadService persistence-backed flow', () => {
     await jest.advanceTimersByTimeAsync(2000);
 
     expect((await stateStore.getVideo(videoId))?.status).toBe('ready');
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
     jest.useRealTimers();
   });
 
@@ -343,6 +373,8 @@ describe('UploadService persistence-backed flow', () => {
 
   it('swallows ready-transition persistence failures', async () => {
     jest.useFakeTimers();
+    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
     const { service, stateStore } = makeService();
     stateStore.failUpdate = true;
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -354,6 +386,7 @@ describe('UploadService persistence-backed flow', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to persist ready status:', expect.any(Error));
     consoleErrorSpy.mockRestore();
+    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
     jest.useRealTimers();
   });
 });

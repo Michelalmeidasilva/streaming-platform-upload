@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, fireEvent, waitFor } from '@testing-library/react';
 import UploadArea from '../UploadArea';
 import { useSession } from 'next-auth/react';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
@@ -219,7 +219,7 @@ describe('UploadArea', () => {
     });
   });
 
-  it('uploads a file successfully with direct upload and marks it ready', async () => {
+  it('uploads a file successfully with direct upload and waits for processing', async () => {
     jest.useFakeTimers();
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',
@@ -310,12 +310,8 @@ describe('UploadArea', () => {
       }),
     );
 
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
-
     await waitFor(() => {
-      expect(getByText('upload.uploadStatus.ready')).toBeDefined();
+      expect(getByText('upload.uploadStatus.processing')).toBeDefined();
       expect(emitUploadComplete).toHaveBeenCalled();
     });
 

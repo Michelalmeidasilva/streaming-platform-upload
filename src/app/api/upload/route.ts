@@ -3,6 +3,7 @@ import { uploadService } from '@/lib/api/uploadService';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
+import { withMetrics } from '@/lib/metrics';
 
 const ALLOWED_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm', '.m3u8']);
 const ALLOWED_MIME_TYPES = new Set([
@@ -19,7 +20,7 @@ function validateUploadRequest(filename: string, size: number, mimeType?: string
   return null;
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const session = await getCurrentSession();
     if (!session) {
@@ -71,3 +72,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to initiate upload' }, { status: 500 });
   }
 }
+
+export const POST = withMetrics('/api/upload', postHandler);

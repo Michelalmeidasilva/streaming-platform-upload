@@ -4,6 +4,7 @@ import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import type { Video as VideoModel } from '@/types';
+import { withMetrics } from '@/lib/metrics';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +23,7 @@ function toVideoDto(video: VideoModel) {
   };
 }
 
-export async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   const session = await getCurrentSession();
   if (!session) {
     recordSecurityEvent({
@@ -56,3 +57,5 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ videos });
 }
+
+export const GET = withMetrics('/api/videos', getHandler);

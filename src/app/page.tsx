@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { signIn, signOut } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import UploadArea from '@/components/UploadArea';
@@ -17,10 +17,7 @@ import { useI18n } from '@/lib/i18n/LocaleProvider';
 export default function Home() {
   const router = useRouter();
   const { locale, setLocale, t } = useI18n();
-  const { effectiveSession, effectiveStatus, activateE2ESession } = useE2ESession();
-
-  const e2eAuthEnabled = process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED === '1';
-  const e2eEmail = process.env.NEXT_PUBLIC_E2E_ADMIN_EMAIL || 'admin-e2e@example.com';
+  const { effectiveSession, effectiveStatus } = useE2ESession();
 
   useEffect(() => {
     if (effectiveStatus === 'unauthenticated') {
@@ -32,12 +29,6 @@ export default function Home() {
     document.title = t('metadata.title');
     document.querySelector('meta[name="description"]')?.setAttribute('content', t('metadata.description'));
   }, [t, locale]);
-
-  const signInAsE2EAdmin = useCallback(() => {
-    document.cookie = `${E2E_AUTH_COOKIE}=${encodeURIComponent(e2eEmail)}; path=/; SameSite=Lax`;
-    activateE2ESession(e2eEmail);
-    window.location.href = '/';
-  }, [e2eEmail, activateE2ESession]);
 
   // Read the cookie at call time — no need to mirror it as state.
   const handleSignOut = useCallback(() => {
@@ -57,7 +48,7 @@ export default function Home() {
   if (role === 'ADMIN') roleLabel = t('roles.admin');
   else if (role === 'MEMBER') roleLabel = t('roles.member');
 
-  if (effectiveStatus === 'loading') {
+  if (effectiveStatus === 'loading' || effectiveStatus === 'unauthenticated') {
     return (
       <VideoEventProvider>
         <div className={styles.loadingScreen}>
@@ -135,27 +126,12 @@ export default function Home() {
                 </select>
               </label>
 
-              {effectiveSession ? (
-                <>
-                  <span className={styles.authStatus}>
-                    {effectiveSession.user?.name || effectiveSession.user?.email}
-                  </span>
-                  <button type="button" className={styles.authButton} onClick={handleSignOut}>
-                    {t('auth.signOut')}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className={styles.authButton} onClick={() => signIn('google')}>
-                    {t('auth.signInWithGoogle')}
-                  </button>
-                  {e2eAuthEnabled && (
-                    <button type="button" className={styles.authButton} onClick={signInAsE2EAdmin}>
-                      {t('auth.signInAsE2EAdmin')}
-                    </button>
-                  )}
-                </>
-              )}
+              <span className={styles.authStatus}>
+                {effectiveSession?.user?.name || effectiveSession?.user?.email}
+              </span>
+              <button type="button" className={styles.authButton} onClick={handleSignOut}>
+                {t('auth.signOut')}
+              </button>
             </div>
           </header>
 
