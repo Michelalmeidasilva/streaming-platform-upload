@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadService } from '@/lib/api/uploadService';
+import { uploadService, storageAdapter } from '@/lib/api/uploadService';
 import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import type { Video as VideoModel } from '@/types';
 import { withMetrics } from '@/lib/metrics';
+import { deriveThumbnailUrl } from './thumbnail';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,9 +54,15 @@ async function getHandler(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.trim().toLowerCase();
-  const videos = (await uploadService.getAllVideos(query || undefined)).map(toVideoDto);
+  const videos = await uploadService.getAllVideos(query || undefined);
+  const dtos = await Promise.all(
+    videos.map(async (video) => ({
+      ...toVideoDto(video),
+      thumbnailUrl: await deriveThumbnailUrl(video, storageAdapter),
+    })),
+  );
 
-  return NextResponse.json({ videos });
+  return NextResponse.json({ videos: dtos });
 }
 
 export const GET = withMetrics('/api/videos', getHandler);
