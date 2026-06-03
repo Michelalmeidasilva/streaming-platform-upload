@@ -1,11 +1,21 @@
-# Changelog
+## [1.2.4] - 2026-06-03
 
-## [Unreleased] 2026-06-03
-### Added
-- Endpoint `GET /api/metrics` expondo métricas Prometheus RED
-  (`http_requests_total`, `http_request_duration_seconds`) com labels
-  `service,status_code,method,path`. Permite ao streaming-telemetry coletar
-  requests/erros/latência (sinais 1/4/5) por scrape.
+fe18d7b Merge branch 'fix/upload-area'
+873fed2 Merge remote-tracking branch 'origin/main'
+9838051 docs(upload): document Prometheus RED /api/metrics endpoint
+3b7a10e feat(upload): expose Prometheus RED metrics at /api/metrics (prom-client)
+349b8e1 feat(upload): add OpenTelemetry instrumentation for traces and metrics
+28408b3 fix(docker): support E2E auth and fix lint error for Docker build
+699ec82 chore: migrate docs to obsidian-vault, add AGENTS.md
+f81a96a feat(agents): add streaming-platform-upload AGENTS.md
+52dc314 chore: fix uploada chunk
+706179a chore: fix readme.md
+9918170 chore: fix upload
+00456d1 fix(upload): parallelize S3 multipart chunks and remove redundant ListParts call
+6b4aefc chore: merge main, resolve conflicts and add gitleaks ignore for security docs
+2db79b5 Merge branch 'main' of github.com:Michelalmeidasilva/streaming-platform-upload
+2fc162f chore: fix readme.md
+
 
 ---
 
