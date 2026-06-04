@@ -1,11 +1,21 @@
-## [Unreleased] 2026-06-04
-### Added
-- Six visible upload lifecycle stages (uploading, upload finished, available to
-  preview, transcoding pending, transcoding, transcoded) in both the active upload
-  card (`UploadArea`) and the library (`VideoList`), derived from `status` +
-  `processingStatus` + `storageConfirmedAt` via the pure function `deriveUploadStage`
-  (`src/lib/uploadStage.ts`).
-- `UploadArea` now captures the server-assigned `videoId` returned by
+## [1.4.0] - 2026-06-04
+
+b22a66d Merge remote-tracking branch 'origin/main'
+23c5739 chore(env): set example UPLOAD_MAX_FILE_SIZE_GB to 10
+7b4c53a Merge feat/upload-status-stages: 6 visible upload stages + configurable max file size
+a7a1f19 fix(upload): style stage badges, fix SSE effect dep, drop dead updateVideoStatus
+9395133 feat(upload): configurable max file size via UPLOAD_MAX_FILE_SIZE_GB
+2804444 docs(upload): document 6 upload stages and deriveUploadStage
+92a3cc6 docs(env): document UPLOAD_RAW_PREFIX_ENABLED requirement on AWS
+ffe4ddb feat(UploadArea): track server videoId, subscribe SSE, render 6 stages
+01cf852 feat(VideoList): render 6 derived upload stages
+04f38d0 feat(i18n): add 6 upload stage labels (en/es/pt)
+30d14fa feat(stream): propagate storageConfirmedAt over SSE
+128e791 refactor(upload): remove autoReadyAfterUpload shortcut so transcoding stages surface
+21d2b87 feat: add deriveUploadStage pure function
+08baae6 feat(types): add storageConfirmedAt and UploadStage
+353b6ea feat: added tsconfig
+
   `POST /api/upload` (`serverVideoId`) and subscribes to the SSE stream so the
   active card advances through transcoding stages (3–6) in real time.
 - `UploadStage` union type in `src/types/index.ts`.
