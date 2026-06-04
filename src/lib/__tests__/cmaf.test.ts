@@ -57,18 +57,16 @@ describe('validateCMAFFile', () => {
       const result = validateCMAFFile(file);
       expect(result.valid).toBe(true);
     });
+
+    it.each(['video.mkv', 'clip.y4m', 'raw.yuv'])('accepts %s', (name) => {
+      const result = validateCMAFFile(createMockFile(name, 100));
+      expect(result.valid).toBe(true);
+    });
   });
 
   describe('unsupported formats', () => {
     it('rejects .avi files', () => {
       const file = createMockFile('video.avi', 100);
-      const result = validateCMAFFile(file);
-      expect(result.valid).toBe(false);
-      expect(result.errorKey).toBe('unsupportedFormat');
-    });
-
-    it('rejects .mkv files', () => {
-      const file = createMockFile('video.mkv', 100);
       const result = validateCMAFFile(file);
       expect(result.valid).toBe(false);
       expect(result.errorKey).toBe('unsupportedFormat');

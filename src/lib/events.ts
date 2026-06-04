@@ -10,9 +10,30 @@ export type EventType =
   | 'video.thumbnail.generated'
   | 'video.thumbnail.fallback';
 
+// RawVideoParams describes a headerless raw upload (.yuv). ffprobe cannot infer
+// geometry from the bytes, so the operator supplies it and it travels with the
+// upload.started event to the gateway and on to the transcoder.
+export interface RawVideoParams {
+  width: number;
+  height: number;
+  fps: number;
+  pixelFormat?: string;
+}
+
+// SubtitleRef points at a sidecar subtitle (.srt) uploaded with the video. The
+// objectKey is the storage location the gateway forwards to the transcoder,
+// which converts it to WebVTT.
+export interface SubtitleRef {
+  objectKey: string;
+  language?: string;
+  label?: string;
+}
+
 export interface UploadStartedEvent {
   videoId: string;
   filename: string;
+  rawVideo?: RawVideoParams;
+  subtitles?: SubtitleRef[];
 }
 
 export interface UploadProgressEvent {
@@ -69,7 +90,7 @@ export type EventData =
   | VideoThumbnailFallbackEvent;
 
 export interface VideoEvents {
-  on(event: 'upload.started', handler: (data: { videoId: string; filename: string }) => void): void;
+  on(event: 'upload.started', handler: (data: UploadStartedEvent) => void): void;
   on(event: 'upload.progress', handler: (data: UploadProgressEvent) => void): void;
   on(event: 'upload.completed', handler: (data: UploadCompletedEvent) => void): void;
   on(event: 'upload.failed', handler: (data: UploadFailedEvent) => void): void;
@@ -80,7 +101,7 @@ export interface VideoEvents {
   on(event: 'video.thumbnail.generated', handler: (data: VideoThumbnailGeneratedEvent) => void): void;
   on(event: 'video.thumbnail.fallback', handler: (data: VideoThumbnailFallbackEvent) => void): void;
 
-  emit(event: 'upload.started', data: { videoId: string; filename: string }): void;
+  emit(event: 'upload.started', data: UploadStartedEvent): void;
   emit(event: 'upload.progress', data: UploadProgressEvent): void;
   emit(event: 'upload.completed', data: UploadCompletedEvent): void;
   emit(event: 'upload.failed', data: UploadFailedEvent): void;

@@ -3,6 +3,8 @@ import {
   EventType,
   EventData,
   UploadProgressEvent,
+  RawVideoParams,
+  SubtitleRef,
 } from './events';
 
 export class VideoEventEmitter extends NodeEventEmitter {
@@ -47,8 +49,13 @@ export class VideoEventEmitter extends NodeEventEmitter {
     this.eventHistory = [];
   }
 
-  emitUploadStarted(videoId: string, filename: string): void {
-    this.emit('upload.started', { videoId, filename });
+  emitUploadStarted(videoId: string, filename: string, rawVideo?: RawVideoParams, subtitles?: SubtitleRef[]): void {
+    this.emit('upload.started', {
+      videoId,
+      filename,
+      ...(rawVideo ? { rawVideo } : {}),
+      ...(subtitles && subtitles.length ? { subtitles } : {}),
+    });
   }
 
   emitUploadProgress(data: Omit<UploadProgressEvent, 'videoId' | 'filename'> & { videoId: string; filename: string }): void {

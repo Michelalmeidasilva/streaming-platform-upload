@@ -83,6 +83,13 @@ const translations = {
         unsupportedFormat: 'Unsupported format. Supported formats: {{formats}}',
         fileTooLarge: 'File size exceeds 5GB limit',
       },
+      rawVideo: {
+        dimensionsPrompt: 'Raw .yuv has no header. Enter the frame size as WIDTHxHEIGHT (e.g. 1920x1080):',
+        fpsPrompt: 'Enter the frame rate (fps), e.g. 30:',
+        pixelFormatPrompt: 'Enter the pixel format (default yuv420p):',
+        invalidDimensions: 'Invalid size. Use the WIDTHxHEIGHT format, e.g. 1920x1080.',
+        invalidMetadata: 'Invalid raw video metadata. Width, height and fps must be positive numbers.',
+      },
       uploadStatus: {
         uploading: '{{progress}}%',
         processing: 'Processing',
@@ -216,6 +223,13 @@ const translations = {
         unsupportedFormat: 'Formato no compatible. Formatos admitidos: {{formats}}',
         fileTooLarge: 'El archivo supera el límite de 5 GB',
       },
+      rawVideo: {
+        dimensionsPrompt: 'El .yuv crudo no tiene cabecera. Introduce el tamaño como ANCHOxALTO (p. ej. 1920x1080):',
+        fpsPrompt: 'Introduce la tasa de fotogramas (fps), p. ej. 30:',
+        pixelFormatPrompt: 'Introduce el formato de píxel (por defecto yuv420p):',
+        invalidDimensions: 'Tamaño inválido. Usa el formato ANCHOxALTO, p. ej. 1920x1080.',
+        invalidMetadata: 'Metadatos de vídeo crudo inválidos. El ancho, el alto y los fps deben ser positivos.',
+      },
       uploadStatus: {
         uploading: '{{progress}}%',
         processing: 'Procesando',
@@ -348,6 +362,13 @@ const translations = {
       validation: {
         unsupportedFormat: 'Formato não suportado. Formatos aceitos: {{formats}}',
         fileTooLarge: 'O arquivo excede o limite de 5 GB',
+      },
+      rawVideo: {
+        dimensionsPrompt: 'O .yuv cru não tem cabeçalho. Informe o tamanho como LARGURAxALTURA (ex.: 1920x1080):',
+        fpsPrompt: 'Informe a taxa de quadros (fps), ex.: 30:',
+        pixelFormatPrompt: 'Informe o pixel format (padrão yuv420p):',
+        invalidDimensions: 'Tamanho inválido. Use o formato LARGURAxALTURA, ex.: 1920x1080.',
+        invalidMetadata: 'Metadados de vídeo cru inválidos. Largura, altura e fps devem ser positivos.',
       },
       uploadStatus: {
         uploading: '{{progress}}%',

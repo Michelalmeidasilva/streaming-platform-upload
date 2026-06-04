@@ -93,6 +93,56 @@ describe('Upload API Route', () => {
     expect(data.error).toContain('5 GB');
   });
 
+  it('accepts .y4m without a canonical MIME type', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    (uploadService.initiateUpload as jest.Mock).mockResolvedValue({
+      sessionId: 's1', videoId: 'v1', chunkSize: 100, totalChunks: 1, presignedUrls: ['url'],
+    });
+    const req = mockReq({ filename: 'clip.y4m', size: 1000, mimeType: 'application/octet-stream' });
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+  });
+
+  it('returns 400 for .yuv without rawVideo metadata', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    const req = mockReq({ filename: 'raw.yuv', size: 1000 });
+    const response = await POST(req);
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain('width, height and fps');
+  });
+
+  it('forwards rawVideo metadata to initiateUpload for .yuv', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    (uploadService.initiateUpload as jest.Mock).mockResolvedValue({
+      sessionId: 's1', videoId: 'v1', chunkSize: 100, totalChunks: 1, presignedUrls: ['url'],
+    });
+    const rawVideo = { width: 1920, height: 1080, fps: 30, pixelFormat: 'yuv420p' };
+    const req = mockReq({ filename: 'raw.yuv', size: 1000, rawVideo });
+    const response = await POST(req);
+    expect(response.status).toBe(200);
+    expect(uploadService.initiateUpload).toHaveBeenCalledWith('raw.yuv', 1000, undefined, rawVideo, undefined);
+  });
+
+  it('forwards subtitles and returns subtitleUploads', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    const subtitleUploads = [{ objectKey: 'subtitles/v1/en.srt', url: 'https://put/en', language: 'en' }];
+    (uploadService.initiateUpload as jest.Mock).mockResolvedValue({
+      sessionId: 's1', videoId: 'v1', chunkSize: 100, totalChunks: 1, presignedUrls: ['url'], subtitleUploads,
+    });
+    const subtitles = [{ language: 'en', label: 'EN' }];
+    const req = mockReq({ filename: 'movie.mp4', size: 1000, mimeType: 'video/mp4', subtitles });
+    const response = await POST(req);
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(uploadService.initiateUpload).toHaveBeenCalledWith('movie.mp4', 1000, 'video/mp4', undefined, subtitles);
+    expect(data.subtitleUploads).toEqual(subtitleUploads);
+  });
+
   it('handles internal errors', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);

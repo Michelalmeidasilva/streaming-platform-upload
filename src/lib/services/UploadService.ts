@@ -15,9 +15,27 @@ import {
 import {
   EventType,
   EventData,
+  RawVideoParams,
+  SubtitleRef,
   VideoThumbnailGeneratedEvent,
   VideoThumbnailFallbackEvent,
 } from '@/lib/events';
+
+// SubtitleInput is the per-track metadata the client supplies at initiate. The
+// .srt bytes are uploaded separately to the presigned URL returned below.
+export interface SubtitleInput {
+  language?: string;
+  label?: string;
+}
+
+// SubtitleUpload tells the client where to PUT each .srt and the objectKey the
+// pipeline will read it from.
+export interface SubtitleUpload {
+  objectKey: string;
+  url: string;
+  language: string;
+  label?: string;
+}
 import { ThumbnailExtractor } from './ThumbnailExtractor';
 import { getRecoveryPolicy } from '@/lib/security/recovery-policy';
 import { resolveStoragePolicy } from '@/lib/security/storage-policy';
@@ -40,6 +58,17 @@ function resolveChunkSize() {
 
 function rawUploadPrefixEnabled() {
   return process.env.UPLOAD_RAW_PREFIX_ENABLED === 'true';
+}
+
+// sanitizeLanguage normalizes a subtitle language into a filename-safe token,
+// mirroring the transcoder's SanitizeLanguage so playlist paths line up.
+function sanitizeLanguage(language: string | undefined, fallback: string): string {
+  const token = (language || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  return token || fallback;
+}
+
+function buildSubtitleKey(videoId: string, language: string): string {
+  return `subtitles/${videoId}/${language}.srt`;
 }
 
 function buildObjectKey(videoId: string, filename: string) {
@@ -113,7 +142,16 @@ export class UploadService {
     filename: string,
     size: number,
     mimeType?: string,
-  ): Promise<{ sessionId: string; videoId: string; chunkSize: number; totalChunks: number; presignedUrls: string[] }> {
+    rawVideo?: RawVideoParams,
+    subtitles?: SubtitleInput[],
+  ): Promise<{
+    sessionId: string;
+    videoId: string;
+    chunkSize: number;
+    totalChunks: number;
+    presignedUrls: string[];
+    subtitleUploads: SubtitleUpload[];
+  }> {
     const chunkSize = resolveChunkSize();
     const videoId = uuidv4();
     const sessionId = uuidv4();
@@ -169,10 +207,30 @@ export class UploadService {
       securityPosture: this.securityPosture,
     };
 
-    await this.stateStore.saveState({ session, video });
-    videoEvents.emitUploadStarted(videoId, filename);
+    // Sidecar subtitles: presign a PUT per track and forward the planned object
+    // keys on upload.started so the gateway can attach them to the transcode job.
+    const subtitleUploads: SubtitleUpload[] = [];
+    const subtitleRefs: SubtitleRef[] = [];
+    const usedLanguages = new Set<string>();
+    for (let i = 0; i < (subtitles?.length ?? 0); i++) {
+      const sub = subtitles![i];
+      let language = sanitizeLanguage(sub.language, `sub-${i + 1}`);
+      while (usedLanguages.has(language)) language = `${language}-${i + 1}`;
+      usedLanguages.add(language);
+      const objectKey = buildSubtitleKey(videoId, language);
+      const url = await this.storage.getUploadPresignedUrl(
+        objectKey,
+        'text/plain',
+        this.storagePolicy.signedUrlTtlSeconds,
+      );
+      subtitleUploads.push({ objectKey, url, language, label: sub.label });
+      subtitleRefs.push({ objectKey, language, label: sub.label });
+    }
 
-    return { sessionId, videoId, chunkSize, totalChunks, presignedUrls };
+    await this.stateStore.saveState({ session, video });
+    videoEvents.emitUploadStarted(videoId, filename, rawVideo, subtitleRefs.length ? subtitleRefs : undefined);
+
+    return { sessionId, videoId, chunkSize, totalChunks, presignedUrls, subtitleUploads };
   }
 
   async uploadChunk(sessionId: string, chunkIndex: number, chunk: Buffer): Promise<void> {

@@ -1,4 +1,4 @@
-const SUPPORTED_FORMATS = ['.mp4', '.mov', '.m4v', '.webm', '.m3u8'];
+const SUPPORTED_FORMATS = ['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.y4m', '.yuv', '.m3u8'];
 
 export interface ValidationResult {
   valid: boolean;

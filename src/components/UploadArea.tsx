@@ -8,6 +8,14 @@ import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
+import {
+  ACCEPTED_EXTENSIONS,
+  isRawVideoFile,
+  isSubtitleFile,
+  matchSubtitles,
+  promptRawVideoParams,
+  type RawVideoInput,
+} from '@/lib/upload/fileIntake';
 
 interface UploadProgress {
   videoId: string;
@@ -76,16 +84,32 @@ export default function UploadArea() {
 
   const handleFiles = useCallback(
     async (files: FileList) => {
-      for (const file of Array.from(files)) {
+      const allFiles = Array.from(files);
+      const subtitleFiles = allFiles.filter(f => isSubtitleFile(f.name));
+      const videoFiles = allFiles.filter(f => !isSubtitleFile(f.name));
+      const soleVideo = videoFiles.length === 1;
+
+      for (const file of videoFiles) {
         const validation = validateCMAFFile(file);
         if (!validation.valid) {
           if (validation.errorKey === 'unsupportedFormat') {
-            alert(t('upload.validation.unsupportedFormat', { formats: '.mp4, .mov, .m4v, .webm, .m3u8' }));
+            alert(t('upload.validation.unsupportedFormat', { formats: '.mp4, .mov, .m4v, .mkv, .webm, .y4m, .yuv, .m3u8' }));
           } else if (validation.errorKey === 'fileTooLarge') {
             alert(t('upload.validation.fileTooLarge'));
           }
           continue;
         }
+
+        // Raw .yuv has no header — collect geometry before starting the upload.
+        let rawVideo: RawVideoInput | undefined;
+        if (isRawVideoFile(file.name)) {
+          const params = promptRawVideoParams(t);
+          if (!params) continue;
+          rawVideo = params;
+        }
+
+        // Pair sidecar .srt subtitles to this video.
+        const pendingSubtitles = matchSubtitles(file, subtitleFiles, soleVideo);
 
         const videoId = `video-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
         setUploads(prev => [...prev, { videoId, filename: file.name, progress: 0, status: 'uploading' }]);
@@ -99,12 +123,31 @@ export default function UploadArea() {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: file.name, size: file.size, mimeType: file.type }),
+            body: JSON.stringify({
+              filename: file.name,
+              size: file.size,
+              mimeType: file.type,
+              rawVideo,
+              subtitles: pendingSubtitles.map(s => ({ language: s.language, label: s.label })),
+            }),
           });
           if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
-          const { sessionId, chunkSize, totalChunks, presignedUrls } = await initRes.json();
+          const { sessionId, chunkSize, totalChunks, presignedUrls, subtitleUploads } = await initRes.json();
 
-          // 2. Upload chunks in parallel (max 6 concurrent)
+          // 2. Upload sidecar subtitles to their presigned URLs (best-effort:
+          // they should land before transcoding reads them).
+          if (Array.isArray(subtitleUploads)) {
+            await Promise.all(
+              subtitleUploads.map((target: { url: string }, idx: number) => {
+                const sub = pendingSubtitles[idx];
+                if (!sub || !target?.url) return Promise.resolve();
+                return fetch(target.url, { method: 'PUT', body: sub.file, headers: { 'Content-Type': 'text/plain' } })
+                  .catch(err => console.warn('Subtitle upload failed', err));
+              }),
+            );
+          }
+
+          // 3. Upload chunks in parallel (max 6 concurrent)
           const CONCURRENCY = 6;
           const etags: { PartNumber: number; ETag: string }[] = [];
           let completedChunks = 0;
@@ -160,7 +203,7 @@ export default function UploadArea() {
             await Promise.all(indices.slice(offset, offset + CONCURRENCY).map(uploadChunk));
           }
 
-          // 3. Complete upload
+          // 4. Complete upload
           const thumbnailBase64 = await thumbnailPromise;
           const completeRes = await fetch('/api/upload/complete', {
             method: 'POST',
@@ -262,7 +305,7 @@ export default function UploadArea() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".mp4,.mov,.m4v,.webm,.m3u8"
+          accept={ACCEPTED_EXTENSIONS}
           multiple
           onChange={handleInputChange}
           className={styles.fileInput}
@@ -286,7 +329,10 @@ export default function UploadArea() {
             <span className={styles.formatBadge}>MP4</span>
             <span className={styles.formatBadge}>MOV</span>
             <span className={styles.formatBadge}>M4V</span>
+            <span className={styles.formatBadge}>MKV</span>
             <span className={styles.formatBadge}>WEBM</span>
+            <span className={styles.formatBadge}>Y4M</span>
+            <span className={styles.formatBadge}>YUV</span>
           </div>
         </div>
       </button>

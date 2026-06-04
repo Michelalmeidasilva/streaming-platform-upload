@@ -672,6 +672,37 @@ describe('VideoEventEmitter', () => {
       }, 0);
     });
 
+    it('should include rawVideo and subtitles when provided', (done) => {
+      const handler = jest.fn();
+      emitter.on('upload.started', handler);
+
+      const rawVideo = { width: 1920, height: 1080, fps: 30, pixelFormat: 'yuv420p' };
+      const subtitles = [{ objectKey: 'subtitles/vid-1/en.srt', language: 'en', label: 'EN' }];
+      emitter.emitUploadStarted('vid-1', 'movie.yuv', rawVideo, subtitles);
+
+      setTimeout(() => {
+        expect(handler).toHaveBeenCalledWith({
+          videoId: 'vid-1',
+          filename: 'movie.yuv',
+          rawVideo,
+          subtitles,
+        });
+        done();
+      }, 0);
+    });
+
+    it('should omit an empty subtitles array', (done) => {
+      const handler = jest.fn();
+      emitter.on('upload.started', handler);
+
+      emitter.emitUploadStarted('vid-2', 'movie.mp4', undefined, []);
+
+      setTimeout(() => {
+        expect(handler).toHaveBeenCalledWith({ videoId: 'vid-2', filename: 'movie.mp4' });
+        done();
+      }, 0);
+    });
+
     it('should emit upload.progress via emitUploadProgress', (done) => {
       const handler = jest.fn();
       emitter.on('upload.progress', handler);

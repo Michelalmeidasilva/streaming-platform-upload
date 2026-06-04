@@ -319,6 +319,99 @@ describe('UploadArea', () => {
     jest.useRealTimers();
   });
 
+  it('prompts for .yuv geometry and uploads paired .srt sidecars', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const promptSpy = jest.spyOn(window, 'prompt')
+      .mockReturnValueOnce('1920x1080') // dimensions
+      .mockReturnValueOnce('30')        // fps
+      .mockReturnValueOnce('yuv420p');  // pixel format
+
+    const videoElement: Record<string, any> = {
+      preload: '', muted: false, playsInline: false, duration: 4, videoWidth: 1920, videoHeight: 1080,
+    };
+    Object.defineProperty(videoElement, 'currentTime', {
+      get: () => 1,
+      set: () => { if (videoElement.onseeked) videoElement.onseeked(); },
+    });
+    const canvasElement = {
+      width: 0, height: 0,
+      getContext: jest.fn().mockReturnValue({ drawImage: jest.fn() }),
+      toDataURL: jest.fn().mockReturnValue('data:image/jpeg;base64,thumb'),
+    };
+    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'video') return videoElement as any;
+      if (tagName === 'canvas') return canvasElement as any;
+      return document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as any;
+    }) as typeof document.createElement);
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          sessionId: 'session-yuv',
+          chunkSize: 5,
+          totalChunks: 1,
+          presignedUrls: ['https://upload.example/part-1'],
+          subtitleUploads: [{ objectKey: 'subtitles/v/en.srt', url: 'https://put.example/en', language: 'en' }],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true }) // subtitle PUT
+      .mockResolvedValueOnce({ ok: true, headers: { get: jest.fn().mockReturnValue('"etag-1"') } }) // chunk PUT
+      .mockResolvedValueOnce({ ok: true }); // complete
+
+    const { container } = render(<UploadArea />);
+    const input = container.querySelector('input[type="file"]')!;
+    const yuv = new File(['raw'], 'movie.yuv', { type: '' });
+    const srt = new File(['1\n00:00:00,000 --> 00:00:01,000\nhi\n'], 'movie.en.srt', { type: '' });
+
+    fireEvent.change(input, { target: { files: [yuv, srt] } });
+    videoElement.onloadeddata();
+
+    await waitFor(() => {
+      // initiate carried the rawVideo geometry collected via prompt
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        1,
+        '/api/upload',
+        expect.objectContaining({
+          body: expect.stringContaining('"rawVideo":{"width":1920,"height":1080,"fps":30,"pixelFormat":"yuv420p"}'),
+        }),
+      );
+      // the sidecar .srt was PUT to its presigned URL
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        2,
+        'https://put.example/en',
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    });
+    expect(promptSpy).toHaveBeenCalledTimes(3);
+
+    createElementSpy.mockRestore();
+    promptSpy.mockRestore();
+  });
+
+  it('skips a .yuv upload when geometry prompt is cancelled', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+    const promptSpy = jest.spyOn(window, 'prompt').mockReturnValueOnce(null);
+
+    const { container } = render(<UploadArea />);
+    const input = container.querySelector('input[type="file"]')!;
+    const yuv = new File(['raw'], 'clip.yuv', { type: '' });
+
+    fireEvent.change(input, { target: { files: [yuv] } });
+
+    await waitFor(() => expect(promptSpy).toHaveBeenCalled());
+    // Cancelling means no upload session is initiated.
+    expect(global.fetch).not.toHaveBeenCalled();
+    promptSpy.mockRestore();
+  });
+
   it('falls back to server upload when direct S3 upload fails', async () => {
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',

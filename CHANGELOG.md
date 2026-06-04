@@ -1,3 +1,22 @@
+## [Unreleased] 2026-06-04
+### Added
+- Accept additional source formats: `.mkv`, `.y4m` and raw `.yuv` (in addition
+  to `.mp4`, `.mov`, `.m4v`, `.webm`, `.m3u8`). Updated the upload API allowlist,
+  client-side `validateCMAFFile`, the dropzone `accept` attribute and format
+  badges.
+- `.y4m`/`.yuv` have no canonical MIME type, so MIME enforcement is skipped for
+  them; `video/x-matroska` was added for `.mkv`.
+- Raw `.yuv` uploads collect `rawVideo` geometry (width×height, fps, pixel
+  format) from the operator before the upload starts and forward it on the
+  `upload.started` event (new `RawVideoParams` type, `emitUploadStarted` /
+  `initiateUpload` accept it). The API rejects `.yuv` without valid width/height/fps.
+- Sidecar subtitles: `.srt` files dropped alongside a video are paired by
+  basename (`movie.srt` / `movie.en.srt` → `movie.mp4`; language inferred from
+  the name) and, for a single video, any unmatched `.srt` is attached to it.
+  `initiateUpload` presigns a PUT per subtitle (`subtitles/<videoId>/<lang>.srt`),
+  returns `subtitleUploads`, and forwards the refs on `upload.started`
+  (`SubtitleRef`). The client uploads the `.srt` bytes to the presigned URLs.
+
 ## [1.2.5] - 2026-06-04
 
 62b7d06 Merge remote-tracking branch 'origin/main'
