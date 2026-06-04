@@ -146,6 +146,29 @@ describe('validateCMAFFile', () => {
     });
   });
 
+  describe('env-configurable size limit', () => {
+    const originalPublic = process.env.NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB;
+
+    afterEach(() => {
+      process.env.NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB = originalPublic;
+    });
+
+    it('accepts a 6GB file when the limit is raised to 10GB', () => {
+      process.env.NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB = '10';
+      const file = createLargeFile('video.mp4', 6 * 1024 * 1024 * 1024);
+      const result = validateCMAFFile(file);
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects a file just over the raised 10GB limit', () => {
+      process.env.NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB = '10';
+      const file = createLargeFile('video.mp4', 10 * 1024 * 1024 * 1024 + 1);
+      const result = validateCMAFFile(file);
+      expect(result.valid).toBe(false);
+      expect(result.errorKey).toBe('fileTooLarge');
+    });
+  });
+
   describe('edge cases', () => {
     it('handles files with multiple dots in name', () => {
       const file = createMockFile('my.video.file.mp4', 100);
