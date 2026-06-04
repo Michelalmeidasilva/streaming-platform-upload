@@ -41,6 +41,11 @@
   badges.
 - `.y4m`/`.yuv` have no canonical MIME type, so MIME enforcement is skipped for
   them; `video/x-matroska` was added for `.mkv`.
+
+## [1.3.0] - 2026-06-04
+
+17d09e8 feat: accept mkv/y4m/yuv uploads and sidecar .srt subtitles
+
 - Raw `.yuv` uploads collect `rawVideo` geometry (width×height, fps, pixel
   format) from the operator before the upload starts and forward it on the
   `upload.started` event (new `RawVideoParams` type, `emitUploadStarted` /
