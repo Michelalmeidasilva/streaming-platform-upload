@@ -95,8 +95,9 @@ export default function UploadArea() {
     [],
   );
 
+  const hasUploads = uploads.length > 0;
   useEffect(() => {
-    if (uploads.length === 0) return;
+    if (!hasUploads) return;
     const es = new EventSource('/api/videos/stream', { withCredentials: true });
     es.addEventListener('video-updated', (e) => {
       const u = JSON.parse((e as MessageEvent).data) as {
@@ -117,7 +118,7 @@ export default function UploadArea() {
       );
     });
     return () => es.close();
-  }, [uploads.length]);
+  }, [hasUploads]);
 
   const handleFiles = useCallback(
     async (files: FileList) => {

@@ -10,7 +10,6 @@ import {
   StorageSecurityPolicy,
   Video,
   UploadSession,
-  VideoStatus,
 } from '@/types';
 import {
   EventType,
@@ -366,9 +365,5 @@ export class UploadService {
       updatedAt: new Date(),
     });
     return updated || undefined;
-  }
-
-  async updateVideoStatus(videoId: string, status: VideoStatus): Promise<void> {
-    await this.stateStore.updateVideo(videoId, { status, updatedAt: new Date() });
   }
 }
