@@ -1,5 +1,40 @@
 ## [Unreleased] 2026-06-04
 ### Added
+- Six visible upload lifecycle stages (uploading, upload finished, available to
+  preview, transcoding pending, transcoding, transcoded) in both the active upload
+  card (`UploadArea`) and the library (`VideoList`), derived from `status` +
+  `processingStatus` + `storageConfirmedAt` via the pure function `deriveUploadStage`
+  (`src/lib/uploadStage.ts`).
+- `UploadArea` now captures the server-assigned `videoId` returned by
+  `POST /api/upload` (`serverVideoId`) and subscribes to the SSE stream so the
+  active card advances through transcoding stages (3–6) in real time.
+- `UploadStage` union type in `src/types/index.ts`.
+- Stage labels (`stages.*`) for `en`, `es`, and `pt` in
+  `src/lib/i18n/translations.ts`.
+
+### Changed
+- `storageConfirmedAt` (RFC3339) is now part of the `/api/videos/stream` SSE
+  snapshot diff and the emitted `video-updated` payload, enabling stage 3
+  (`available`) transitions to be pushed to the browser.
+- `Video` type gains the optional `storageConfirmedAt` field, mapped from the
+  `streaming-ingest` upload-state document.
+
+### Removed
+- The `autoReadyAfterUpload` shortcut (`AUTO_READY_AFTER_UPLOAD_ENABLED`) that
+  forced `status=ready` 2 seconds after upload completion and hid the transcoding
+  stages. Readiness is now driven by the real transcode completion signal
+  (`processingStatus=ready`) delivered via SSE.
+
+## [Unreleased] 2026-06-04
+### Added
+- Configurable maximum upload size. The previously hardcoded 5GB limit is now
+  read from `UPLOAD_MAX_FILE_SIZE_GB` (server) and `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB`
+  (client), both defaulting to 5GB; e.g. set both to `10` to allow 10GB uploads.
+  Introduced `src/lib/uploadLimits.ts` as the single source of truth (server var
+  takes precedence, public var is the client fallback, invalid/zero/negative
+  values fall back to 5GB). Wired into `validateCMAFFile` and the upload API.
+  The localized "file too large" message now interpolates the configured limit
+  (`{{limit}}`) instead of a hardcoded "5GB" across EN/ES/PT.
 - Accept additional source formats: `.mkv`, `.y4m` and raw `.yuv` (in addition
   to `.mp4`, `.mov`, `.m4v`, `.webm`, `.m3u8`). Updated the upload API allowlist,
   client-side `validateCMAFFile`, the dropzone `accept` attribute and format
