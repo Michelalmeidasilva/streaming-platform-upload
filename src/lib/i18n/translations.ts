@@ -24,6 +24,15 @@ interface Dictionary {
 
 const translations = {
   en: {
+    stages: {
+      uploading: 'Uploading',
+      uploaded: 'Upload finished',
+      available: 'Available to preview',
+      transcode_pending: 'Available · transcoding pending',
+      transcoding: 'Transcoding',
+      transcoded: 'Ready',
+      error: 'Error',
+    },
     metadata: {
       title: 'Streaming Platform Upload',
       description: 'Upload and manage your videos',
@@ -81,7 +90,7 @@ const translations = {
       },
       validation: {
         unsupportedFormat: 'Unsupported format. Supported formats: {{formats}}',
-        fileTooLarge: 'File size exceeds 5GB limit',
+        fileTooLarge: 'File size exceeds {{limit}} limit',
       },
       rawVideo: {
         dimensionsPrompt: 'Raw .yuv has no header. Enter the frame size as WIDTHxHEIGHT (e.g. 1920x1080):',
@@ -164,6 +173,15 @@ const translations = {
     },
   },
   es: {
+    stages: {
+      uploading: 'Subiendo',
+      uploaded: 'Subida finalizada',
+      available: 'Disponible para ver',
+      transcode_pending: 'Disponible · transcodificación pendiente',
+      transcoding: 'Transcodificando',
+      transcoded: 'Listo',
+      error: 'Error',
+    },
     metadata: {
       title: 'Carga de plataforma de streaming',
       description: 'Sube y administra tus videos',
@@ -221,7 +239,7 @@ const translations = {
       },
       validation: {
         unsupportedFormat: 'Formato no compatible. Formatos admitidos: {{formats}}',
-        fileTooLarge: 'El archivo supera el límite de 5 GB',
+        fileTooLarge: 'El archivo supera el límite de {{limit}}',
       },
       rawVideo: {
         dimensionsPrompt: 'El .yuv crudo no tiene cabecera. Introduce el tamaño como ANCHOxALTO (p. ej. 1920x1080):',
@@ -304,6 +322,15 @@ const translations = {
     },
   },
   pt: {
+    stages: {
+      uploading: 'Realizando upload',
+      uploaded: 'Upload inicial finalizado',
+      available: 'Disponível para visualização',
+      transcode_pending: 'Disponível · transcoding pendente',
+      transcoding: 'Realizando transcoding',
+      transcoded: 'Transcoding finalizado',
+      error: 'Erro',
+    },
     metadata: {
       title: 'Envio da plataforma de streaming',
       description: 'Envie e gerencie seus vídeos',
@@ -361,7 +388,7 @@ const translations = {
       },
       validation: {
         unsupportedFormat: 'Formato não suportado. Formatos aceitos: {{formats}}',
-        fileTooLarge: 'O arquivo excede o limite de 5 GB',
+        fileTooLarge: 'O arquivo excede o limite de {{limit}}',
       },
       rawVideo: {
         dimensionsPrompt: 'O .yuv cru não tem cabeçalho. Informe o tamanho como LARGURAxALTURA (ex.: 1920x1080):',

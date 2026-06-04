@@ -1,3 +1,5 @@
+import { getMaxFileSizeBytes } from './uploadLimits';
+
 const SUPPORTED_FORMATS = ['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.y4m', '.yuv', '.m3u8'];
 
 export interface ValidationResult {
@@ -16,7 +18,7 @@ export function validateCMAFFile(file: File): ValidationResult {
     };
   }
 
-  const maxSize = 5 * 1024 * 1024 * 1024;
+  const maxSize = getMaxFileSizeBytes();
   if (file.size > maxSize) {
     return {
       valid: false,

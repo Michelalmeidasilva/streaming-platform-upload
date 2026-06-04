@@ -28,6 +28,7 @@ export async function GET(_request: NextRequest) {
           const items: StreamSnapshotItem[] = videos.map((v) => ({
             id: v.id, status: v.status,
             processingStatus: v.processingStatus, thumbnailStatus: v.thumbnailStatus,
+            storageConfirmedAt: v.storageConfirmedAt,
           }));
           const { changed, snapshot } = diffVideos(prev, items);
           prev = snapshot;
@@ -37,6 +38,7 @@ export async function GET(_request: NextRequest) {
               id: video.id, status: video.status,
               processingStatus: video.processingStatus ?? null,
               thumbnailStatus: video.thumbnailStatus ?? null,
+              storageConfirmedAt: video.storageConfirmedAt ?? null,
               thumbnailUrl: await deriveThumbnailUrl(video),
             };
             controller.enqueue(encoder.encode(`event: video-updated\ndata: ${JSON.stringify(payload)}\n\n`));

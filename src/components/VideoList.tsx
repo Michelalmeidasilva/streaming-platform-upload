@@ -9,6 +9,7 @@ import { canDeleteVideo, canViewVideo } from '@/lib/auth/permissions';
 import VideoModal from './VideoModal';
 import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
+import { deriveUploadStage } from '@/lib/uploadStage';
 
 interface Video {
   id: string;
@@ -22,6 +23,7 @@ interface Video {
   thumbnailUrl?: string;
   thumbnailStatus?: string;
   processingStatus?: string;
+  storageConfirmedAt?: string;
 }
 
 export default function VideoList() {
@@ -106,6 +108,7 @@ export default function VideoList() {
       const u = JSON.parse((e as MessageEvent).data) as {
         id: string; status: string; processingStatus: string | null;
         thumbnailStatus: string | null; thumbnailUrl: string | null;
+        storageConfirmedAt: string | null;
       };
       setVideos((prev) =>
         prev.map((v) =>
@@ -114,6 +117,7 @@ export default function VideoList() {
                 ...v,
                 status: u.status,
                 processingStatus: u.processingStatus ?? v.processingStatus,
+                storageConfirmedAt: u.storageConfirmedAt ?? v.storageConfirmedAt,
                 thumbnailStatus: u.thumbnailStatus ?? v.thumbnailStatus,
                 thumbnailUrl: u.thumbnailUrl ?? v.thumbnailUrl,
               }
@@ -261,7 +265,7 @@ export default function VideoList() {
                     <path d="M4 2L9 6L4 10V2z" />
                   </svg>
                 </div>
-                {video.status === 'uploading' && (
+                {deriveUploadStage(video) === 'uploading' && (
                   <div className={styles.thumbProgress}>
                     <div className={styles.thumbProgressFill} />
                   </div>
@@ -276,11 +280,8 @@ export default function VideoList() {
                   <span>{formatDate(video.createdAt)}</span>
                 </div>
                 <div className={styles.footer}>
-                  <span className={`${styles.statusBadge} ${styles[video.status]}`}>
-                    {video.status === 'ready' && t('library.status.ready')}
-                    {video.status === 'processing' && t('library.status.processing')}
-                    {video.status === 'uploading' && t('library.status.uploading')}
-                    {video.status === 'error' && t('library.status.error')}
+                  <span className={`${styles.statusBadge} ${styles[deriveUploadStage(video)] ?? ''}`}>
+                    {t(`stages.${deriveUploadStage(video)}`)}
                   </span>
                   {canManageVideos ? (
                     <button

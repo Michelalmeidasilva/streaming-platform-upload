@@ -3,10 +3,11 @@ export interface StreamSnapshotItem {
   status: string;
   processingStatus?: string;
   thumbnailStatus?: string;
+  storageConfirmedAt?: string;
 }
 
 const sig = (i: StreamSnapshotItem) =>
-  `${i.status}|${i.processingStatus ?? ''}|${i.thumbnailStatus ?? ''}`;
+  `${i.status}|${i.processingStatus ?? ''}|${i.thumbnailStatus ?? ''}|${i.storageConfirmedAt ?? ''}`;
 
 export function diffVideos(
   prev: Map<string, StreamSnapshotItem>,

@@ -13,6 +13,12 @@ describe('i18n translations', () => {
     expect(translate('en', 'upload.uploadStatus.uploading', { progress: 50 })).toBe('50%');
   });
 
+  it('interpolates the size limit into the fileTooLarge message in every locale', () => {
+    expect(translate('en', 'upload.validation.fileTooLarge', { limit: '10GB' })).toContain('10GB');
+    expect(translate('es', 'upload.validation.fileTooLarge', { limit: '10GB' })).toContain('10GB');
+    expect(translate('pt', 'upload.validation.fileTooLarge', { limit: '10GB' })).toContain('10GB');
+  });
+
   it('falls back to default locale if key missing in target', () => {
     // metadata.title exists in all, but we can assume it works
     expect(translate('es', 'metadata.title')).toBe('Carga de plataforma de streaming');

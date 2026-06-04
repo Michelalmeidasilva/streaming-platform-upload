@@ -530,7 +530,7 @@ describe('VideoList', () => {
 
     await waitFor(() => {
       expect(getByText(/library\.formats\.sizeGigabytes/)).toBeDefined();
-      expect(getByText('library.status.uploading')).toBeDefined();
+      expect(getByText('stages.uploading')).toBeDefined();
       expect(getByAltText('Huge Video')).toBeDefined();
       expect(container.querySelector('[class*="thumbProgressFill"]')).toBeTruthy();
     });
@@ -624,7 +624,7 @@ describe('VideoList', () => {
 
     await waitFor(() => {
       expect(getByText('Video 1')).toBeDefined();
-      expect(getByText('library.status.processing')).toBeDefined();
+      expect(getByText('stages.uploaded')).toBeDefined();
     });
 
     act(() => {
@@ -640,7 +640,29 @@ describe('VideoList', () => {
     });
 
     await waitFor(() => {
-      expect(getByText('library.status.ready')).toBeDefined();
+      expect(getByText('stages.transcoded')).toBeDefined();
+    });
+  });
+
+  it('shows the transcoding stage label when processingStatus is transcoding', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: jest.fn().mockResolvedValue({
+        videos: [
+          { id: '1', title: 'Video 1', status: 'processing', processingStatus: 'transcoding', size: 100, createdAt: '2023-01-01' },
+        ],
+      }),
+    });
+
+    const { getByText } = render(<VideoList />);
+
+    await waitFor(() => {
+      expect(getByText('stages.transcoding')).toBeDefined();
     });
   });
 

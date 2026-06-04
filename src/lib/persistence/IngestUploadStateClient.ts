@@ -44,6 +44,7 @@ function mapVideo(video: Record<string, unknown>): Video {
     thumbnailStatus: typeof video.thumbnailStatus === 'string' ? video.thumbnailStatus as Video['thumbnailStatus'] : undefined,
     mimeType: typeof video.mimeType === 'string' ? video.mimeType : undefined,
     processingStatus: typeof video.processingStatus === 'string' ? video.processingStatus as Video['processingStatus'] : undefined,
+    storageConfirmedAt: typeof video.storageConfirmedAt === 'string' ? video.storageConfirmedAt : undefined,
     source: typeof video.source === 'object' && video.source !== null ? video.source as Video['source'] : undefined,
     mediaInfo: typeof video.mediaInfo === 'object' && video.mediaInfo !== null ? video.mediaInfo as Video['mediaInfo'] : undefined,
     transcode: typeof video.transcode === 'object' && video.transcode !== null ? video.transcode as Video['transcode'] : undefined,

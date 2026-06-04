@@ -18,4 +18,13 @@ describe('diffVideos', () => {
     const { changed } = diffVideos(prev, [v({ id: 'a' })]);
     expect(changed).toHaveLength(0);
   });
+  it('detects a storageConfirmedAt transition as a change', () => {
+    const prev = new Map([
+      ['v1', { id: 'v1', status: 'processing' }],
+    ]);
+    const { changed } = diffVideos(prev, [
+      { id: 'v1', status: 'processing', storageConfirmedAt: '2026-06-04T12:00:00Z' },
+    ]);
+    expect(changed.map((c) => c.id)).toEqual(['v1']);
+  });
 });

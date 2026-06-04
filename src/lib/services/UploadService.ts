@@ -10,7 +10,6 @@ import {
   StorageSecurityPolicy,
   Video,
   UploadSession,
-  VideoStatus,
 } from '@/types';
 import {
   EventType,
@@ -42,10 +41,6 @@ import { resolveStoragePolicy } from '@/lib/security/storage-policy';
 
 const MIN_MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024;
 const DEFAULT_CHUNK_SIZE = MIN_MULTIPART_CHUNK_SIZE;
-
-function autoReadyAfterUploadEnabled() {
-  return process.env.AUTO_READY_AFTER_UPLOAD_ENABLED === 'true';
-}
 
 function resolveChunkSize() {
   const parsed = Number.parseInt(process.env.UPLOAD_CHUNK_SIZE_BYTES || '', 10);
@@ -332,15 +327,6 @@ export class UploadService {
       this.thumbnailExtractor.extract(video);
     }
 
-    if (autoReadyAfterUploadEnabled()) {
-      const readyTimer = setTimeout(() => {
-        void this.updateVideoStatus(video.id, 'ready')
-          .then(() => videoEvents.emitVideoReady(session.videoId))
-          .catch((error) => console.error('Failed to persist ready status:', error));
-      }, 2000);
-      readyTimer.unref?.();
-    }
-
     await this.stateStore.deleteSession(sessionId);
     return video;
   }
@@ -379,9 +365,5 @@ export class UploadService {
       updatedAt: new Date(),
     });
     return updated || undefined;
-  }
-
-  async updateVideoStatus(videoId: string, status: VideoStatus): Promise<void> {
-    await this.stateStore.updateVideo(videoId, { status, updatedAt: new Date() });
   }
 }

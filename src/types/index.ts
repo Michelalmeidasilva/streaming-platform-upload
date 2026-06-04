@@ -40,6 +40,7 @@ export interface Video {
   duration?: number;
   securityPosture?: SecurityPosture;
   processingStatus?: ProcessingStatus;
+  storageConfirmedAt?: string;
   source?: VideoSource;
   mediaInfo?: MediaInfo;
   transcode?: TranscodeInfo;
@@ -49,6 +50,15 @@ export interface Video {
 
 export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'error';
 export type ProcessingStatus = 'queued' | 'transcoding' | 'packaging' | 'ready' | 'failed';
+
+export type UploadStage =
+  | 'uploading'
+  | 'uploaded'
+  | 'available'
+  | 'transcode_pending'
+  | 'transcoding'
+  | 'transcoded'
+  | 'error';
 
 export interface VideoSource {
   bucket?: string;

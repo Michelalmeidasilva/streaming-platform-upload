@@ -4,6 +4,7 @@ import { canUploadVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import { withMetrics } from '@/lib/metrics';
+import { getMaxFileSizeBytes, getMaxFileSizeGB } from '@/lib/uploadLimits';
 import type { RawVideoParams } from '@/lib/events';
 
 const ALLOWED_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.y4m', '.yuv', '.m3u8']);
@@ -16,7 +17,6 @@ const ALLOWED_MIME_TYPES = new Set([
 const NO_CANONICAL_MIME_EXTENSIONS = new Set(['.y4m', '.yuv']);
 // Headerless raw streams carry no geometry; it must be supplied as rawVideo.
 const RAW_VIDEO_EXTENSIONS = new Set(['.yuv']);
-const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024;
 
 function fileExtension(filename: string): string {
   return filename.slice(filename.lastIndexOf('.')).toLowerCase();
@@ -33,7 +33,9 @@ function validateUploadRequest(
   if (mimeType && !NO_CANONICAL_MIME_EXTENSIONS.has(ext) && !ALLOWED_MIME_TYPES.has(mimeType.toLowerCase())) {
     return 'Unsupported MIME type';
   }
-  if (size > MAX_FILE_SIZE) return 'File exceeds maximum allowed size of 5 GB';
+  if (size > getMaxFileSizeBytes()) {
+    return `File exceeds maximum allowed size of ${getMaxFileSizeGB()} GB`;
+  }
   if (RAW_VIDEO_EXTENSIONS.has(ext)) {
     if (!rawVideo || !(rawVideo.width > 0) || !(rawVideo.height > 0) || !(rawVideo.fps > 0)) {
       return 'Raw .yuv uploads require width, height and fps metadata';

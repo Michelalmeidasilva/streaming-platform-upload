@@ -93,6 +93,39 @@ describe('Upload API Route', () => {
     expect(data.error).toContain('5 GB');
   });
 
+  it('accepts a 6 GB file when UPLOAD_MAX_FILE_SIZE_GB raises the limit to 10', async () => {
+    const original = process.env.UPLOAD_MAX_FILE_SIZE_GB;
+    process.env.UPLOAD_MAX_FILE_SIZE_GB = '10';
+    try {
+      (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN', email: 'a@t.com' } });
+      (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+      (uploadService.initiateUpload as jest.Mock).mockResolvedValue({
+        sessionId: 's1', videoId: 'v1', chunkSize: 100, totalChunks: 1, presignedUrls: ['url'],
+      });
+      const req = mockReq({ filename: 'video.mp4', size: 6 * 1024 * 1024 * 1024 });
+      const response = await POST(req);
+      expect(response.status).toBe(200);
+    } finally {
+      process.env.UPLOAD_MAX_FILE_SIZE_GB = original;
+    }
+  });
+
+  it('reports the configured limit in the oversize error message', async () => {
+    const original = process.env.UPLOAD_MAX_FILE_SIZE_GB;
+    process.env.UPLOAD_MAX_FILE_SIZE_GB = '10';
+    try {
+      (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+      (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+      const req = mockReq({ filename: 'video.mp4', size: 11 * 1024 * 1024 * 1024 });
+      const response = await POST(req);
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('10 GB');
+    } finally {
+      process.env.UPLOAD_MAX_FILE_SIZE_GB = original;
+    }
+  });
+
   it('accepts .y4m without a canonical MIME type', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
