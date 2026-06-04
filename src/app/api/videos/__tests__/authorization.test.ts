@@ -405,7 +405,7 @@ describe('video authorization', () => {
       size: 2048,
       status: 'ready',
       downloadUrl: '/api/videos/1/download',
-      thumbnailUrl: 'http://storage/thumbnail.jpg',
+      thumbnailUrl: '/api/videos/1/thumbnail',
       thumbnailStatus: 'ready',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',

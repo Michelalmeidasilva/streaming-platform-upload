@@ -175,6 +175,10 @@ export class MemoryAdapter implements IStorageAdapter {
     return buildToken('download', token);
   }
 
+  async getPublicUrl(key: string): Promise<string> {
+    return this.getSignedUrl(key);
+  }
+
   async exists(key: string): Promise<boolean> {
     return getMemoryStorageState().objects.has(key);
   }

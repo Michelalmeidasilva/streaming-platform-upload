@@ -233,7 +233,7 @@ describe('Connectors', () => {
 
   describe('EventGatewayConnector', () => {
     it('sends transformed payload to /events endpoint', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: true });
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
 
       await connector.send(payload);
@@ -249,21 +249,21 @@ describe('Connectors', () => {
     });
 
     it('returns false when disabled', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: false });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: false });
 
       const result = await connector.send(payload);
       expect(result).toBe(false);
     });
 
     it('returns false when endpoint missing', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', enabled: true });
 
       const result = await connector.send(payload);
       expect(result).toBe(false);
     });
 
     it('returns false on send error', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: true });
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Gateway unreachable'));
 
       const result = await connector.send(payload);
@@ -272,7 +272,7 @@ describe('Connectors', () => {
     });
 
     it('tests /health endpoint', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: true });
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
 
       const result = await connector.test();
@@ -281,14 +281,14 @@ describe('Connectors', () => {
     });
 
     it('returns false for test when endpoint missing', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', enabled: true });
 
       const result = await connector.test();
       expect(result).toBe(false);
     });
 
     it('returns false on test error', async () => {
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: true });
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Connection refused'));
 
       const result = await connector.test();
@@ -298,7 +298,7 @@ describe('Connectors', () => {
     it('sends with apiKey header', async () => {
       const connector = new EventGatewayConnector({
         name: 'g',
-        type: 'event-gateway',
+        type: 'streaming-ingest',
         endpoint: 'http://g.com',
         enabled: true,
         apiKey: 'gw-key'
@@ -323,7 +323,7 @@ describe('Connectors', () => {
         data: { duration: 3600, bitrate: 5000 },
         timestamp: '2023-01-02'
       };
-      const connector = new EventGatewayConnector({ name: 'g', type: 'event-gateway', endpoint: 'http://g.com', enabled: true });
+      const connector = new EventGatewayConnector({ name: 'g', type: 'streaming-ingest', endpoint: 'http://g.com', enabled: true });
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
 
       await connector.send(customPayload);

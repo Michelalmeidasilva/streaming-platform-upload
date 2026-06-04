@@ -27,6 +27,7 @@ function makeStorage(): jest.Mocked<IStorageAdapter> {
     completeMultipartUpload: jest.fn().mockResolvedValue('http://storage/file'),
     delete: jest.fn().mockResolvedValue(undefined),
     getSignedUrl: jest.fn().mockResolvedValue('http://storage/signed'),
+    getPublicUrl: jest.fn().mockResolvedValue('http://storage/public'),
     exists: jest.fn().mockResolvedValue(false),
     listObjects: jest.fn().mockResolvedValue([]),
   };

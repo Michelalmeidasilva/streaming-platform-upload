@@ -48,6 +48,20 @@ describe('Middleware', () => {
     expect(response?.status).toBe(401);
   });
 
+  it('allows the public thumbnail proxy GET without a token', async () => {
+    const req = mockRequest('/api/videos/abc123/thumbnail');
+    (getToken as jest.Mock).mockResolvedValue(null);
+    const response = await middleware(req);
+    expect(response?.status).toBe(200);
+  });
+
+  it('still blocks other /api/videos routes without a token', async () => {
+    const req = mockRequest('/api/videos/abc123');
+    (getToken as jest.Mock).mockResolvedValue(null);
+    const response = await middleware(req);
+    expect(response?.status).toBe(401);
+  });
+
   it('reads non-secure auth cookies for local http requests', async () => {
     const req = mockRequest('/api/upload');
     (getToken as jest.Mock).mockResolvedValue(null);

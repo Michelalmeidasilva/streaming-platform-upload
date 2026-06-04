@@ -48,6 +48,8 @@ function resolveStorageConfig() {
       provider: storageProvider,
       bucket: process.env.STORAGE_BUCKET || 'videos',
       endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
+      publicEndpoint:
+        process.env.MINIO_PUBLIC_ENDPOINT || process.env.MINIO_ENDPOINT || 'http://localhost:9000',
       accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
       secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
       forcePathStyle: true,

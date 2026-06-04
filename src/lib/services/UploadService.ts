@@ -252,12 +252,15 @@ export class UploadService {
         const buffer = Buffer.from(base64Data, 'base64');
         const thumbnailKey = `thumbnails/${video.id}.jpg`;
         const checksum = createHash('sha256').update(buffer).digest('base64');
-        const thumbnailUrl = await this.storage.upload(
+        await this.storage.upload(
           buffer,
           thumbnailKey,
           'image/jpeg',
           checksum,
         );
+        // Browser-reachable, unsigned URL — not the internal-host presigned URL
+        // returned by upload(), which the browser cannot resolve.
+        const thumbnailUrl = await this.storage.getPublicUrl(thumbnailKey);
         video.thumbnailUrl = thumbnailUrl;
         video.thumbnailStatus = 'ready';
         videoEvents.emitThumbnailGenerated(video.id, thumbnailUrl, new Date().toISOString());

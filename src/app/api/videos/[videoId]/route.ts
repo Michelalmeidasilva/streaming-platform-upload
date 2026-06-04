@@ -4,6 +4,7 @@ import { canDeleteVideo, canEditVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import type { Video as VideoModel } from '@/types';
+import { deriveThumbnailUrl } from '../thumbnail';
 
 function toVideoDto(video: VideoModel) {
   return {
@@ -52,7 +53,12 @@ export async function GET(
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ video: toVideoDto(video) });
+  return NextResponse.json({
+    video: {
+      ...toVideoDto(video),
+      thumbnailUrl: await deriveThumbnailUrl(video),
+    },
+  });
 }
 
 export async function PATCH(
@@ -88,7 +94,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Video not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ video: toVideoDto(updated) });
+  return NextResponse.json({
+    video: {
+      ...toVideoDto(updated),
+      thumbnailUrl: await deriveThumbnailUrl(updated),
+    },
+  });
 }
 
 export async function DELETE(

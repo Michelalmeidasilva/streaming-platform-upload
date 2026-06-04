@@ -34,6 +34,7 @@ export class MinIOAdapter implements IStorageAdapter {
   private s3Client: S3Client;
   private bucket: string;
   private policy: StorageSecurityPolicy;
+  private publicEndpoint: string;
   private multipartComposeState = new Map<string, { key: string; partKeys: Map<number, string> }>();
 
   constructor(config: StorageConfig) {
@@ -56,6 +57,10 @@ export class MinIOAdapter implements IStorageAdapter {
       },
     });
     this.bucket = config.bucket;
+    // Browser-facing base. Defaults to the internal endpoint for backwards
+    // compatibility, but in Docker it should be the host-published URL
+    // (MINIO_PUBLIC_ENDPOINT=http://localhost:9000) so the browser can load it.
+    this.publicEndpoint = (config.publicEndpoint || config.endpoint || 'http://localhost:9000').replace(/\/+$/, '');
   }
 
   private async listUploadedParts(key: string, uploadId: string) {
@@ -227,6 +232,13 @@ export class MinIOAdapter implements IStorageAdapter {
   async getSignedUrl(key: string, expiresIn?: number): Promise<string> {
     const ttl = expiresIn ?? this.policy.signedUrlTtlSeconds;
     return this.client.presignedGetObject(this.bucket, key, ttl);
+  }
+
+  async getPublicUrl(key: string): Promise<string> {
+    // Path-style, unsigned URL against the public endpoint. Relies on the bucket
+    // being public-read (same model as streaming-distribution's CDN_BASE).
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/');
+    return `${this.publicEndpoint}/${this.bucket}/${encodedKey}`;
   }
 
   async exists(key: string): Promise<boolean> {

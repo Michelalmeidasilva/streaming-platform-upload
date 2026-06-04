@@ -48,6 +48,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# The next/image optimizer writes optimized images to .next/cache/images at
+# runtime. Create it and hand ownership to the unprivileged runtime user so the
+# mkdir does not fail with EACCES (which degrades/duplicates optimizer work).
+RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next
+
 USER nextjs
 
 EXPOSE 3000

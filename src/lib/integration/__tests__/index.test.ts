@@ -84,8 +84,8 @@ describe('IntegrationLayer', () => {
     expect(layer.getConnectors()).toContain('q');
   });
 
-  it('creates EventGatewayConnector for event-gateway type', () => {
-    const config: IntegrationConfig = { name: 'eg', type: 'event-gateway', endpoint: 'http://gateway.com', enabled: true };
+  it('creates EventGatewayConnector for streaming-ingest type', () => {
+    const config: IntegrationConfig = { name: 'eg', type: 'streaming-ingest', endpoint: 'http://gateway.com', enabled: true };
     layer.register(config);
     expect(layer.getConnectors()).toContain('eg');
   });

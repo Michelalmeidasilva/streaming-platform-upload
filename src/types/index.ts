@@ -150,6 +150,12 @@ export interface StorageConfig {
   bucket: string;
   region?: string;
   endpoint?: string;
+  /**
+   * Browser-reachable base URL for objects (e.g. http://localhost:9000). Used to
+   * build public URLs returned to the client, since `endpoint` may point at an
+   * internal Docker host (e.g. http://minio:9000) the browser cannot resolve.
+   */
+  publicEndpoint?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
   forcePathStyle?: boolean;
@@ -161,7 +167,7 @@ export interface StorageConfig {
 
 export interface IntegrationConfig {
   name: string;
-  type: 'webhook' | 'api' | 'queue' | 'event-gateway';
+  type: 'webhook' | 'api' | 'queue' | 'streaming-ingest';
   endpoint?: string;
   apiKey?: string;
   enabled: boolean;
