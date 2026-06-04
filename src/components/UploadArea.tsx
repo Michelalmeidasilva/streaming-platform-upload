@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import styles from './UploadArea.module.css';
 import Skeleton from './Skeleton';
 import { validateCMAFFile } from '@/lib/cmaf';
+import { getMaxFileSizeGB } from '@/lib/uploadLimits';
 import { useVideoEvents } from '@/lib/context/VideoEventContext';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { useE2ESession } from '@/lib/auth/useE2ESession';
@@ -16,13 +17,25 @@ import {
   promptRawVideoParams,
   type RawVideoInput,
 } from '@/lib/upload/fileIntake';
+import { deriveUploadStage } from '@/lib/uploadStage';
+import type { UploadStage } from '@/types';
 
 interface UploadProgress {
-  videoId: string;
+  videoId: string;        // client-side id, used as React key
+  serverVideoId?: string; // uuid returned by /api/upload, used to correlate SSE
   filename: string;
   progress: number;
-  status: 'uploading' | 'processing' | 'queued' | 'transcoding' | 'packaging' | 'ready' | 'error';
+  status: string;             // raw video status
+  processingStatus?: string;  // raw processing status from SSE
+  storageConfirmedAt?: string;
 }
+
+const stageOf = (u: UploadProgress): UploadStage =>
+  deriveUploadStage({
+    status: u.status,
+    processingStatus: u.processingStatus,
+    storageConfirmedAt: u.storageConfirmedAt,
+  });
 
 function isDirectUploadEnabled() {
   return process.env.NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED === 'true';
@@ -82,6 +95,30 @@ export default function UploadArea() {
     [],
   );
 
+  useEffect(() => {
+    if (uploads.length === 0) return;
+    const es = new EventSource('/api/videos/stream', { withCredentials: true });
+    es.addEventListener('video-updated', (e) => {
+      const u = JSON.parse((e as MessageEvent).data) as {
+        id: string; status: string; processingStatus: string | null;
+        storageConfirmedAt: string | null;
+      };
+      setUploads((prev) =>
+        prev.map((row) =>
+          row.serverVideoId === u.id
+            ? {
+                ...row,
+                status: u.status,
+                processingStatus: u.processingStatus ?? row.processingStatus,
+                storageConfirmedAt: u.storageConfirmedAt ?? row.storageConfirmedAt,
+              }
+            : row,
+        ),
+      );
+    });
+    return () => es.close();
+  }, [uploads.length]);
+
   const handleFiles = useCallback(
     async (files: FileList) => {
       const allFiles = Array.from(files);
@@ -95,7 +132,7 @@ export default function UploadArea() {
           if (validation.errorKey === 'unsupportedFormat') {
             alert(t('upload.validation.unsupportedFormat', { formats: '.mp4, .mov, .m4v, .mkv, .webm, .y4m, .yuv, .m3u8' }));
           } else if (validation.errorKey === 'fileTooLarge') {
-            alert(t('upload.validation.fileTooLarge'));
+            alert(t('upload.validation.fileTooLarge', { limit: `${getMaxFileSizeGB()}GB` }));
           }
           continue;
         }
@@ -132,7 +169,8 @@ export default function UploadArea() {
             }),
           });
           if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
-          const { sessionId, chunkSize, totalChunks, presignedUrls, subtitleUploads } = await initRes.json();
+          const { sessionId, videoId: serverVideoId, chunkSize, totalChunks, presignedUrls, subtitleUploads } = await initRes.json();
+          setStatus(videoId, { serverVideoId });
 
           // 2. Upload sidecar subtitles to their presigned URLs (best-effort:
           // they should land before transcoding reads them).
@@ -353,11 +391,10 @@ export default function UploadArea() {
                 </div>
               </div>
               <div className={styles.uploadActions}>
-                <span className={`${styles.statusBadge} ${styles[upload.status]}`}>
-                  {upload.status === 'uploading' && t('upload.uploadStatus.uploading', { progress: Math.round(upload.progress) })}
-                  {upload.status === 'processing' && t('upload.uploadStatus.processing')}
-                  {upload.status === 'ready' && t('upload.uploadStatus.ready')}
-                  {upload.status === 'error' && t('upload.uploadStatus.error')}
+                <span className={`${styles.statusBadge} ${styles[stageOf(upload)] ?? ''}`}>
+                  {stageOf(upload) === 'uploading'
+                    ? t('upload.uploadStatus.uploading', { progress: Math.round(upload.progress) })
+                    : t(`stages.${stageOf(upload)}`)}
                 </span>
                 <button
                   type="button"

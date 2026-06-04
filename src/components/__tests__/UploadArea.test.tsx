@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
-import React from 'react';
+import React, { act } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import UploadArea from '../UploadArea';
 import { useSession } from 'next-auth/react';
@@ -60,6 +60,10 @@ describe('UploadArea', () => {
       user: { email, role: 'ADMIN', name: 'E2E Admin' },
     }));
     global.fetch = jest.fn();
+    (global as any).EventSource = jest.fn().mockImplementation(() => ({
+      addEventListener: jest.fn(),
+      close: jest.fn(),
+    }));
     global.alert = jest.fn();
     document.cookie = '';
   });
@@ -289,7 +293,7 @@ describe('UploadArea', () => {
     await waitFor(() => {
       expect(getByText('video.mp4')).toBeDefined();
       expect(global.fetch).toHaveBeenCalledTimes(3);
-      expect(getByText('upload.uploadStatus.processing')).toBeDefined();
+      expect(getByText('stages.uploaded')).toBeDefined();
     });
 
     expect(global.fetch).toHaveBeenNthCalledWith(
@@ -311,7 +315,7 @@ describe('UploadArea', () => {
     );
 
     await waitFor(() => {
-      expect(getByText('upload.uploadStatus.processing')).toBeDefined();
+      expect(getByText('stages.uploaded')).toBeDefined();
       expect(emitUploadComplete).toHaveBeenCalled();
     });
 
@@ -693,7 +697,7 @@ describe('UploadArea', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(getByText('upload.uploadStatus.error')).toBeDefined();
+      expect(getByText('stages.error')).toBeDefined();
     });
 
     fireEvent.click(getByLabelText('upload.actions.remove'));
@@ -757,6 +761,91 @@ describe('UploadArea', () => {
           body: expect.stringContaining('"thumbnail":null'),
         }),
       );
+    });
+
+    createElementSpy.mockRestore();
+  });
+
+  it('merges SSE video-updated events into matching upload rows by serverVideoId', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    // Capture the EventSource instance so we can fire events manually
+    let capturedAddEventListener: jest.Mock | null = null;
+    (global as any).EventSource = jest.fn().mockImplementation(() => {
+      const handler: jest.Mock = jest.fn();
+      capturedAddEventListener = handler;
+      return { addEventListener: handler, close: jest.fn() };
+    });
+
+    const videoElement: Record<string, any> = {
+      preload: '', muted: false, playsInline: false, duration: 4, videoWidth: 1280, videoHeight: 720,
+    };
+    Object.defineProperty(videoElement, 'currentTime', {
+      get: () => 1,
+      set: () => { if (videoElement.onseeked) videoElement.onseeked(); },
+    });
+    const canvasElement = {
+      width: 0, height: 0,
+      getContext: jest.fn().mockReturnValue({ drawImage: jest.fn() }),
+      toDataURL: jest.fn().mockReturnValue('data:image/jpeg;base64,thumb'),
+    };
+    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      if (tagName === 'video') return videoElement as any;
+      if (tagName === 'canvas') return canvasElement as any;
+      return document.createElementNS('http://www.w3.org/1999/xhtml', tagName) as any;
+    }) as typeof document.createElement);
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          sessionId: 'session-sse',
+          videoId: 'server-uuid-1',
+          chunkSize: 5,
+          totalChunks: 1,
+          presignedUrls: ['https://upload.example/part-sse'],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, headers: { get: jest.fn().mockReturnValue('"etag-sse"') } })
+      .mockResolvedValueOnce({ ok: true });
+
+    const { container, getByText } = render(<UploadArea />);
+    const input = container.querySelector('input[type="file"]')!;
+    const file = new File(['data'], 'sse-test.mp4', { type: 'video/mp4' });
+
+    fireEvent.change(input, { target: { files: [file] } });
+    videoElement.onloadeddata();
+
+    // Wait for the upload to complete and the SSE effect to mount
+    await waitFor(() => {
+      expect(getByText('stages.uploaded')).toBeDefined();
+    });
+
+    // Fire a video-updated SSE event with matching server uuid
+    expect(capturedAddEventListener).not.toBeNull();
+    const addEventListenerMock = capturedAddEventListener as unknown as jest.Mock;
+    const [, sseHandler] = addEventListenerMock.mock.calls.find(
+      ([eventName]: [string]) => eventName === 'video-updated',
+    )!;
+    act(() => {
+      sseHandler({ data: JSON.stringify({ id: 'server-uuid-1', status: 'processing', processingStatus: 'queued', storageConfirmedAt: null }) } as MessageEvent);
+    });
+
+    await waitFor(() => {
+      expect(getByText('stages.transcode_pending')).toBeDefined();
+    });
+
+    // Fire a second event with null processingStatus — should keep existing processingStatus
+    act(() => {
+      sseHandler({ data: JSON.stringify({ id: 'server-uuid-1', status: 'processing', processingStatus: null, storageConfirmedAt: '2026-06-04T00:00:00Z' }) } as MessageEvent);
+    });
+
+    await waitFor(() => {
+      // storageConfirmedAt is now set; processingStatus stayed 'queued' (null fell back to existing)
+      expect(getByText('stages.transcode_pending')).toBeDefined();
     });
 
     createElementSpy.mockRestore();
