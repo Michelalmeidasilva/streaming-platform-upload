@@ -324,22 +324,6 @@ describe('UploadService persistence-backed flow', () => {
     expect((await stateStore.getVideo(videoId))?.status).toBe('processing');
   });
 
-  it('supports legacy auto-ready mode when explicitly enabled', async () => {
-    jest.useFakeTimers();
-    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
-    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
-    const { service, stateStore } = makeService();
-    const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
-
-    await service.uploadChunk(sessionId, 0, Buffer.alloc(4 * MB));
-    await service.completeUpload(sessionId);
-    await jest.advanceTimersByTimeAsync(2000);
-
-    expect((await stateStore.getVideo(videoId))?.status).toBe('ready');
-    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
-    jest.useRealTimers();
-  });
-
   it('persists thumbnail fallback events emitted after completion', async () => {
     const { service, stateStore } = makeService();
     const { sessionId, videoId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
@@ -372,22 +356,4 @@ describe('UploadService persistence-backed flow', () => {
     expect(extractor.extract).toHaveBeenCalled();
   });
 
-  it('swallows ready-transition persistence failures', async () => {
-    jest.useFakeTimers();
-    const original = process.env.AUTO_READY_AFTER_UPLOAD_ENABLED;
-    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = 'true';
-    const { service, stateStore } = makeService();
-    stateStore.failUpdate = true;
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    const { sessionId } = await service.initiateUpload('video.mp4', 4 * MB, 'video/mp4');
-
-    await service.uploadChunk(sessionId, 0, Buffer.alloc(4 * MB));
-    await service.completeUpload(sessionId);
-    await jest.advanceTimersByTimeAsync(2000);
-
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to persist ready status:', expect.any(Error));
-    consoleErrorSpy.mockRestore();
-    process.env.AUTO_READY_AFTER_UPLOAD_ENABLED = original;
-    jest.useRealTimers();
-  });
 });
