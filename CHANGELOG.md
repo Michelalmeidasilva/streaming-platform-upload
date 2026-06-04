@@ -1,11 +1,14 @@
-## [1.2.4] - 2026-06-03
+## [1.2.5] - 2026-06-04
 
-fe18d7b Merge branch 'fix/upload-area'
-873fed2 Merge remote-tracking branch 'origin/main'
-9838051 docs(upload): document Prometheus RED /api/metrics endpoint
-3b7a10e feat(upload): expose Prometheus RED metrics at /api/metrics (prom-client)
-349b8e1 feat(upload): add OpenTelemetry instrumentation for traces and metrics
-28408b3 fix(docker): support E2E auth and fix lint error for Docker build
+62b7d06 Merge remote-tracking branch 'origin/main'
+e07842b merge fix/upload-area: thumbnail proxy, cache dir, SSE + thumbnail WIP
+8774a7d fix(platform): serve thumbnails via same-origin proxy + cache dir
+053d078 docs(platform): thumbnail derive + SSE status
+789d102 feat(platform): live status/thumbnail updates via SSE in library
+17d8dd5 feat(platform): SSE stream of video status changes
+b6d402f feat(platform): default thumbnail fallback in library grid
+496946e feat(platform): derive public thumbnailUrl from thumbnailStatus
+
 699ec82 chore: migrate docs to obsidian-vault, add AGENTS.md
 f81a96a feat(agents): add streaming-platform-upload AGENTS.md
 52dc314 chore: fix uploada chunk
