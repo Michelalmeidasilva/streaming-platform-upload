@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { uploadService, storageAdapter } from '@/lib/api/uploadService';
+import { uploadService } from '@/lib/api/uploadService';
 import { getCurrentSession } from '@/lib/auth/session';
 import { deriveThumbnailUrl } from '../thumbnail';
 import { diffVideos, type StreamSnapshotItem } from './diff';
@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest) {
               id: video.id, status: video.status,
               processingStatus: video.processingStatus ?? null,
               thumbnailStatus: video.thumbnailStatus ?? null,
-              thumbnailUrl: await deriveThumbnailUrl(video, storageAdapter),
+              thumbnailUrl: await deriveThumbnailUrl(video),
             };
             controller.enqueue(encoder.encode(`event: video-updated\ndata: ${JSON.stringify(payload)}\n\n`));
           }

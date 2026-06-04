@@ -149,6 +149,12 @@ export class S3Adapter implements IStorageAdapter {
     );
   }
 
+  async getPublicUrl(key: string): Promise<string> {
+    // S3 presigned URLs already target the public AWS host, so they are
+    // browser-reachable; no internal/public host split is needed for S3.
+    return this.getSignedUrl(key);
+  }
+
   async exists(key: string): Promise<boolean> {
     try {
       await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));

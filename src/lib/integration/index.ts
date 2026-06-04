@@ -21,7 +21,7 @@ export class IntegrationLayer {
         return new ApiConnector(config);
       case 'queue':
         return new QueueConnector(config);
-      case 'event-gateway':
+      case 'streaming-ingest':
         return new EventGatewayConnector(config);
       default:
         throw new Error(`Unknown integration type: ${config.type}`);

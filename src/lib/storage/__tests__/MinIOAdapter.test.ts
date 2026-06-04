@@ -131,6 +131,46 @@ describe('MinIOAdapter multipart compatibility', () => {
   });
 });
 
+describe('MinIOAdapter - getPublicUrl (browser-facing)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('builds an unsigned public URL using publicEndpoint, not the internal endpoint', async () => {
+    const adapter = new MinIOAdapter({
+      provider: 'minio',
+      bucket: 'videos',
+      endpoint: 'http://minio:9000',
+      publicEndpoint: 'http://localhost:9000',
+      accessKeyId: 'admin',
+      secretAccessKey: 'password123',
+      signedUrlTtlSeconds: 3600,
+    });
+
+    const url = await adapter.getPublicUrl('thumbnails/abc.jpg');
+
+    expect(url).toBe('http://localhost:9000/videos/thumbnails/abc.jpg');
+    // No signature, and never the internal docker host.
+    expect(url).not.toContain('minio:9000');
+    expect(url).not.toContain('X-Amz-Signature');
+    expect(mockPresignedGetObject).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the internal endpoint when publicEndpoint is absent', async () => {
+    const adapter = new MinIOAdapter({
+      provider: 'minio',
+      bucket: 'videos',
+      endpoint: 'http://localhost:9000/',
+      accessKeyId: 'admin',
+      secretAccessKey: 'password123',
+    });
+
+    const url = await adapter.getPublicUrl('thumbnails/x y.jpg');
+
+    expect(url).toBe('http://localhost:9000/videos/thumbnails/x%20y.jpg');
+  });
+});
+
 describe('MinIOAdapter - getSignedUrl (generatePresignedUrl)', () => {
   beforeEach(() => {
     jest.clearAllMocks();

@@ -39,6 +39,12 @@ function rateLimitFor(pathname: string) {
   return { limit: 60, windowMs: 60_000 };
 }
 
+// Same-origin thumbnail proxy is public: the bucket is already public-read and
+// the next/image optimizer fetches it server-side without forwarding the session.
+function isPublicThumbnail(pathname: string, method: string) {
+  return method === 'GET' && /^\/api\/videos\/[^/]+\/thumbnail\/?$/.test(pathname);
+}
+
 function isProtectedApi(pathname: string) {
   return pathname.startsWith('/api/upload') || pathname.startsWith('/api/videos');
 }
@@ -88,7 +94,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isProtectedApi(pathname) && !token) {
+  if (isProtectedApi(pathname) && !isPublicThumbnail(pathname, method) && !token) {
     recordSecurityEvent({
       type: 'access_denied',
       route: pathname,

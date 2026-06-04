@@ -27,7 +27,7 @@ describe('EventDispatcher', () => {
     initializeEventDispatcher();
     expect(integrationLayer.register).toHaveBeenCalledWith({
       name: 'EventGateway',
-      type: 'event-gateway',
+      type: 'streaming-ingest',
       endpoint: 'http://gateway.com',
       enabled: true,
     });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadService, storageAdapter } from '@/lib/api/uploadService';
+import { uploadService } from '@/lib/api/uploadService';
 import { canDeleteVideo, canEditVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
@@ -56,7 +56,7 @@ export async function GET(
   return NextResponse.json({
     video: {
       ...toVideoDto(video),
-      thumbnailUrl: await deriveThumbnailUrl(video, storageAdapter),
+      thumbnailUrl: await deriveThumbnailUrl(video),
     },
   });
 }
@@ -97,7 +97,7 @@ export async function PATCH(
   return NextResponse.json({
     video: {
       ...toVideoDto(updated),
-      thumbnailUrl: await deriveThumbnailUrl(updated, storageAdapter),
+      thumbnailUrl: await deriveThumbnailUrl(updated),
     },
   });
 }

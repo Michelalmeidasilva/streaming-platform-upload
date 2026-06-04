@@ -1,5 +1,32 @@
 # Changelog
 
+## [Unreleased] 2026-06-04
+### Added
+- Same-origin thumbnail proxy `GET /api/videos/[videoId]/thumbnail`: streams the
+  stored thumbnail object (`thumbnails/<id>.jpg`, or `…-fallback.jpg` when
+  `thumbnailStatus === 'failed'`) by fetching it server-side through a signed URL
+  built against the **internal** storage endpoint (`minio:9000`). Unauthenticated
+  by design — the bucket is already public-read and the `next/image` optimizer,
+  which fetches the URL server-side, does not forward the user session.
+
+### Changed
+- `deriveThumbnailUrl` now returns the same-origin proxy path
+  (`/api/videos/<id>/thumbnail`) whenever a thumbnail exists (explicit
+  `thumbnailUrl`, or `thumbnailStatus` `ready`/`failed`), instead of the raw
+  object-storage URL. It no longer needs the storage adapter argument.
+
+### Fixed
+- Thumbnails rendered broken (HTTP 500) when the app runs in Docker. `VideoList`
+  uses `next/image`, whose optimizer runs **server-side inside the container** and
+  fetched the stored `thumbnailUrl = http://localhost:9000/...` (the browser-facing
+  `MINIO_PUBLIC_ENDPOINT`). Inside the container `localhost:9000` is `ECONNREFUSED`
+  (MinIO is `minio:9000`), so `/_next/image` returned 500. The new proxy keeps the
+  URL same-origin and resolves the object via the internal endpoint, fixing the
+  dual-host trap for both the optimizer and direct browser loads.
+- Docker runner now creates `/app/.next/cache` and chowns `.next` to the `nextjs`
+  runtime user. The `next/image` optimizer could not `mkdir` its cache dir
+  (`EACCES`), repeatedly re-optimizing images and spamming errors.
+
 ## [Unreleased] 2026-06-03
 ### Added
 - `/api/videos` and `/api/videos/[videoId]` now derive `thumbnailUrl`: uses an

@@ -7,19 +7,26 @@ const base = (over: Partial<Video>): Video => ({
   createdAt: new Date(), updatedAt: new Date(), ...over,
 }) as Video;
 
-const storage = { getPublicUrl: async (k: string) => `http://localhost:9000/videos/${k}` };
-
 describe('deriveThumbnailUrl', () => {
-  it('returns explicit thumbnailUrl when present', async () => {
-    const url = await deriveThumbnailUrl(base({ thumbnailUrl: 'http://x/y.jpg' }), storage);
-    expect(url).toBe('http://x/y.jpg');
+  it('returns the same-origin proxy URL when an explicit thumbnailUrl is present', async () => {
+    // The stored URL points at the browser-facing MinIO host; we must NOT hand it
+    // to next/image (the server-side optimizer cannot resolve it). Always proxy.
+    const url = await deriveThumbnailUrl(base({ thumbnailUrl: 'http://localhost:9000/videos/thumbnails/v1.jpg' }));
+    expect(url).toBe('/api/videos/v1/thumbnail');
   });
-  it('derives public URL when thumbnailStatus is ready', async () => {
-    const url = await deriveThumbnailUrl(base({ thumbnailStatus: 'ready' }), storage);
-    expect(url).toBe('http://localhost:9000/videos/thumbnails/v1.jpg');
+
+  it('returns the same-origin proxy URL when thumbnailStatus is ready', async () => {
+    const url = await deriveThumbnailUrl(base({ thumbnailStatus: 'ready' }));
+    expect(url).toBe('/api/videos/v1/thumbnail');
   });
+
+  it('returns the same-origin proxy URL when thumbnailStatus is failed (fallback image)', async () => {
+    const url = await deriveThumbnailUrl(base({ thumbnailStatus: 'failed' }));
+    expect(url).toBe('/api/videos/v1/thumbnail');
+  });
+
   it('returns null when not ready and no explicit url', async () => {
-    const url = await deriveThumbnailUrl(base({ thumbnailStatus: 'pending' }), storage);
+    const url = await deriveThumbnailUrl(base({ thumbnailStatus: 'pending' }));
     expect(url).toBeNull();
   });
 });

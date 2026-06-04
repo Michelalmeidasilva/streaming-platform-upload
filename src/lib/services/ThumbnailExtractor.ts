@@ -52,7 +52,8 @@ export class ThumbnailExtractor {
 
       if (frameBuffer) {
         const thumbnailKey = `thumbnails/${video.id}.jpg`;
-        const thumbnailUrl = await this.storageAdapter.upload(frameBuffer, thumbnailKey, 'image/jpeg');
+        await this.storageAdapter.upload(frameBuffer, thumbnailKey, 'image/jpeg');
+        const thumbnailUrl = await this.storageAdapter.getPublicUrl(thumbnailKey);
 
         const duration = Date.now() - startTime;
         console.info('Thumbnail extracted successfully', {
@@ -149,7 +150,8 @@ export class ThumbnailExtractor {
     try {
       const fallbackBuffer = await this.generateFallbackImage(video);
       const fallbackKey = `thumbnails/${video.id}-fallback.jpg`;
-      const fallbackUrl = await this.storageAdapter.upload(fallbackBuffer, fallbackKey, 'image/jpeg');
+      await this.storageAdapter.upload(fallbackBuffer, fallbackKey, 'image/jpeg');
+      const fallbackUrl = await this.storageAdapter.getPublicUrl(fallbackKey);
 
       console.info('Using fallback thumbnail', {
         videoId: video.id,

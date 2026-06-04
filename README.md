@@ -255,7 +255,8 @@ npx jest --coverage
 | `STORAGE_ENCRYPTION_MODE` | `AES256` | Server | Storage encryption mode |
 | `STORAGE_CHECKSUM_ALGORITHM` | `SHA256` | Server | Storage checksum algorithm |
 | `UPLOAD_CHUNK_SIZE_BYTES` | `5242880` | Server | Chunk size used during multipart uploads |
-| `MINIO_ENDPOINT` | `http://localhost:9000` | Server | MinIO server endpoint |
+| `MINIO_ENDPOINT` | `http://localhost:9000` | Server | MinIO server endpoint (internal; in Docker use `http://minio:9000`) |
+| `MINIO_PUBLIC_ENDPOINT` | `MINIO_ENDPOINT` | Server | Browser-reachable base for object URLs (thumbnails). In Docker set to `http://localhost:9000` so the browser can resolve it |
 | `MINIO_ACCESS_KEY` | `admin` | Server | MinIO access key |
 | `MINIO_SECRET_KEY` | `password123` | Server | MinIO secret key |
 | `AWS_REGION` | `us-east-1` | Server | AWS region for S3 and related services |

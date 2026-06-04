@@ -36,6 +36,10 @@ class MockStorageAdapter implements IStorageAdapter {
     return `https://mock-storage.example.com/${key}?signature=...`;
   }
 
+  async getPublicUrl(key: string) {
+    return `https://cdn.example.com/${key}`;
+  }
+
   async exists(_key: string) {
     return true;
   }
@@ -124,7 +128,11 @@ describe('ThumbnailExtractor', () => {
       const successVideo = { ...video, id: 'test-success' };
       const frameBuffer = Buffer.from('fake-frame');
       jest.spyOn(extractor, 'extractFrameFromUrl').mockResolvedValue(frameBuffer);
-      jest.spyOn(storageAdapter, 'upload').mockResolvedValue('https://s3.amazonaws.com/thumbnails/test-success.jpg');
+      jest.spyOn(storageAdapter, 'upload').mockResolvedValue('s3://bucket/thumbnails/test-success.jpg');
+      // The emitted URL must be the browser-facing public URL, not upload()'s return.
+      const getPublicUrlSpy = jest
+        .spyOn(storageAdapter, 'getPublicUrl')
+        .mockResolvedValue('https://cdn.example.com/thumbnails/test-success.jpg');
       const emitSpy = jest.spyOn(eventEmitter, 'emitThumbnailGenerated');
 
       const completion = new Promise<void>(resolve => {
@@ -134,9 +142,10 @@ describe('ThumbnailExtractor', () => {
       await extractor.extract(successVideo);
       await completion;
 
+      expect(getPublicUrlSpy).toHaveBeenCalledWith('thumbnails/test-success.jpg');
       expect(emitSpy).toHaveBeenCalledWith(
         successVideo.id,
-        'https://s3.amazonaws.com/thumbnails/test-success.jpg',
+        'https://cdn.example.com/thumbnails/test-success.jpg',
         expect.any(String),
       );
     });

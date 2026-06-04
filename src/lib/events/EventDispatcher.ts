@@ -16,7 +16,7 @@ export function initializeEventDispatcher() {
   if (eventGatewayUrl) {
     integrationLayer.register({
       name: 'EventGateway',
-      type: 'event-gateway',
+      type: 'streaming-ingest',
       endpoint: eventGatewayUrl,
       enabled: true,
     });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadService, storageAdapter } from '@/lib/api/uploadService';
+import { uploadService } from '@/lib/api/uploadService';
 import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
@@ -58,7 +58,7 @@ async function getHandler(request: NextRequest) {
   const dtos = await Promise.all(
     videos.map(async (video) => ({
       ...toVideoDto(video),
-      thumbnailUrl: await deriveThumbnailUrl(video, storageAdapter),
+      thumbnailUrl: await deriveThumbnailUrl(video),
     })),
   );
 

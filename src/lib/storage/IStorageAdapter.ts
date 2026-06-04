@@ -13,6 +13,13 @@ export interface IStorageAdapter {
   completeMultipartUpload(key: string, uploadId: string, parts: { PartNumber: number; ETag: string }[]): Promise<string>;
   delete(key: string): Promise<void>;
   getSignedUrl(key: string, expiresIn?: number): Promise<string>;
+  /**
+   * Returns a browser-reachable URL for an object. Unlike getSignedUrl, this is
+   * meant for URLs handed to the client (e.g. thumbnails): for MinIO it uses the
+   * public endpoint and is unsigned (the bucket is public-read), so it does not
+   * carry an internal Docker host nor an expiring signature.
+   */
+  getPublicUrl(key: string): Promise<string>;
   exists(key: string): Promise<boolean>;
   listObjects(prefix?: string): Promise<StorageObject[]>;
 }
