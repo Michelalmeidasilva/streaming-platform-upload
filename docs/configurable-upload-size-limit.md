@@ -52,6 +52,20 @@ returns `File exceeds maximum allowed size of <N> GB`.
 - **Set both vars together.** Setting only the server var leaves the browser
   pre-check at the default, so oversize files are rejected client-side before the
   server ever sees them (and vice-versa).
+- **Under Docker, the client var must be a `build.arg`, not just `env_file`.**
+  `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB` is inlined into the client bundle during
+  `npm run build` (`Dockerfile`). An `env_file`/runtime env only reaches the Node
+  server, not the already-built browser bundle. The `Dockerfile` declares
+  `ARG/ENV NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB` and `infra/docker-compose.yml`
+  passes it under `build.args`; keep that value in sync with the `.env` server var.
+  After changing either, rebuild **and** recreate the container so both layers pick
+  up the new value:
+  ```bash
+  docker compose up -d --build streaming-platform-upload
+  ```
+  A plain restart (or editing `.env` while the container runs) is **not** enough:
+  Compose reads `env_file` only at container creation, and the client bundle only
+  changes on rebuild.
 - **Multipart headroom is fine at 10GB.** With the default 100MB chunk
   (`UPLOAD_CHUNK_SIZE_BYTES=104857600`), 10GB is ~100 parts — well within the S3
   limit of 10,000 parts / 5TB per object.
