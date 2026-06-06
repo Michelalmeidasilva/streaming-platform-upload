@@ -168,11 +168,22 @@ Object key convention: `<videoId>/<filename>` (MinIO/local) or
 The `EventGatewayConnector` posts lifecycle events (`upload.started`,
 `upload.progress`, `upload.completed`) to `EVENT_GATEWAY_URL`.
 
+## Telemetry (CloudWatch EMF)
+
+Per-request telemetry is emitted to stdout as CloudWatch Embedded Metric Format (EMF).
+Route handlers are wrapped with `withEmf(route, handler)` (exported from
+`src/lib/telemetry/emf.ts`), which measures duration and writes one JSON line per
+request with RED metrics (`RequestCount`, `RequestLatency` ms, `ErrorCount`) under
+namespace `VOD/streaming-platform-upload`, dimensions `service/route/method`.
+`GET /api/metrics` has been removed. See `docs/cloudwatch-emf-telemetry.md`.
+
 ## Accepted Formats
 
 `.mp4`, `.m4v`, `.mov`, `.m3u8`, `.webm`, `.mkv`, `.y4m`, `.yuv`. Maximum size
-configurable via `UPLOAD_MAX_FILE_SIZE_GB` (default 5 GB). `.y4m`/`.yuv` have no
-canonical MIME type; MIME enforcement is skipped for them.
+configurable via `UPLOAD_MAX_FILE_SIZE_GB` (default 5 GB). MIME enforcement is
+skipped for `.y4m`/`.yuv` (headerless raw, no canonical MIME) and `.mkv`
+(browsers report Matroska inconsistently — e.g. Safari sends `video/matroska`
+without the `x-`); for these the extension allow-list is the gate.
 
 ## Env
 
@@ -190,7 +201,7 @@ canonical MIME type; MIME enforcement is skipped for them.
 | `EVENT_GATEWAY_URL` | `http://localhost:8080/api/v1` | Event gateway base URL |
 | `INGEST_PERSISTENCE_BASE_URL` | `http://localhost:8080/api/v1` | Ingest HTTP base for video list reads |
 | `UPLOAD_MAX_FILE_SIZE_GB` | `5` | Server-side max upload size in GB |
-| `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB` | `5` | Client-side max upload size in GB |
+| `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB` | `5` | Client-side max upload size in GB. **Inlined into the client bundle at build time** — under Docker it must be passed as a `build.arg` (see `Dockerfile`/`infra/docker-compose.yml`); setting it only via `env_file` raises the server limit but leaves the browser validation at the build-time value. |
 | `UPLOAD_CHUNK_SIZE_BYTES` | `5242880` | Multipart chunk size |
 | `UPLOAD_RAW_PREFIX_ENABLED` | `false` | **Set `true` on AWS.** Prepends `raw/` to object keys so they match the EventBridge `raw/` notification filter that routes `ObjectCreated` events to `streaming-ingest`. Required for stage 3 (`available`) and the S3→Batch transcode trigger. |
 | `NEXTAUTH_SECRET` | `development-secret` | NextAuth JWT secret |

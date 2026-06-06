@@ -1,4 +1,29 @@
+## [Unreleased] 2026-06-06
+### Changed
+- Telemetry now emits CloudWatch EMF to stdout (RED per request: `RequestCount`, `RequestLatency`, `ErrorCount`; dimensions `service/route/method`; namespace `VOD/streaming-platform-upload`).
+### Removed
+- OTel SDK push pipeline (`instrumentation.ts`, `@opentelemetry/*` deps), prom-client metrics registry (`src/lib/metrics.ts`), and the `GET /api/metrics` endpoint + `prom-client` dep.
+
 ## [Unreleased] 2026-06-04
+### Fixed
+- `.mkv` uploads were rejected with `400 Unsupported MIME type` even though `.mkv`
+  is an accepted extension: the server MIME allow-list only had `video/x-matroska`,
+  but browsers report Matroska inconsistently (Safari/iOS sends `video/matroska`
+  without the `x-`). Added `.mkv` to `NO_CANONICAL_MIME_EXTENSIONS` in
+  `src/app/api/upload/route.ts` so MIME is not strictly enforced for it (the
+  extension allow-list remains the gate), matching the existing `.y4m`/`.yuv`
+  handling. Added a regression test covering `video/matroska`, `video/x-matroska`,
+  `application/octet-stream` and empty MIME.
+- Raising `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB` in `.env` had no effect on the
+  Docker-built client: the value is inlined at build time, but it was never passed
+  as a `build.arg`, so the browser kept enforcing the 5 GB default and rejected
+  larger files (e.g. a 7.1 GB upload) with an immediate "file too large" alert —
+  even when the server limit was already raised. Added the `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB`
+  build arg (`Dockerfile` + `infra/docker-compose.yml`) so the client bundle honors
+  the configured limit. Also documented that a running container must be recreated
+  (`docker compose up -d --build streaming-platform-upload`) for an `.env` change to
+  reach both the server runtime and the client bundle.
+
 ### Added
 - Six visible upload lifecycle stages (uploading, upload finished, available to
   preview, transcoding pending, transcoding, transcoded) in both the active upload
