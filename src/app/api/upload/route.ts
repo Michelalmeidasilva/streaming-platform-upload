@@ -3,7 +3,7 @@ import { uploadService } from '@/lib/api/uploadService';
 import { canUploadVideo } from '@/lib/auth/permissions';
 import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
-import { withMetrics } from '@/lib/metrics';
+import { withEmf } from '@/lib/telemetry/emf';
 import { getMaxFileSizeBytes, getMaxFileSizeGB } from '@/lib/uploadLimits';
 import type { RawVideoParams } from '@/lib/events';
 
@@ -12,9 +12,15 @@ const ALLOWED_MIME_TYPES = new Set([
   'video/mp4', 'video/quicktime', 'video/x-m4v', 'video/x-matroska',
   'video/webm', 'application/x-mpegurl', 'application/vnd.apple.mpegurl',
 ]);
-// Headerless / uncommon raw formats have no canonical MIME; browsers send an
-// empty type or application/octet-stream, so MIME is not enforced for them.
-const NO_CANONICAL_MIME_EXTENSIONS = new Set(['.y4m', '.yuv']);
+// Extensions whose browser-reported MIME type is unreliable, so MIME is not
+// enforced for them — the ALLOWED_EXTENSIONS allow-list above is the real gate:
+//  - .y4m/.yuv: headerless raw formats with no canonical MIME; browsers send an
+//    empty type or application/octet-stream.
+//  - .mkv: Matroska's MIME varies across browsers/OSes (Safari sends
+//    video/matroska, others video/x-matroska, application/x-matroska, video/mkv,
+//    or empty), so a strict allow-list rejects legitimate files with
+//    "Unsupported MIME type".
+const NO_CANONICAL_MIME_EXTENSIONS = new Set(['.y4m', '.yuv', '.mkv']);
 // Headerless raw streams carry no geometry; it must be supplied as rawVideo.
 const RAW_VIDEO_EXTENSIONS = new Set(['.yuv']);
 
@@ -94,4 +100,4 @@ async function postHandler(request: NextRequest) {
   }
 }
 
-export const POST = withMetrics('/api/upload', postHandler);
+export const POST = withEmf('/api/upload', postHandler);

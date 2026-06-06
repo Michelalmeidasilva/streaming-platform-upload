@@ -3,7 +3,7 @@ import { IntegrationConfig } from '@/types';
 import { integrationLayer } from '@/lib/integration';
 import { getCurrentSession } from '@/lib/auth/session';
 import { canEditVideo } from '@/lib/auth/permissions';
-import { withMetrics } from '@/lib/metrics';
+import { withEmf } from '@/lib/telemetry/emf';
 
 async function postHandler(request: NextRequest) {
   const session = await getCurrentSession();
@@ -114,4 +114,4 @@ async function postHandler(request: NextRequest) {
   }
 }
 
-export const POST = withMetrics('/api/integrate', postHandler);
+export const POST = withEmf('/api/integrate', postHandler);

@@ -4,7 +4,7 @@ import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import type { Video as VideoModel } from '@/types';
-import { withMetrics } from '@/lib/metrics';
+import { withEmf } from '@/lib/telemetry/emf';
 import { deriveThumbnailUrl } from './thumbnail';
 
 export const dynamic = 'force-dynamic';
@@ -65,4 +65,4 @@ async function getHandler(request: NextRequest) {
   return NextResponse.json({ videos: dtos });
 }
 
-export const GET = withMetrics('/api/videos', getHandler);
+export const GET = withEmf('/api/videos', getHandler);
