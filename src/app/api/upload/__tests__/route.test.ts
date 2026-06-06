@@ -137,6 +137,20 @@ describe('Upload API Route', () => {
     expect(response.status).toBe(200);
   });
 
+  it('accepts .mkv with the non-canonical MIME types browsers report', async () => {
+    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
+    (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);
+    (uploadService.initiateUpload as jest.Mock).mockResolvedValue({
+      sessionId: 's1', videoId: 'v1', chunkSize: 100, totalChunks: 1, presignedUrls: ['url'],
+    });
+    // Safari sends video/matroska (no x-); see route.ts NO_CANONICAL_MIME_EXTENSIONS.
+    for (const mimeType of ['video/matroska', 'video/x-matroska', 'application/octet-stream', '']) {
+      const req = mockReq({ filename: 'The Boys S05E07.mkv', size: 1000, mimeType });
+      const response = await POST(req);
+      expect(response.status).toBe(200);
+    }
+  });
+
   it('returns 400 for .yuv without rawVideo metadata', async () => {
     (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
     (canUploadVideo as unknown as jest.Mock).mockReturnValue(true);

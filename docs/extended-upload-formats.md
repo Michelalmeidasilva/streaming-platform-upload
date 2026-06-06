@@ -11,9 +11,13 @@ raw YUV (`.yuv`) in addition to the previous set (`.mp4`, `.mov`, `.m4v`,
   - `src/lib/cmaf.ts` — `SUPPORTED_FORMATS` (client-side pre-check).
   - `src/components/UploadArea.tsx` — `accept` attribute + format badges +
     validation message.
-- **MIME handling** — `.y4m`/`.yuv` have no canonical MIME type (browsers send an
-  empty type or `application/octet-stream`), so MIME enforcement is skipped for
-  them (`NO_CANONICAL_MIME_EXTENSIONS`). `video/x-matroska` was added for `.mkv`.
+- **MIME handling** — MIME enforcement is skipped (`NO_CANONICAL_MIME_EXTENSIONS`)
+  for `.y4m`/`.yuv` (no canonical MIME; browsers send empty or
+  `application/octet-stream`) **and `.mkv`**. Matroska's MIME varies by
+  browser/OS — Safari/iOS sends `video/matroska`, others `video/x-matroska`,
+  `application/x-matroska`, `video/mkv` or empty — so a strict allow-list rejected
+  legitimate `.mkv` files with `400 Unsupported MIME type`. The extension
+  allow-list is the gate; the MIME guard is not applied to these extensions.
 
 ## Raw `.yuv` geometry
 A headerless `.yuv` has no resolution/fps/pixel-format, so the transcoder needs
