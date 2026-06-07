@@ -12,7 +12,7 @@ export function ensureRealtimeStarted(): void {
   }
   const url = process.env.RABBITMQ_URL;
   if (!url) {
-    console.error('[realtime] RABBITMQ_URL not set; live updates disabled, UI will rely on the connect snapshot only');
+    console.warn('[realtime] RABBITMQ_URL not set; live updates disabled, UI will rely on the connect snapshot only');
     return;
   }
   globalThis.__realtimeStarted__ = true;
