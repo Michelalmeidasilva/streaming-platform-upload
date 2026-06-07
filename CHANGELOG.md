@@ -1,3 +1,9 @@
+## [Unreleased] 2026-06-07
+### Changed
+- `GET /api/videos/stream` is now event-driven: a per-instance `amqplib` consumer binds an exclusive queue to the `video_events` topic exchange and feeds an in-process hub that pushes `video-updated` deltas over SSE. Replaces the per-connection 3s polling of `streaming-ingest` (which scaled as O(open tabs)). Adds `RABBITMQ_URL`.
+### Removed
+- `src/app/api/videos/stream/diff.ts` — the polling diff is obsolete; events identify the changed video directly.
+
 ## [Unreleased] 2026-06-06
 ### Changed
 - Telemetry now emits CloudWatch EMF to stdout (RED per request: `RequestCount`, `RequestLatency`, `ErrorCount`; dimensions `service/route/method`; namespace `VOD/streaming-platform-upload`).

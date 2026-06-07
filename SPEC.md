@@ -55,16 +55,25 @@ Fetches the video list from `streaming-ingest` (`INGEST_PERSISTENCE_BASE_URL`).
 Returns an array of `Video` objects.
 
 ### GET /api/videos/stream
-Server-Sent Events stream of video status changes.
+Server-Sent Events stream of video status changes. Requires an authenticated session (401 otherwise).
 
 ```
 Content-Type: text/event-stream
 Cache-Control: no-cache
 ```
 
-On connection the current video list is snapshotted. Every **3 seconds** the list
-is re-fetched and diffed; any video whose `status`, `processingStatus`,
-`thumbnailStatus`, or `storageConfirmedAt` changed emits:
+**Event-driven (RabbitMQ consumer → in-process hub → SSE).** On connection the
+current video list is snapshotted and each video is emitted immediately as a
+`video-updated` event. Subsequent events are pushed only when the hub receives a
+notification from the `VideoEventHub`, which is driven by the `RabbitConsumer`
+listening to the `video_events` topic exchange (binding key `#`). Each incoming
+AMQP message identifies the changed `videoId`; the hub fetches that single video,
+derives its thumbnail URL, and broadcasts the delta.
+
+The per-connection 3-second polling `setInterval` and the `diff.ts` comparison
+have been removed; events arrive as state changes happen, not on a fixed interval.
+
+Emitted payload:
 
 ```
 event: video-updated
@@ -73,6 +82,11 @@ data: {"id":"<id>","status":"<s>","processingStatus":"<ps>","thumbnailStatus":"<
 
 A heartbeat comment (`: heartbeat`) is emitted every 15 seconds to keep the
 connection alive through proxies. The stream closes when the client disconnects.
+
+Bootstrap is lazy and idempotent: the `RabbitConsumer` starts once per BFF
+instance (via `ensureRealtimeStarted()`) when `RABBITMQ_URL` is set. Each BFF
+instance binds its own **exclusive, auto-delete** queue so every instance
+receives every event from the exchange.
 
 ### GET /api/videos/[videoId]/thumbnail
 Same-origin proxy: fetches the stored thumbnail (`thumbnails/<id>.jpg` or the
@@ -209,3 +223,19 @@ without the `x-`); for these the extension allow-list is the gate.
 | `GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
 | `ADMIN_EMAILS` | `admin@example.com` | Comma-separated admin emails |
 | `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Enable direct browser-to-S3 upload |
+| `RABBITMQ_URL` | — | AMQP URL consumed by the realtime SSE push layer. Example: `amqp://guest:guest@rabbitmq:5672/`. When unset, `ensureRealtimeStarted()` is a no-op and the SSE route still serves connections (snapshot only, no live deltas). |
+
+## RabbitMQ Dependency
+
+The BFF consumes the `video_events` topic exchange (durable, declared by
+`streaming-ingest`) via an exclusive, auto-delete queue bound with routing key
+`#`. This connection is managed by `src/lib/realtime/RabbitConsumer` using
+`amqplib` and drives live `video-updated` pushes over `GET /api/videos/stream`.
+
+**Accepted deviation — AMQP credentials in the BFF:** The project guideline
+states that `streaming-ingest` is the sole RabbitMQ owner and no other service
+holds AMQP credentials. The BFF now holds `RABBITMQ_URL` as an explicit,
+approved trade-off: the BFF is a *consumer-only* subscriber and never publishes
+or declares durable infrastructure on the exchange. The gateway/ingest remains
+the sole publisher and never consumes. This deviation was accepted to eliminate
+O(open-tabs) server-side polling.
