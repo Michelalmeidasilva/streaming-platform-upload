@@ -1,11 +1,22 @@
-## [Unreleased] 2026-06-07
-### Changed
-- `GET /api/videos/stream` is now event-driven: a per-instance `amqplib` consumer binds an exclusive queue to the `video_events` topic exchange and feeds an in-process hub that pushes `video-updated` deltas over SSE. Replaces the per-connection 3s polling of `streaming-ingest` (which scaled as O(open tabs)). Adds `RABBITMQ_URL`.
-### Removed
-- `src/app/api/videos/stream/diff.ts` — the polling diff is obsolete; events identify the changed video directly.
+## [1.5.0] - 2026-06-07
 
-## [Unreleased] 2026-06-06
-### Changed
+fc3529e Merge origin/main (v1.4.0) into realtime SSE push work
+02298fe refactor: log RABBITMQ_URL-unset degraded mode at warn, not error
+73de900 docs: record realtime SSE push design, SPEC and changelog
+c365dd8 docs: document RABBITMQ_URL in .env.example for BFF realtime consumer
+fbb944a feat: drive SSE stream from RabbitMQ hub instead of polling
+60be15f feat: add lazy idempotent realtime bootstrap
+005f9bf feat: add RabbitConsumer binding video_events to the hub
+4fca80b feat: add VideoEventHub for in-process realtime fan-out
+b6e4ce0 build: add amqplib for BFF realtime consumer
+14c4528 docs: plano de implementacao do push de UI via consumer RabbitMQ
+507ccdb docs: spec do push de UI em tempo real via consumer RabbitMQ no BFF
+de1deb6 test(upload): cover .mkv non-canonical MIME types + doc extended formats
+52663d9 feat(upload): wire NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB build arg
+f88657a docs(telemetry): document CloudWatch EMF migration
+b190dd3 refactor(telemetry): swap /metrics+OTel for EMF wrapper, drop deps
+8b12163 feat(telemetry): add CloudWatch EMF wrapper for route handlers
+
 - Telemetry now emits CloudWatch EMF to stdout (RED per request: `RequestCount`, `RequestLatency`, `ErrorCount`; dimensions `service/route/method`; namespace `VOD/streaming-platform-upload`).
 ### Removed
 - OTel SDK push pipeline (`instrumentation.ts`, `@opentelemetry/*` deps), prom-client metrics registry (`src/lib/metrics.ts`), and the `GET /api/metrics` endpoint + `prom-client` dep.
