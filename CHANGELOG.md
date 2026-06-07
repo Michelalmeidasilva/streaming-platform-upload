@@ -1,3 +1,7 @@
+## [Unreleased] 2026-06-07 — E2E auth works in the production-built image
+### Fixed
+- `isE2EAuthEnabled()` (`src/lib/auth/e2e.ts`) no longer gates on `NODE_ENV`. Next freezes `process.env.NODE_ENV` as `'production'` at build time (in every access form — dot or bracket), so the `NODE_ENV !== 'production'` guard disabled the E2E auth bypass in the optimized Docker image even when it runs locally with `NODE_ENV=development`. The upload API therefore returned `401` for the `e2e-session` cookie and the only remaining provider (Google OAuth) is unusable locally. The gate is now the explicit, runtime-read `E2E_AUTH_ENABLED` flag (off by default; prod must not set it) — consistent with the credentials-provider gate in `auth/config.ts`. Verified live: authenticated upload through the UI/BFF → ingest → transcode → ready → playback in `streaming-web-client`.
+
 ## [1.5.0] - 2026-06-07
 
 fc3529e Merge origin/main (v1.4.0) into realtime SSE push work

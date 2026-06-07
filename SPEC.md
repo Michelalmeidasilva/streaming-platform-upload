@@ -222,6 +222,8 @@ without the `x-`); for these the extension allow-list is the gate.
 | `GOOGLE_CLIENT_ID` | — | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
 | `ADMIN_EMAILS` | `admin@example.com` | Comma-separated admin emails |
+| `E2E_AUTH_ENABLED` | `0` (off) | **Test/dev only.** When `1`, enables the E2E auth bypass: a NextAuth credentials provider (`auth/config.ts`) and the `e2e-session` cookie overlay (`auth/e2e.ts` / `session.ts`) that accepts any email as a session. Gated **solely** on this runtime flag — **not** `NODE_ENV` (Next freezes `NODE_ENV` as `production` at build time, so the optimized image can't read it at runtime). A real production deployment must leave this unset. |
+| `E2E_ADMIN_EMAIL` | — | Email granted `ADMIN` by the E2E bypass (falls back to first `ADMIN_EMAILS`). Should match the client build arg `NEXT_PUBLIC_E2E_ADMIN_EMAIL`. |
 | `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Enable direct browser-to-S3 upload |
 | `RABBITMQ_URL` | — | AMQP URL consumed by the realtime SSE push layer. Example: `amqp://guest:guest@rabbitmq:5672/`. When unset, `ensureRealtimeStarted()` is a no-op and the SSE route still serves connections (snapshot only, no live deltas). |
 

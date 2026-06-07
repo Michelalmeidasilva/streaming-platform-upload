@@ -37,11 +37,11 @@ describe('E2E Auth Utility', () => {
       expect(isE2EAuthEnabled()).toBe(false);
     });
 
-    it('returns false in production regardless of E2E_AUTH_ENABLED', () => {
+    it('gates on E2E_AUTH_ENABLED only, not NODE_ENV (Next freezes NODE_ENV at build time, so the production-built image used locally/in CI must still honor the runtime flag)', () => {
       process.env.E2E_AUTH_ENABLED = '1';
       const env = process.env as Record<string, string | undefined>;
       env.NODE_ENV = 'production';
-      expect(isE2EAuthEnabled()).toBe(false);
+      expect(isE2EAuthEnabled()).toBe(true);
       env.NODE_ENV = 'test';
     });
 

@@ -11,7 +11,13 @@ export type EffectiveSession = Session & {
 };
 
 export function isE2EAuthEnabled() {
-  if (process.env.NODE_ENV === 'production') return false;
+  // Gate purely on the explicit, runtime-read E2E_AUTH_ENABLED flag (off by
+  // default; a real production deployment must never set it). NODE_ENV is NOT a
+  // usable guard here: Next freezes process.env.NODE_ENV as 'production' at build
+  // time for the optimized standalone image — in every access form, dot or
+  // bracket — so a NODE_ENV check disabled E2E auth even when the same image runs
+  // locally/in CI with NODE_ENV=development. This matches the credentials-provider
+  // gate in auth/config.ts, which already keys solely on E2E_AUTH_ENABLED.
   return process.env.E2E_AUTH_ENABLED === '1';
 }
 
