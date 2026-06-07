@@ -1,110 +1,81 @@
+const getAllVideos = jest.fn();
+const subscribe = jest.fn().mockReturnValue(() => undefined);
+const ensureRealtimeStarted = jest.fn();
+
+jest.mock('@/lib/auth/session', () => ({
+  getCurrentSession: jest.fn().mockResolvedValue({ user: { email: 'admin@test' } }),
+}));
+jest.mock('@/lib/api/uploadService', () => ({ uploadService: { getAllVideos } }));
+jest.mock('../../thumbnail', () => ({ deriveThumbnailUrl: async () => null }));
+jest.mock('@/lib/realtime/videoEventHub', () => ({
+  getVideoEventHub: () => ({ subscribe }),
+}));
+jest.mock('@/lib/realtime/bootstrap', () => ({ ensureRealtimeStarted }));
+
 import { GET } from '../route';
-import { uploadService } from '@/lib/api/uploadService';
-import { getCurrentSession } from '@/lib/auth/session';
-import { NextRequest } from 'next/server';
 
-jest.mock('@/lib/api/uploadService', () => ({
-  uploadService: { getAllVideos: jest.fn() },
-  storageAdapter: { getPublicUrl: jest.fn() },
-}));
-jest.mock('@/lib/auth/session');
-jest.mock('@/app/api/videos/thumbnail', () => ({
-  deriveThumbnailUrl: jest.fn().mockResolvedValue(null),
-}));
-
-const mockReq = () => ({} as unknown as NextRequest);
+async function readFirstEvent(body: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = body.getReader();
+  const { value } = await reader.read();
+  await reader.cancel();
+  return new TextDecoder().decode(value);
+}
 
 describe('GET /api/videos/stream', () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
+  beforeEach(() => jest.clearAllMocks());
+
+  it('returns 401 without a session', async () => {
+    const session = jest.requireMock('@/lib/auth/session');
+    session.getCurrentSession.mockResolvedValueOnce(null);
+    const res = await GET({} as never);
+    expect(res.status).toBe(401);
   });
 
-  it('returns 401 when unauthenticated', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue(null);
-    const response = await GET(mockReq());
-    expect(response.status).toBe(401);
-    const body = await response.json();
-    expect(body.error).toBe('Unauthorized');
+  it('starts realtime, subscribes to the hub, and sends a snapshot', async () => {
+    getAllVideos.mockResolvedValue([
+      { id: 'v1', status: 'ready', processingStatus: 'completed', thumbnailStatus: 'ready' },
+    ]);
+
+    const res = await GET({} as never);
+    expect(res.headers.get('Content-Type')).toBe('text/event-stream');
+    expect(ensureRealtimeStarted).toHaveBeenCalledTimes(1);
+
+    const chunk = await readFirstEvent(res.body as ReadableStream<Uint8Array>);
+    expect(chunk).toContain('event: video-updated');
+    expect(chunk).toContain('"id":"v1"');
+    expect(subscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('returns an SSE stream when authenticated', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([]);
+  it('emits null for undefined optional video fields in snapshot', async () => {
+    getAllVideos.mockResolvedValue([{ id: 'v2', status: 'uploading' }]);
 
-    const response = await GET(mockReq());
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toBe('text/event-stream');
-    expect(response.headers.get('Cache-Control')).toBe('no-cache, no-transform');
-    expect(response.body).toBeTruthy();
-    response.body?.cancel();
+    const res = await GET({} as never);
+    const chunk = await readFirstEvent(res.body as ReadableStream<Uint8Array>);
+    expect(chunk).toContain('"processingStatus":null');
+    expect(chunk).toContain('"thumbnailStatus":null');
+    expect(chunk).toContain('"storageConfirmedAt":null');
   });
 
-  it('emits video-updated events for changed videos', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    const video = {
-      id: 'v1',
-      status: 'processing',
-      processingStatus: 'transcoding',
-      thumbnailStatus: 'pending',
-      thumbnailUrl: null,
-    };
-    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([video]);
-    const { deriveThumbnailUrl } = jest.requireMock('@/app/api/videos/thumbnail') as { deriveThumbnailUrl: jest.Mock };
-    deriveThumbnailUrl.mockResolvedValue('http://cdn/thumb.jpg');
+  it('keeps the stream open when getAllVideos throws (best-effort snapshot)', async () => {
+    getAllVideos.mockRejectedValue(new Error('DB error'));
 
-    const response = await GET(mockReq());
-    expect(response.status).toBe(200);
-
-    const reader = response.body!.getReader();
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
-    expect(text).toContain('event: video-updated');
-    expect(text).toContain('"id":"v1"');
-    reader.releaseLock();
-    response.body?.cancel();
+    const res = await GET({} as never);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('text/event-stream');
+    // subscribe still called after catch
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    await res.body!.cancel();
   });
 
-  it('does not emit events when no videos are present', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([]);
+  it('calls unsubscribe when the stream is cancelled', async () => {
+    const unsubscribeFn = jest.fn();
+    subscribe.mockReturnValueOnce(unsubscribeFn);
+    getAllVideos.mockResolvedValue([]);
 
-    const response = await GET(mockReq());
-    expect(response.status).toBe(200);
-    response.body?.cancel();
-  });
-
-  it('handles getAllVideos errors gracefully (no crash)', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    (uploadService.getAllVideos as jest.Mock).mockRejectedValue(new Error('DB error'));
-
-    const response = await GET(mockReq());
-    expect(response.status).toBe(200);
-    // The stream stays open despite tick error — cancel it to clean up
-    await response.body?.cancel();
-  });
-
-  it('cancels intervals when stream is cancelled', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([]);
-
-    const response = await GET(mockReq());
-    expect(response.status).toBe(200);
-    // Cancelling the body triggers the ReadableStream cancel callback which clears intervals
-    await response.body!.cancel();
-  });
-
-  it('emits event with null processingStatus and thumbnailStatus when undefined', async () => {
-    (getCurrentSession as jest.Mock).mockResolvedValue({ user: { role: 'ADMIN' } });
-    const video = { id: 'v2', status: 'ready' };
-    (uploadService.getAllVideos as jest.Mock).mockResolvedValue([video]);
-
-    const response = await GET(mockReq());
-    const reader = response.body!.getReader();
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
-    expect(text).toContain('"processingStatus":null');
-    expect(text).toContain('"thumbnailStatus":null');
-    reader.releaseLock();
-    response.body?.cancel();
+    const res = await GET({} as never);
+    // drain the snapshot (empty) so start() completes and unsubscribe is set
+    const reader = res.body!.getReader();
+    await reader.cancel();
+    expect(unsubscribeFn).toHaveBeenCalled();
   });
 });
