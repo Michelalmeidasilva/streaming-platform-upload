@@ -851,6 +851,55 @@ describe('UploadArea', () => {
     createElementSpy.mockRestore();
   });
 
+  it('renders codec and resolution checkboxes for admins', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByLabelText } = render(<UploadArea />);
+    // Default: H.264 checked, H.265 and AV1 unchecked
+    expect((getByLabelText('H.264 (AVC)') as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText('H.265 (HEVC)') as HTMLInputElement).checked).toBe(false);
+    // Default resolutions: 720p and 1080p checked
+    expect((getByLabelText('720p') as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText('1080p') as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText('360p') as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('shows AV1 warning when AV1 is selected', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByLabelText, getByText } = render(<UploadArea />);
+    const av1Checkbox = getByLabelText('AV1') as HTMLInputElement;
+    fireEvent.click(av1Checkbox);
+
+    await waitFor(() => {
+      expect(getByText('AV1 é o encode mais lento — pode demorar bastante.')).toBeDefined();
+    });
+  });
+
+  it('shows validation error and blocks upload when no codec selected', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByLabelText, getByRole } = render(<UploadArea />);
+    // Uncheck the default H.264
+    fireEvent.click(getByLabelText('H.264 (AVC)'));
+
+    await waitFor(() => {
+      expect(getByRole('alert')).toBeDefined();
+    });
+
+    // No upload should be attempted
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('authenticates through the e2e cookie when enabled', async () => {
     process.env.NEXT_PUBLIC_E2E_AUTH_ENABLED = '1';
     document.cookie = 'e2e-session=admin-e2e%40example.com';

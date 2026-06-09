@@ -171,7 +171,7 @@ describe('Upload API Route', () => {
     const req = mockReq({ filename: 'raw.yuv', size: 1000, rawVideo });
     const response = await POST(req);
     expect(response.status).toBe(200);
-    expect(uploadService.initiateUpload).toHaveBeenCalledWith('raw.yuv', 1000, undefined, rawVideo, undefined);
+    expect(uploadService.initiateUpload).toHaveBeenCalledWith('raw.yuv', 1000, undefined, rawVideo, undefined, undefined);
   });
 
   it('forwards subtitles and returns subtitleUploads', async () => {
@@ -186,7 +186,7 @@ describe('Upload API Route', () => {
     const response = await POST(req);
     const data = await response.json();
     expect(response.status).toBe(200);
-    expect(uploadService.initiateUpload).toHaveBeenCalledWith('movie.mp4', 1000, 'video/mp4', undefined, subtitles);
+    expect(uploadService.initiateUpload).toHaveBeenCalledWith('movie.mp4', 1000, 'video/mp4', undefined, subtitles, undefined);
     expect(data.subtitleUploads).toEqual(subtitleUploads);
   });
 

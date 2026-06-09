@@ -5,7 +5,7 @@ import { getCurrentSession } from '@/lib/auth/session';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import { withEmf } from '@/lib/telemetry/emf';
 import { getMaxFileSizeBytes, getMaxFileSizeGB } from '@/lib/uploadLimits';
-import type { RawVideoParams } from '@/lib/events';
+import type { RawVideoParams, TranscodeSelection } from '@/lib/events';
 
 const ALLOWED_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.mkv', '.webm', '.y4m', '.yuv', '.m3u8']);
 const ALLOWED_MIME_TYPES = new Set([
@@ -79,7 +79,14 @@ async function postHandler(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { filename, size, mimeType, rawVideo, subtitles } = await request.json();
+    const { filename, size, mimeType, rawVideo, subtitles, transcode } = await request.json() as {
+      filename: string;
+      size: number;
+      mimeType?: string;
+      rawVideo?: RawVideoParams;
+      subtitles?: { language?: string; label?: string }[];
+      transcode?: TranscodeSelection;
+    };
 
     if (!filename || !size) {
       return NextResponse.json({ error: 'filename and size are required' }, { status: 400 });
@@ -91,7 +98,7 @@ async function postHandler(request: NextRequest) {
     }
 
     const { sessionId, videoId, chunkSize, totalChunks, presignedUrls, subtitleUploads } =
-      await uploadService.initiateUpload(filename, size, mimeType, rawVideo, subtitles);
+      await uploadService.initiateUpload(filename, size, mimeType, rawVideo, subtitles, transcode);
 
     return NextResponse.json({ sessionId, videoId, chunkSize, totalChunks, presignedUrls, subtitleUploads });
   } catch (error) {

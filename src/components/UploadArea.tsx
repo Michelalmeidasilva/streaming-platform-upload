@@ -19,6 +19,14 @@ import {
 } from '@/lib/upload/fileIntake';
 import { deriveUploadStage } from '@/lib/uploadStage';
 import type { UploadStage } from '@/types';
+import {
+  AVAILABLE_CODECS,
+  RENDITION_RESOLUTIONS,
+  DEFAULT_CODECS,
+  DEFAULT_RESOLUTIONS,
+  buildTranscodeSelection,
+  type CodecId,
+} from '@/lib/transcodeOptions';
 
 interface UploadProgress {
   videoId: string;        // client-side id, used as React key
@@ -88,6 +96,9 @@ export default function UploadArea() {
   const { emitUploadComplete } = useVideoEvents();
   const { effectiveSession, effectiveStatus } = useE2ESession();
   const isAdmin = canUploadVideo(effectiveSession?.user?.role);
+  const [selectedCodecs, setSelectedCodecs] = useState<CodecId[]>(DEFAULT_CODECS);
+  const [selectedResolutions, setSelectedResolutions] = useState<string[]>(DEFAULT_RESOLUTIONS);
+  const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   const setStatus = useCallback(
     (videoId: string, patch: Partial<UploadProgress>) =>
@@ -122,6 +133,9 @@ export default function UploadArea() {
 
   const handleFiles = useCallback(
     async (files: FileList) => {
+      const transcode = buildTranscodeSelection(selectedCodecs, selectedResolutions);
+      if (!transcode) return; // validation: block if no codec or no resolution selected
+
       const allFiles = Array.from(files);
       const subtitleFiles = allFiles.filter(f => isSubtitleFile(f.name));
       const videoFiles = allFiles.filter(f => !isSubtitleFile(f.name));
@@ -167,6 +181,7 @@ export default function UploadArea() {
               mimeType: file.type,
               rawVideo,
               subtitles: pendingSubtitles.map(s => ({ language: s.language, label: s.label })),
+              transcode,
             }),
           });
           if (!initRes.ok) throw new Error(t('upload.errors.initiate'));
@@ -260,7 +275,7 @@ export default function UploadArea() {
         }
       }
     },
-    [setStatus, emitUploadComplete, t, directUploadEnabled],
+    [setStatus, emitUploadComplete, t, directUploadEnabled, selectedCodecs, selectedResolutions],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -329,8 +344,52 @@ export default function UploadArea() {
     );
   }
 
+  const transcodeInvalid = buildTranscodeSelection(selectedCodecs, selectedResolutions) === null;
+
   return (
     <div className={styles.container}>
+      <div className={styles.transcodeSelector}>
+        <div className={styles.transcodeSelectorGroup}>
+          <span className={styles.transcodeSelectorLabel}>Codec</span>
+          <div className={styles.transcodeSelectorOptions}>
+            {AVAILABLE_CODECS.map((codec) => (
+              <label key={codec.id} className={styles.transcodeSelectorOption}>
+                <input
+                  type="checkbox"
+                  checked={selectedCodecs.includes(codec.id)}
+                  onChange={() => setSelectedCodecs(prev => toggle(prev, codec.id))}
+                />
+                <span>{codec.label}</span>
+              </label>
+            ))}
+          </div>
+          {selectedCodecs.includes('av1') && (
+            <p className={styles.transcodeWarning}>
+              {AVAILABLE_CODECS.find((c) => c.id === 'av1')?.warn}
+            </p>
+          )}
+        </div>
+        <div className={styles.transcodeSelectorGroup}>
+          <span className={styles.transcodeSelectorLabel}>Resolução</span>
+          <div className={styles.transcodeSelectorOptions}>
+            {RENDITION_RESOLUTIONS.map((res) => (
+              <label key={res.label} className={styles.transcodeSelectorOption}>
+                <input
+                  type="checkbox"
+                  checked={selectedResolutions.includes(res.label)}
+                  onChange={() => setSelectedResolutions(prev => toggle(prev, res.label))}
+                />
+                <span>{res.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        {transcodeInvalid && (
+          <p className={styles.transcodeError} role="alert">
+            Selecione pelo menos um codec e uma resolução.
+          </p>
+        )}
+      </div>
       <button
         type="button"
         className={`${styles.dropzone} ${isDragging ? styles.dragging : ''}`}
