@@ -96,7 +96,7 @@ export default function UploadArea() {
   const { emitUploadComplete } = useVideoEvents();
   const { effectiveSession, effectiveStatus } = useE2ESession();
   const isAdmin = canUploadVideo(effectiveSession?.user?.role);
-  const [selectedCodecs, setSelectedCodecs] = useState<CodecId[]>(DEFAULT_CODECS);
+  const [selectedCodec, setSelectedCodec] = useState<CodecId>(DEFAULT_CODECS[0]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>(DEFAULT_RESOLUTIONS);
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -133,7 +133,7 @@ export default function UploadArea() {
 
   const handleFiles = useCallback(
     async (files: FileList) => {
-      const transcode = buildTranscodeSelection(selectedCodecs, selectedResolutions);
+      const transcode = buildTranscodeSelection([selectedCodec], selectedResolutions);
       if (!transcode) return; // validation: block if no codec or no resolution selected
 
       const allFiles = Array.from(files);
@@ -275,7 +275,7 @@ export default function UploadArea() {
         }
       }
     },
-    [setStatus, emitUploadComplete, t, directUploadEnabled, selectedCodecs, selectedResolutions],
+    [setStatus, emitUploadComplete, t, directUploadEnabled, selectedCodec, selectedResolutions],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -344,7 +344,7 @@ export default function UploadArea() {
     );
   }
 
-  const transcodeInvalid = buildTranscodeSelection(selectedCodecs, selectedResolutions) === null;
+  const transcodeInvalid = buildTranscodeSelection([selectedCodec], selectedResolutions) === null;
 
   return (
     <div className={styles.container}>
@@ -355,15 +355,17 @@ export default function UploadArea() {
             {AVAILABLE_CODECS.map((codec) => (
               <label key={codec.id} className={styles.transcodeSelectorOption}>
                 <input
-                  type="checkbox"
-                  checked={selectedCodecs.includes(codec.id)}
-                  onChange={() => setSelectedCodecs(prev => toggle(prev, codec.id))}
+                  type="radio"
+                  name="codec"
+                  value={codec.id}
+                  checked={selectedCodec === codec.id}
+                  onChange={() => setSelectedCodec(codec.id)}
                 />
                 <span>{codec.label}</span>
               </label>
             ))}
           </div>
-          {selectedCodecs.includes('av1') && (
+          {selectedCodec === 'av1' && (
             <p className={styles.transcodeWarning}>
               {AVAILABLE_CODECS.find((c) => c.id === 'av1')?.warn}
             </p>
@@ -386,7 +388,7 @@ export default function UploadArea() {
         </div>
         {transcodeInvalid && (
           <p className={styles.transcodeError} role="alert">
-            Selecione pelo menos um codec e uma resolução.
+            Selecione pelo menos uma resolução.
           </p>
         )}
       </div>

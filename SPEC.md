@@ -17,12 +17,10 @@ Request:
   "mimeType": "video/mp4",
   "subtitles": [{ "language": "en", "label": "EN" }],
   "transcode": {
-    "codecs": ["h264", "av1"],
+    "codecs": ["h264"],
     "renditions": [
       { "width": 1280, "height": 720, "codec": "h264" },
-      { "width": 1920, "height": 1080, "codec": "h264" },
-      { "width": 1280, "height": 720, "codec": "av1" },
-      { "width": 1920, "height": 1080, "codec": "av1" }
+      { "width": 1920, "height": 1080, "codec": "h264" }
     ]
   }
 }
@@ -143,9 +141,9 @@ for `en`, `es`, and `pt`.
 
 ## Codec and Resolution Selector
 
-The upload form (`UploadArea`) renders a selector above the drop zone with two checkbox groups:
+The upload form (`UploadArea`) renders a selector above the drop zone: a **codec radio group (pick exactly one)** and a **resolution checkbox group (pick one or more)**.
 
-**Codecs** (pick one or more):
+**Codecs** (radio — pick exactly one):
 | ID | Label | Note |
 |----|-------|------|
 | `h264` | H.264 (AVC) | Default. Broadest device compatibility. |

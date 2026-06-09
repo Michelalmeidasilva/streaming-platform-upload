@@ -851,20 +851,38 @@ describe('UploadArea', () => {
     createElementSpy.mockRestore();
   });
 
-  it('renders codec and resolution checkboxes for admins', () => {
+  it('renders a single-select codec radio and resolution checkboxes for admins', () => {
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',
       data: { user: { role: 'ADMIN' } },
     });
 
     const { getByLabelText } = render(<UploadArea />);
-    // Default: H.264 checked, H.265 and AV1 unchecked
-    expect((getByLabelText('H.264 (AVC)') as HTMLInputElement).checked).toBe(true);
-    expect((getByLabelText('H.265 (HEVC)') as HTMLInputElement).checked).toBe(false);
+    // Codec is a radio group: H.264 selected by default, others not
+    const h264 = getByLabelText('H.264 (AVC)') as HTMLInputElement;
+    const h265 = getByLabelText('H.265 (HEVC)') as HTMLInputElement;
+    expect(h264.type).toBe('radio');
+    expect(h264.checked).toBe(true);
+    expect(h265.checked).toBe(false);
     // Default resolutions: 720p and 1080p checked
     expect((getByLabelText('720p') as HTMLInputElement).checked).toBe(true);
     expect((getByLabelText('1080p') as HTMLInputElement).checked).toBe(true);
     expect((getByLabelText('360p') as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('selects only one codec at a time (radio)', async () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { role: 'ADMIN' } },
+    });
+
+    const { getByLabelText } = render(<UploadArea />);
+    fireEvent.click(getByLabelText('H.265 (HEVC)'));
+
+    await waitFor(() => {
+      expect((getByLabelText('H.265 (HEVC)') as HTMLInputElement).checked).toBe(true);
+      expect((getByLabelText('H.264 (AVC)') as HTMLInputElement).checked).toBe(false);
+    });
   });
 
   it('shows AV1 warning when AV1 is selected', async () => {
@@ -874,23 +892,23 @@ describe('UploadArea', () => {
     });
 
     const { getByLabelText, getByText } = render(<UploadArea />);
-    const av1Checkbox = getByLabelText('AV1') as HTMLInputElement;
-    fireEvent.click(av1Checkbox);
+    fireEvent.click(getByLabelText('AV1'));
 
     await waitFor(() => {
       expect(getByText('AV1 é o encode mais lento — pode demorar bastante.')).toBeDefined();
     });
   });
 
-  it('shows validation error and blocks upload when no codec selected', async () => {
+  it('shows validation error and blocks upload when no resolution selected', async () => {
     (useSession as jest.Mock).mockReturnValue({
       status: 'authenticated',
       data: { user: { role: 'ADMIN' } },
     });
 
     const { getByLabelText, getByRole } = render(<UploadArea />);
-    // Uncheck the default H.264
-    fireEvent.click(getByLabelText('H.264 (AVC)'));
+    // Uncheck both default resolutions
+    fireEvent.click(getByLabelText('720p'));
+    fireEvent.click(getByLabelText('1080p'));
 
     await waitFor(() => {
       expect(getByRole('alert')).toBeDefined();

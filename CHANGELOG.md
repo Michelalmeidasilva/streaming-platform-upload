@@ -1,9 +1,9 @@
 ## [Unreleased] 2026-06-09
 ### Added
-- Codec and resolution selector in the upload form: operators can choose H.264, H.265, and/or AV1 codecs and one or more output resolutions (360p, 480p, 720p, 1080p) before starting an upload.
-- `upload.started` event now carries a `transcode` field (`{ codecs: string[], renditions: { width, height, codec }[] }`) with the full codec×resolution product, forwarded to the gateway and on to the transcoder.
+- Codec and resolution selector in the upload form: operators choose **exactly one** codec (H.264, H.265, or AV1) via a radio group and one or more output resolutions (360p, 480p, 720p, 1080p, checkboxes) before starting an upload.
+- `upload.started` event now carries a `transcode` field (`{ codecs: string[], renditions: { width, height, codec }[] }`) with the codec×resolution product (the single selected codec × the selected resolutions), forwarded to the gateway and on to the transcoder.
 - Defaults: H.264 + 720p + 1080p. AV1 displays a latency warning in the UI.
-- Validation blocks the upload if no codec or no resolution is selected.
+- Validation blocks the upload if no resolution is selected (a codec is always selected via the radio).
 
 ## [Unreleased] 2026-06-07 — E2E auth works in the production-built image
 ### Fixed

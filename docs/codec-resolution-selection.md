@@ -10,10 +10,11 @@ their intent at upload time, avoiding wasted transcode cycles and storage.
 
 ## UI
 
-A selector panel rendered above the drop zone in `UploadArea` contains two checkbox
-groups: **Codec** and **Resolução** (Resolution).
+A selector panel rendered above the drop zone in `UploadArea` contains two groups:
+**Codec** (a **radio group — exactly one**) and **Resolução** (Resolution — checkboxes,
+one or more).
 
-**Codecs available:**
+**Codecs available (pick one):**
 - H.264 (AVC) — default, widest device support
 - H.265 (HEVC) — better compression; some legacy clients unsupported
 - AV1 — best compression; a warning is displayed ("AV1 é o encode mais lento — pode
@@ -23,8 +24,10 @@ groups: **Codec** and **Resolução** (Resolution).
 
 **Defaults:** H.264 + 720p + 1080p
 
-**Validation:** If either the codec list or the resolution list is empty, a validation
-message is shown and the upload is blocked (the `handleFiles` callback returns early).
+**Validation:** A codec is always selected (radio), so only the resolution list can be
+empty — when it is, a validation message is shown and the upload is blocked (the
+`handleFiles` callback returns early). The `transcode` payload still uses a `codecs` array
+(length 1) so the backend contract is unchanged.
 
 ## Contract (API)
 
@@ -35,12 +38,10 @@ message is shown and the upload is blocked (the `handleFiles` callback returns e
   "filename": "movie.mp4",
   "size": 123456789,
   "transcode": {
-    "codecs": ["h264", "av1"],
+    "codecs": ["h264"],
     "renditions": [
       { "width": 1280, "height": 720,  "codec": "h264" },
-      { "width": 1920, "height": 1080, "codec": "h264" },
-      { "width": 1280, "height": 720,  "codec": "av1"  },
-      { "width": 1920, "height": 1080, "codec": "av1"  }
+      { "width": 1920, "height": 1080, "codec": "h264" }
     ]
   }
 }
