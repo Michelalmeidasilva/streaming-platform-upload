@@ -703,6 +703,14 @@ describe('VideoEventEmitter', () => {
       }, 0);
     });
 
+    it('includes transcode selection on upload.started when provided', () => {
+      const received: UploadStartedEvent[] = [];
+      emitter.on('upload.started', (d) => received.push(d as UploadStartedEvent));
+      const transcode = { codecs: ['h264'], renditions: [{ width: 1280, height: 720, codec: 'h264' }] };
+      emitter.emitUploadStarted('vid', 'f.mp4', undefined, undefined, transcode);
+      expect(received[0].transcode).toEqual(transcode);
+    });
+
     it('should emit upload.progress via emitUploadProgress', (done) => {
       const handler = jest.fn();
       emitter.on('upload.progress', handler);

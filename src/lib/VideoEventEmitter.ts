@@ -5,6 +5,7 @@ import {
   UploadProgressEvent,
   RawVideoParams,
   SubtitleRef,
+  TranscodeSelection,
 } from './events';
 
 export class VideoEventEmitter extends NodeEventEmitter {
@@ -49,12 +50,19 @@ export class VideoEventEmitter extends NodeEventEmitter {
     this.eventHistory = [];
   }
 
-  emitUploadStarted(videoId: string, filename: string, rawVideo?: RawVideoParams, subtitles?: SubtitleRef[]): void {
+  emitUploadStarted(
+    videoId: string,
+    filename: string,
+    rawVideo?: RawVideoParams,
+    subtitles?: SubtitleRef[],
+    transcode?: TranscodeSelection,
+  ): void {
     this.emit('upload.started', {
       videoId,
       filename,
       ...(rawVideo ? { rawVideo } : {}),
       ...(subtitles && subtitles.length ? { subtitles } : {}),
+      ...(transcode ? { transcode } : {}),
     });
   }
 

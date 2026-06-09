@@ -29,11 +29,17 @@ export interface SubtitleRef {
   label?: string;
 }
 
+export interface TranscodeSelection {
+  codecs: string[];
+  renditions: { width: number; height: number; codec: string }[];
+}
+
 export interface UploadStartedEvent {
   videoId: string;
   filename: string;
   rawVideo?: RawVideoParams;
   subtitles?: SubtitleRef[];
+  transcode?: TranscodeSelection;
 }
 
 export interface UploadProgressEvent {
