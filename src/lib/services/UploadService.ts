@@ -16,6 +16,7 @@ import {
   EventData,
   RawVideoParams,
   SubtitleRef,
+  TranscodeSelection,
   VideoThumbnailGeneratedEvent,
   VideoThumbnailFallbackEvent,
 } from '@/lib/events';
@@ -139,6 +140,7 @@ export class UploadService {
     mimeType?: string,
     rawVideo?: RawVideoParams,
     subtitles?: SubtitleInput[],
+    transcode?: TranscodeSelection,
   ): Promise<{
     sessionId: string;
     videoId: string;
@@ -223,7 +225,7 @@ export class UploadService {
     }
 
     await this.stateStore.saveState({ session, video });
-    videoEvents.emitUploadStarted(videoId, filename, rawVideo, subtitleRefs.length ? subtitleRefs : undefined);
+    videoEvents.emitUploadStarted(videoId, filename, rawVideo, subtitleRefs.length ? subtitleRefs : undefined, transcode);
 
     return { sessionId, videoId, chunkSize, totalChunks, presignedUrls, subtitleUploads };
   }
