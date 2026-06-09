@@ -1,3 +1,10 @@
+## [Unreleased] 2026-06-09
+### Added
+- Codec and resolution selector in the upload form: operators can choose H.264, H.265, and/or AV1 codecs and one or more output resolutions (360p, 480p, 720p, 1080p) before starting an upload.
+- `upload.started` event now carries a `transcode` field (`{ codecs: string[], renditions: { width, height, codec }[] }`) with the full codec×resolution product, forwarded to the gateway and on to the transcoder.
+- Defaults: H.264 + 720p + 1080p. AV1 displays a latency warning in the UI.
+- Validation blocks the upload if no codec or no resolution is selected.
+
 ## [Unreleased] 2026-06-07 — E2E auth works in the production-built image
 ### Fixed
 - `isE2EAuthEnabled()` (`src/lib/auth/e2e.ts`) no longer gates on `NODE_ENV`. Next freezes `process.env.NODE_ENV` as `'production'` at build time (in every access form — dot or bracket), so the `NODE_ENV !== 'production'` guard disabled the E2E auth bypass in the optimized Docker image even when it runs locally with `NODE_ENV=development`. The upload API therefore returned `401` for the `e2e-session` cookie and the only remaining provider (Google OAuth) is unusable locally. The gate is now the explicit, runtime-read `E2E_AUTH_ENABLED` flag (off by default; prod must not set it) — consistent with the credentials-provider gate in `auth/config.ts`. Verified live: authenticated upload through the UI/BFF → ingest → transcode → ready → playback in `streaming-web-client`.

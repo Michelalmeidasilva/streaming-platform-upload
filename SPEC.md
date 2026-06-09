@@ -15,9 +15,25 @@ Request:
   "filename": "movie.mp4",
   "size": 123456789,
   "mimeType": "video/mp4",
-  "subtitles": [{ "language": "en", "label": "EN" }]
+  "subtitles": [{ "language": "en", "label": "EN" }],
+  "transcode": {
+    "codecs": ["h264", "av1"],
+    "renditions": [
+      { "width": 1280, "height": 720, "codec": "h264" },
+      { "width": 1920, "height": 1080, "codec": "h264" },
+      { "width": 1280, "height": 720, "codec": "av1" },
+      { "width": 1920, "height": 1080, "codec": "av1" }
+    ]
+  }
 }
 ```
+
+`transcode` is optional but strongly recommended. It is the codec×resolution product
+built from the operator's selector choices (see Codec and Resolution Selector below).
+When present it is forwarded verbatim on the `upload.started` event to the gateway
+(`streaming-ingest`) and from there to the transcoder (`streaming-transcode`).
+Defaults applied by the UI: `codecs: ["h264"]`, resolutions `720p` + `1080p`.
+Valid codec IDs: `h264`, `h265`, `av1`. Valid resolution labels: `360p`, `480p`, `720p`, `1080p`.
 
 Response `200`:
 ```json
@@ -124,6 +140,37 @@ The `error` stage short-circuits the ordered list and can occur at any point.
 
 Stage labels are i18n-keyed under `stages.*` in `src/lib/i18n/translations.ts`
 for `en`, `es`, and `pt`.
+
+## Codec and Resolution Selector
+
+The upload form (`UploadArea`) renders a selector above the drop zone with two checkbox groups:
+
+**Codecs** (pick one or more):
+| ID | Label | Note |
+|----|-------|------|
+| `h264` | H.264 (AVC) | Default. Broadest device compatibility. |
+| `h265` | H.265 (HEVC) | Better compression; limited on older clients. |
+| `av1` | AV1 | Best compression; significantly slower encode — UI shows a warning. |
+
+**Resolutions** (pick one or more):
+| Label | Width × Height |
+|-------|---------------|
+| 360p | 640 × 360 |
+| 480p | 854 × 480 |
+| 720p | 1280 × 720 |
+| 1080p | 1920 × 1080 |
+
+**Default selection**: H.264 + 720p + 1080p.
+
+**Product**: `buildTranscodeSelection(codecs, resolutions)` in `src/lib/transcodeOptions.ts`
+computes every codec×resolution pair. Unknown resolution labels are silently ignored.
+Returns `null` if either list is empty — the UI shows a validation error and blocks the
+upload button in that case.
+
+The selector state lives in `UploadArea` component state and the `transcode` object is
+embedded in the `POST /api/upload` JSON body before starting the session.
+
+See `docs/codec-resolution-selection.md` for the full design document.
 
 ## Data Models
 
