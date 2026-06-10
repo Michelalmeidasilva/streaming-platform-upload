@@ -64,6 +64,15 @@ Request: `{ "sessionId": "<uuid>" }`
 
 Response `200`: `{ "videoId": "<uuid>", "thumbnailStatus": "pending|ready|failed", "thumbnailUrl": "<url|null>" }`
 
+### GET /api/runs
+Auth-gated proxy to `streaming-ingest` `GET /api/v1/runs`. Requires an authenticated session (returns `401` when unauthenticated, `403` when session is present but not admin — same auth middleware as `GET /api/videos`). Returns `502` if the upstream ingest call fails.
+
+Query parameters forwarded to ingest:
+- `machineLabel` — filter runs by exact machine label
+- `codec` — filter by codec
+
+Response `200`: array of `TranscodeRun` objects (see Data Models).
+
 ### GET /api/videos
 Fetches the video list from `streaming-ingest` (`INGEST_PERSISTENCE_BASE_URL`).
 Returns an array of `Video` objects.
@@ -205,6 +214,58 @@ type UploadStage =
   | 'transcoded'
   | 'error'
 ```
+
+### TranscodeRun / RunRendition
+
+```typescript
+interface RunRendition {
+  name: string
+  codec: string
+  width: number
+  height: number
+  preset: string
+  targetBitrateKbps: number
+  outputBitrateKbps: number
+  elapsedSeconds: number
+  avgCpuPercent: number
+  maxCpuPercent: number
+  avgMemoryMb: number
+  maxMemoryMb: number
+}
+
+interface TranscodeRun {
+  jobId: string
+  videoId: string
+  machineLabel: string
+  hostname: string
+  cpuCores: number
+  profile: string
+  elapsedSeconds: number
+  rtf: number
+  sourceFileSizeBytes: number
+  totalOutputSizeBytes: number
+  completedAt: string       // RFC3339
+  createdAt: string         // RFC3339
+  renditions: RunRendition[]
+}
+```
+
+## Metrics Tab
+
+A read-only "Metrics" tab is available in the admin UI (sidebar navigation and mobile nav).
+It renders the `TranscodeMetrics` component, which calls `GET /api/runs` and groups the results
+by `machineLabel`. For each machine label a per-codec aggregation table is displayed showing:
+
+- Average elapsed seconds
+- Average and max CPU %
+- Average output bitrate (kbps)
+- Codec preset
+- Number of runs included in the aggregate
+
+The tab is a view-only comparison surface — no mutations are possible from it. Navigation
+between the upload/library view and the Metrics tab is a client-side toggle in `page.tsx`.
+i18n keys for all Metrics tab strings are defined in `en`, `es`, and `pt` in
+`src/lib/i18n/translations.ts`.
 
 ## Storage Adapters
 
