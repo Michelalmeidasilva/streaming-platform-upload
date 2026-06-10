@@ -57,6 +57,14 @@ describe('GET /api/runs', () => {
     expect(res.status).toBe(502);
   });
 
+  it('forwards the benchmark param to ingest', async () => {
+    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
+    process.env.INGEST_PERSISTENCE_BASE_URL = 'http://ingest:8080/api/v1';
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ runs: [] }) }) as unknown as typeof fetch;
+    await GET(req('http://localhost/api/runs?benchmark=true'));
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('benchmark=true');
+  });
+
   it('forwards codec query param', async () => {
     mockSession.mockResolvedValue({ user: { role: 'MEMBER', email: 'b@c.d' } });
     process.env.INGEST_PERSISTENCE_BASE_URL = 'http://ingest:8080/api/v1';

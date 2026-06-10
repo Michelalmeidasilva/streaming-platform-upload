@@ -48,6 +48,8 @@ async function getHandler(request: NextRequest) {
   const codec = searchParams.get('codec');
   if (machineLabel) qs.set('machineLabel', machineLabel);
   if (codec) qs.set('codec', codec);
+  const benchmark = searchParams.get('benchmark');
+  if (benchmark) qs.set('benchmark', benchmark);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
 
   try {

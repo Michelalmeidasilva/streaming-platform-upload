@@ -49,6 +49,23 @@ describe('TranscodeMetrics', () => {
     await waitFor(() => expect(screen.getByText('metrics.error')).toBeInTheDocument());
   });
 
+  it('switches to benchmark view and requests benchmark runs', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [{
+        ...sampleRun, benchmark: true, clip: 'a.mp4',
+        renditions: [{ ...sampleRun.renditions[0], codec: 'av1', height: 1080 }],
+      }] }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<TranscodeMetrics />);
+    await waitFor(() => expect(screen.getByText('metrics.empty')).toBeInTheDocument());
+    screen.getByText('metrics.viewBenchmark').click();
+    await waitFor(() => expect(screen.getByText('av1')).toBeInTheDocument());
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes('benchmark=true'))).toBe(true);
+  });
+
   it('renders dash when preset is absent', async () => {
     const runWithoutPreset = {
       ...sampleRun,

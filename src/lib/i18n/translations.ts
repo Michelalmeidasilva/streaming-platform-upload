@@ -181,6 +181,9 @@ const translations = {
       maxCpu: 'Max CPU %',
       outputBitrate: 'Output kbps',
       preset: 'Preset',
+      viewProduction: 'Production',
+      viewBenchmark: 'Benchmark',
+      resolution: 'Resolution',
     },
     roles: {
       admin: 'ADMIN',
@@ -345,6 +348,9 @@ const translations = {
       maxCpu: 'CPU máx %',
       outputBitrate: 'Bitrate salida kbps',
       preset: 'Preset',
+      viewProduction: 'Producción',
+      viewBenchmark: 'Benchmark',
+      resolution: 'Resolución',
     },
     roles: {
       admin: 'ADMIN',
@@ -509,6 +515,9 @@ const translations = {
       maxCpu: 'CPU máx %',
       outputBitrate: 'Bitrate saída kbps',
       preset: 'Preset',
+      viewProduction: 'Produção',
+      viewBenchmark: 'Benchmark',
+      resolution: 'Resolução',
     },
     roles: {
       admin: 'ADMIN',

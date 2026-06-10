@@ -219,4 +219,7 @@ export interface TranscodeRun {
   totalOutputSizeBytes: number;
   renditions: RunRendition[];
   completedAt: string;
+  benchmark?: boolean;
+  clip?: string;
+  repetition?: number;
 }
