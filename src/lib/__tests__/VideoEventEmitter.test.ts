@@ -706,7 +706,7 @@ describe('VideoEventEmitter', () => {
     it('includes transcode selection on upload.started when provided', () => {
       const received: UploadStartedEvent[] = [];
       emitter.on('upload.started', (d) => received.push(d as UploadStartedEvent));
-      const transcode = { codecs: ['h264'], renditions: [{ width: 1280, height: 720, codec: 'h264' }] };
+      const transcode = { codecs: ['h264'], protocols: ['hls'], segmentSeconds: 6, renditions: [{ width: 1280, height: 720, codec: 'h264' }] };
       emitter.emitUploadStarted('vid', 'f.mp4', undefined, undefined, transcode);
       expect(received[0].transcode).toEqual(transcode);
     });

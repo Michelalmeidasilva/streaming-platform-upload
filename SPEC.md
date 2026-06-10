@@ -371,3 +371,30 @@ approved trade-off: the BFF is a *consumer-only* subscriber and never publishes
 or declares durable infrastructure on the exchange. The gateway/ingest remains
 the sole publisher and never consumes. This deviation was accepted to eliminate
 O(open-tabs) server-side polling.
+
+## Streaming Format Controls
+
+The upload UI exposes four packaging/encoding choices on the `transcode` selection sent
+with `upload.started`:
+
+- **Codec** — radio, one of H.264 / H.265 / AV1 (existing).
+- **Protocolo** — checkboxes HLS and/or DASH, both default-on, at least one required.
+- **Resolução** — checkboxes, ≥1 (existing).
+- **Duração de segmento** — preset dropdown 2 / 4 / 6 s (default 6).
+- **Bitrate** — per selected resolution, a kbps input pre-filled from the ladder (360→800,
+  480→1400, 720→2800, 1080→5000); blank = auto.
+
+`transcode` payload contract:
+
+```json
+{
+  "codecs": ["h265"],
+  "protocols": ["hls", "dash"],
+  "segmentSeconds": 6,
+  "renditions": [{ "width": 1280, "height": 720, "codec": "h265", "bitrateKbps": 2800 }]
+}
+```
+
+`bitrateKbps` is omitted per rendition when left blank. The upload is blocked when no codec,
+no resolution, or no protocol is selected. Built by `buildTranscodeSelection` in
+`src/lib/transcodeOptions.ts`. See `docs/streaming-format-controls.md`.

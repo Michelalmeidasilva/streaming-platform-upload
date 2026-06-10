@@ -21,11 +21,17 @@ import { deriveUploadStage } from '@/lib/uploadStage';
 import type { UploadStage } from '@/types';
 import {
   AVAILABLE_CODECS,
+  AVAILABLE_PROTOCOLS,
   RENDITION_RESOLUTIONS,
+  SEGMENT_PRESETS,
+  RENDITION_DEFAULT_BITRATE,
   DEFAULT_CODECS,
+  DEFAULT_PROTOCOLS,
   DEFAULT_RESOLUTIONS,
+  DEFAULT_SEGMENT_SECONDS,
   buildTranscodeSelection,
   type CodecId,
+  type ProtocolId,
 } from '@/lib/transcodeOptions';
 
 interface UploadProgress {
@@ -98,6 +104,13 @@ export default function UploadArea() {
   const isAdmin = canUploadVideo(effectiveSession?.user?.role);
   const [selectedCodec, setSelectedCodec] = useState<CodecId>(DEFAULT_CODECS[0]);
   const [selectedResolutions, setSelectedResolutions] = useState<string[]>(DEFAULT_RESOLUTIONS);
+  const [selectedProtocols, setSelectedProtocols] = useState<ProtocolId[]>(DEFAULT_PROTOCOLS);
+  const [segmentSeconds, setSegmentSeconds] = useState<number>(DEFAULT_SEGMENT_SECONDS);
+  const [bitrateByResolution, setBitrateByResolution] = useState<Record<string, number | undefined>>(() => {
+    const init: Record<string, number | undefined> = {};
+    for (const label of DEFAULT_RESOLUTIONS) init[label] = RENDITION_DEFAULT_BITRATE[label];
+    return init;
+  });
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
   const setStatus = useCallback(
@@ -133,7 +146,11 @@ export default function UploadArea() {
 
   const handleFiles = useCallback(
     async (files: FileList) => {
-      const transcode = buildTranscodeSelection([selectedCodec], selectedResolutions);
+      const transcode = buildTranscodeSelection([selectedCodec], selectedResolutions, {
+        protocols: selectedProtocols,
+        segmentSeconds,
+        bitrateByResolution,
+      });
       if (!transcode) return; // validation: block if no codec or no resolution selected
 
       const allFiles = Array.from(files);
@@ -275,7 +292,7 @@ export default function UploadArea() {
         }
       }
     },
-    [setStatus, emitUploadComplete, t, directUploadEnabled, selectedCodec, selectedResolutions],
+    [setStatus, emitUploadComplete, t, directUploadEnabled, selectedCodec, selectedResolutions, selectedProtocols, segmentSeconds, bitrateByResolution],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -344,7 +361,11 @@ export default function UploadArea() {
     );
   }
 
-  const transcodeInvalid = buildTranscodeSelection([selectedCodec], selectedResolutions) === null;
+  const transcodeInvalid = buildTranscodeSelection([selectedCodec], selectedResolutions, {
+    protocols: selectedProtocols,
+    segmentSeconds,
+    bitrateByResolution,
+  }) === null;
 
   return (
     <div className={styles.container}>
@@ -372,6 +393,21 @@ export default function UploadArea() {
           )}
         </div>
         <div className={styles.transcodeSelectorGroup}>
+          <span className={styles.transcodeSelectorLabel}>Protocolo</span>
+          <div className={styles.transcodeSelectorOptions}>
+            {AVAILABLE_PROTOCOLS.map((proto) => (
+              <label key={proto.id} className={styles.transcodeSelectorOption}>
+                <input
+                  type="checkbox"
+                  checked={selectedProtocols.includes(proto.id)}
+                  onChange={() => setSelectedProtocols((prev) => toggle(prev, proto.id))}
+                />
+                <span>{proto.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className={styles.transcodeSelectorGroup}>
           <span className={styles.transcodeSelectorLabel}>Resolução</span>
           <div className={styles.transcodeSelectorOptions}>
             {RENDITION_RESOLUTIONS.map((res) => (
@@ -382,13 +418,46 @@ export default function UploadArea() {
                   onChange={() => setSelectedResolutions(prev => toggle(prev, res.label))}
                 />
                 <span>{res.label}</span>
+                {selectedResolutions.includes(res.label) && (
+                  <input
+                    type="number"
+                    aria-label={`Bitrate ${res.label} (kbps)`}
+                    className={styles.bitrateInput}
+                    min={100}
+                    max={20000}
+                    placeholder="auto"
+                    value={bitrateByResolution[res.label] ?? ''}
+                    onChange={(e) =>
+                      setBitrateByResolution((prev) => ({
+                        ...prev,
+                        [res.label]: e.target.value === '' ? undefined : Number(e.target.value),
+                      }))
+                    }
+                  />
+                )}
               </label>
             ))}
           </div>
         </div>
+        <div className={styles.transcodeSelectorGroup}>
+          <label className={styles.transcodeSelectorLabel} htmlFor="segmentSeconds">
+            Duração de segmento
+          </label>
+          <select
+            id="segmentSeconds"
+            value={segmentSeconds}
+            onChange={(e) => setSegmentSeconds(Number(e.target.value))}
+          >
+            {SEGMENT_PRESETS.map((s) => (
+              <option key={s} value={s}>{`${s}s`}</option>
+            ))}
+          </select>
+        </div>
         {transcodeInvalid && (
           <p className={styles.transcodeError} role="alert">
-            Selecione pelo menos uma resolução.
+            {selectedProtocols.length === 0
+              ? 'Selecione pelo menos um protocolo.'
+              : 'Selecione pelo menos uma resolução.'}
           </p>
         )}
       </div>

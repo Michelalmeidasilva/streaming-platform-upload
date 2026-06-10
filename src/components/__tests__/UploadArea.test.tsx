@@ -929,4 +929,30 @@ describe('UploadArea', () => {
       expect(getByText('upload.dropzone.idleTitle')).toBeDefined();
     });
   });
+
+  describe('format controls', () => {
+    const asAdmin = () =>
+      (useSession as jest.Mock).mockReturnValue({
+        status: 'authenticated',
+        data: { user: { role: 'ADMIN' } },
+      });
+
+    it('renders protocol, segment and bitrate controls with defaults', () => {
+      asAdmin();
+      const { getByRole, getByLabelText } = render(<UploadArea />);
+      expect(getByRole('checkbox', { name: /HLS/i })).toBeChecked();
+      expect(getByRole('checkbox', { name: /DASH/i })).toBeChecked();
+      expect(getByLabelText(/Duração de segmento/i)).toHaveValue('6');
+      // bitrate inputs appear for the default-selected resolutions
+      expect(getByLabelText(/Bitrate 1080p/i)).toHaveValue(5000);
+    });
+
+    it('blocks upload when no protocol is selected', () => {
+      asAdmin();
+      const { getByRole, getByText } = render(<UploadArea />);
+      fireEvent.click(getByRole('checkbox', { name: /HLS/i }));
+      fireEvent.click(getByRole('checkbox', { name: /DASH/i }));
+      expect(getByText(/Selecione pelo menos um protocolo/i)).toBeInTheDocument();
+    });
+  });
 });

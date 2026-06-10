@@ -89,6 +89,17 @@
   background: var(--color-primary-muted);
 }
 
+.bitrateInput {
+  width: 64px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
 .transcodeWarning {
   font-size: 12px;
   color: var(--color-warning, #f59e0b);

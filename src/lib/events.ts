@@ -31,7 +31,9 @@ export interface SubtitleRef {
 
 export interface TranscodeSelection {
   codecs: string[];
-  renditions: { width: number; height: number; codec: string }[];
+  protocols: string[];
+  segmentSeconds: number;
+  renditions: { width: number; height: number; codec: string; bitrateKbps?: number }[];
 }
 
 export interface UploadStartedEvent {
