@@ -37,6 +37,8 @@ type). Within each group, a per **codec × resolution** aggregation table is dis
 
 | Column | Description |
 |--------|-------------|
+| Video | Clip title (filename derived from the S3 key); full S3 key shown in tooltip |
+| Source | Source characterization: `{w}×{h} · {duration}s · {codec}` |
 | Codec × Resolution | e.g. `h264 1280×720` |
 | Avg elapsed (s) | Average wall-clock encode seconds across all repetitions and clips |
 | Median elapsed (s) | Median wall-clock encode seconds |
@@ -50,6 +52,24 @@ using data produced by `streaming-transcode cmd/benchmark` over an S3 corpus.
 
 Different instance types appear as separate groups — operators can compare `c5.xlarge`
 vs. `c5.2xlarge` vs. `c7g.xlarge` side by side once each has run the corpus matrix.
+
+### Source Characterization Columns
+
+The **Video** column displays the clip filename (the last path segment of the S3 key) with
+the full S3 key available as a tooltip for disambiguation when multiple clips share a name.
+
+The **Source** column summarizes the probed properties of each corpus clip:
+`{sourceWidth}×{sourceHeight} · {sourceDurationSeconds}s · {sourceCodec}`. Fields read
+from `sourceWidth`, `sourceHeight`, `sourceDurationSeconds`, and `sourceCodec` on each
+run document (set by `streaming-transcode cmd/benchmark` via `ffprobe`; zero/empty when
+the probe failed for that clip).
+
+### Aggregation Key
+
+The Benchmark view keys its aggregations by **clip × codec × resolution** so that results
+from different corpus clips are kept separate within each machine-label group. This
+prevents blending results across clips with different characteristics (e.g. resolution,
+bitrate, content complexity) into a single misleading average.
 
 ## Read Path
 
