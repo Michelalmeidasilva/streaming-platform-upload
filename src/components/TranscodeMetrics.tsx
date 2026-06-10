@@ -6,18 +6,35 @@ import type { TranscodeRun } from '@/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import styles from './TranscodeMetrics.module.css';
 
+function clipTitle(clip: string): string {
+  const base = clip.split('/').pop() ?? clip;
+  const dot = base.lastIndexOf('.');
+  return dot > 0 ? base.slice(0, dot) : base;
+}
+
+function sourceLabel(run: TranscodeRun): string {
+  if (!run.sourceWidth || !run.sourceHeight) return '—';
+  const parts = [`${run.sourceWidth}×${run.sourceHeight}`];
+  if (run.sourceDurationSeconds) parts.push(`${Math.round(run.sourceDurationSeconds)}s`);
+  if (run.sourceCodec) parts.push(run.sourceCodec);
+  return parts.join(' · ');
+}
+
 interface AggRow {
-  key: string; codec: string; resolution: string; runs: number;
-  avgElapsed: number; avgCpu: number; maxCpu: number; outputBitrate: number; preset: string;
+  key: string; clip: string; source: string; codec: string; resolution: string;
+  runs: number; avgElapsed: number; avgCpu: number; maxCpu: number; outputBitrate: number; preset: string;
 }
 
 function aggregate(runs: TranscodeRun[], mode: 'production' | 'benchmark'): AggRow[] {
-  const groups = new Map<string, { codec: string; resolution: string; elapsed: number[]; avgCpu: number[]; maxCpu: number; bitrate: number[]; preset: string }>();
+  const groups = new Map<string, { clip: string; source: string; codec: string; resolution: string; elapsed: number[]; avgCpu: number[]; maxCpu: number; bitrate: number[]; preset: string }>();
   for (const run of runs) {
     for (const r of run.renditions) {
       const resolution = `${r.width}x${r.height}`;
-      const key = mode === 'benchmark' ? `${r.codec}@${resolution}` : r.codec;
-      const e = groups.get(key) ?? { codec: r.codec, resolution, elapsed: [], avgCpu: [], maxCpu: 0, bitrate: [], preset: r.preset ?? '' };
+      const key = mode === 'benchmark' ? `${run.clip ?? ''}@${r.codec}@${resolution}` : r.codec;
+      const e = groups.get(key) ?? {
+        clip: run.clip ?? '', source: sourceLabel(run), codec: r.codec, resolution,
+        elapsed: [], avgCpu: [], maxCpu: 0, bitrate: [], preset: r.preset ?? '',
+      };
       e.elapsed.push(r.elapsedSeconds);
       e.avgCpu.push(r.avgCpuPercent);
       e.maxCpu = Math.max(e.maxCpu, r.maxCpuPercent);
@@ -26,11 +43,13 @@ function aggregate(runs: TranscodeRun[], mode: 'production' | 'benchmark'): AggR
     }
   }
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-  return Array.from(groups.entries()).map(([key, e]) => ({
-    key, codec: e.codec, resolution: e.resolution, runs: e.elapsed.length,
-    avgElapsed: avg(e.elapsed), avgCpu: avg(e.avgCpu), maxCpu: e.maxCpu,
+  const rows = Array.from(groups.entries()).map(([key, e]) => ({
+    key, clip: e.clip, source: e.source, codec: e.codec, resolution: e.resolution,
+    runs: e.elapsed.length, avgElapsed: avg(e.elapsed), avgCpu: avg(e.avgCpu), maxCpu: e.maxCpu,
     outputBitrate: avg(e.bitrate), preset: e.preset,
   }));
+  rows.sort((a, b) => a.clip.localeCompare(b.clip) || a.codec.localeCompare(b.codec) || a.resolution.localeCompare(b.resolution));
+  return rows;
 }
 
 export default function TranscodeMetrics() {
@@ -82,6 +101,8 @@ export default function TranscodeMetrics() {
           <h3 className={styles.machineLabel}>{machine}</h3>
           <table className={styles.table}>
             <thead><tr>
+              {mode === 'benchmark' && <th>{t('metrics.video')}</th>}
+              {mode === 'benchmark' && <th>{t('metrics.source')}</th>}
               <th>{t('metrics.codec')}</th>
               {mode === 'benchmark' && <th>{t('metrics.resolution')}</th>}
               <th>{t('metrics.runs')}</th>
@@ -94,6 +115,8 @@ export default function TranscodeMetrics() {
             <tbody>
               {aggregate(machineRuns, mode).map((row) => (
                 <tr key={row.key}>
+                  {mode === 'benchmark' && <td title={row.clip}>{clipTitle(row.clip)}</td>}
+                  {mode === 'benchmark' && <td>{row.source}</td>}
                   <td>{row.codec}</td>
                   {mode === 'benchmark' && <td>{row.resolution}</td>}
                   <td>{row.runs}</td>

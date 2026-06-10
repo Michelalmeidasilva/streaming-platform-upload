@@ -66,6 +66,24 @@ describe('TranscodeMetrics', () => {
     expect(urls.some((u) => u.includes('benchmark=true'))).toBe(true);
   });
 
+  it('shows the video title and source in benchmark view', async () => {
+    const benchRun = {
+      ...sampleRun, benchmark: true,
+      clip: 'original_dataset/beauty-medium-001.mp4',
+      sourceWidth: 1920, sourceHeight: 1080, sourceDurationSeconds: 31, sourceCodec: 'vp9',
+      renditions: [{ ...sampleRun.renditions[0], codec: 'av1', width: 1280, height: 720 }],
+    };
+    global.fetch = (jest.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [benchRun] }) })) as unknown as typeof fetch;
+
+    render(<TranscodeMetrics />);
+    await waitFor(() => expect(screen.getByText('metrics.empty')).toBeInTheDocument());
+    screen.getByText('metrics.viewBenchmark').click();
+    await waitFor(() => expect(screen.getByText('beauty-medium-001')).toBeInTheDocument());
+    expect(screen.getByText('1920×1080 · 31s · vp9')).toBeInTheDocument();
+  });
+
   it('renders dash when preset is absent', async () => {
     const runWithoutPreset = {
       ...sampleRun,

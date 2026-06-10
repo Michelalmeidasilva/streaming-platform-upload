@@ -184,6 +184,8 @@ const translations = {
       viewProduction: 'Production',
       viewBenchmark: 'Benchmark',
       resolution: 'Resolution',
+      video: 'Video',
+      source: 'Source',
     },
     roles: {
       admin: 'ADMIN',
@@ -351,6 +353,8 @@ const translations = {
       viewProduction: 'Producción',
       viewBenchmark: 'Benchmark',
       resolution: 'Resolución',
+      video: 'Video',
+      source: 'Origen',
     },
     roles: {
       admin: 'ADMIN',
@@ -518,6 +522,8 @@ const translations = {
       viewProduction: 'Produção',
       viewBenchmark: 'Benchmark',
       resolution: 'Resolução',
+      video: 'Vídeo',
+      source: 'Origem',
     },
     roles: {
       admin: 'ADMIN',

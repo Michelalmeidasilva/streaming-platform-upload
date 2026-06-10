@@ -222,4 +222,10 @@ export interface TranscodeRun {
   benchmark?: boolean;
   clip?: string;
   repetition?: number;
+  sourceWidth?: number;
+  sourceHeight?: number;
+  sourceDurationSeconds?: number;
+  sourceFps?: number;
+  sourceCodec?: string;
+  sourceBitrateKbps?: number;
 }
