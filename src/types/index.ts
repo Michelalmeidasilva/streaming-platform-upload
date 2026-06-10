@@ -189,3 +189,34 @@ export interface IntegrationPayload {
   data: Record<string, unknown>;
   timestamp: string;
 }
+
+export interface RunRendition {
+  name: string;
+  codec: string;
+  width: number;
+  height: number;
+  preset?: string;
+  targetBitrateKbps: number;
+  outputBitrateKbps: number;
+  elapsedSeconds: number;
+  avgCpuPercent: number;
+  maxCpuPercent: number;
+  avgMemoryMb: number;
+  maxMemoryMb: number;
+}
+
+export interface TranscodeRun {
+  id: string;
+  jobId: string;
+  videoId: string;
+  machineLabel: string;
+  hostname: string;
+  cpuCores: number;
+  profile: string;
+  elapsedSeconds: number;
+  rtf: number;
+  sourceFileSizeBytes: number;
+  totalOutputSizeBytes: number;
+  renditions: RunRendition[];
+  completedAt: string;
+}
