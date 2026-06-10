@@ -1,11 +1,18 @@
-## [Unreleased] 2026-06-09
-### Added
-- Read-only Metrics tab and GET /api/runs proxy: transcode runs grouped by machine label with per-codec processing time, CPU, and output bitrate.
+## [1.6.0] - 2026-06-10
 
-## [Unreleased] 2026-06-09
-### Added
-- Codec and resolution selector in the upload form: operators choose **exactly one** codec (H.264, H.265, or AV1) via a radio group and one or more output resolutions (360p, 480p, 720p, 1080p, checkboxes) before starting an upload.
-- `upload.started` event now carries a `transcode` field (`{ codecs: string[], renditions: { width, height, codec }[] }`) with the codec×resolution product (the single selected codec × the selected resolutions), forwarded to the gateway and on to the transcoder.
+3246388 Merge remote-tracking branch 'origin/main'
+355497a docs: transcode metrics tab
+2bce475 feat: add read-only transcode metrics tab
+168168a feat: proxy transcode runs from ingest behind auth
+0e95077 feat(upload): codec selection as single-select radio (was multi-checkbox)
+eb5096c docs(upload): codec + resolution selection
+dffdf18 feat(upload): codec + resolution selector in the upload form
+7204bf3 feat(upload): thread transcode selection through UploadService
+bac3821 feat(upload): carry transcode selection on upload.started
+04789bf feat(upload): transcode options module (codecs, resolutions, product)
+540a533 docs(plan): codec + resolution selection implementation plan
+18fe294 docs(spec): codec + resolution selection at upload
+
 - Defaults: H.264 + 720p + 1080p. AV1 displays a latency warning in the UI.
 - Validation blocks the upload if no resolution is selected (a codec is always selected via the radio).
 
