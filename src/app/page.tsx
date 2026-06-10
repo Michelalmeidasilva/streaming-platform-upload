@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
@@ -13,6 +13,7 @@ import { E2E_AUTH_COOKIE } from '@/lib/auth/e2e';
 import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
+import TranscodeMetrics from '@/components/TranscodeMetrics';
 
 export default function Home() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export default function Home() {
     void signOut({ callbackUrl: '/' });
   }, []);
 
+  const [view, setView] = useState<'library' | 'metrics'>('library');
+
   const role = effectiveSession?.user?.role;
   let roleLabel = '';
   if (role === 'ADMIN') roleLabel = t('roles.admin');
@@ -69,14 +72,30 @@ export default function Home() {
           </div>
 
           <button
-            className={`${styles.navItem} ${styles.navItemActive}`}
+            className={`${styles.navItem} ${view === 'library' ? styles.navItemActive : ''}`}
             type="button"
             aria-label={t('app.sidebar.library')}
-            aria-current="page"
+            aria-current={view === 'library' ? 'page' : undefined}
+            onClick={() => setView('library')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
+            </svg>
+          </button>
+
+          <button
+            className={`${styles.navItem} ${view === 'metrics' ? styles.navItemActive : ''}`}
+            type="button"
+            aria-label={t('app.sidebar.metrics')}
+            aria-current={view === 'metrics' ? 'page' : undefined}
+            onClick={() => setView('metrics')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18" />
+              <rect x="7" y="10" width="3" height="7" />
+              <rect x="12" y="6" width="3" height="11" />
+              <rect x="17" y="13" width="3" height="4" />
             </svg>
           </button>
 
@@ -136,14 +155,18 @@ export default function Home() {
           </header>
 
           <main className={styles.content}>
-            <UploadArea />
-
-            <div className={styles.sectionHeader}>
-              <span className={styles.sectionLabel}>{t('upload.sectionLabel')}</span>
-              <div className={styles.sectionLine} aria-hidden="true" />
-            </div>
-
-            <VideoList />
+            {view === 'library' ? (
+              <>
+                <UploadArea />
+                <div className={styles.sectionHeader}>
+                  <span className={styles.sectionLabel}>{t('upload.sectionLabel')}</span>
+                  <div className={styles.sectionLine} aria-hidden="true" />
+                </div>
+                <VideoList />
+              </>
+            ) : (
+              <TranscodeMetrics />
+            )}
           </main>
         </div>
 
@@ -151,15 +174,31 @@ export default function Home() {
         <nav className={styles.mobileNav} aria-label={t('app.sidebar.library')}>
           <button
             type="button"
-            className={`${styles.mobileNavItem} ${styles.mobileNavItemActive}`}
+            className={`${styles.mobileNavItem} ${view === 'library' ? styles.mobileNavItemActive : ''}`}
             aria-label={t('app.sidebar.library')}
-            aria-current="page"
+            aria-current={view === 'library' ? 'page' : undefined}
+            onClick={() => setView('library')}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
             </svg>
             <span className={styles.mobileNavLabel}>{t('app.sidebar.library')}</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${view === 'metrics' ? styles.mobileNavItemActive : ''}`}
+            aria-label={t('app.sidebar.metrics')}
+            aria-current={view === 'metrics' ? 'page' : undefined}
+            onClick={() => setView('metrics')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18" />
+              <rect x="7" y="10" width="3" height="7" />
+              <rect x="12" y="6" width="3" height="11" />
+              <rect x="17" y="13" width="3" height="4" />
+            </svg>
+            <span className={styles.mobileNavLabel}>{t('app.sidebar.metrics')}</span>
           </button>
           <button
             type="button"

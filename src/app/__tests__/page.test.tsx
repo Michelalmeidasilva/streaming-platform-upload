@@ -30,6 +30,7 @@ jest.mock('@/components/UploadArea', () => () => <div data-testid="upload-area" 
 jest.mock('@/components/VideoList', () => () => <div data-testid="video-list" />);
 jest.mock('@/components/ThemeToggle', () => () => <div data-testid="theme-toggle" />);
 jest.mock('@/components/LoadingSpinner', () => () => <div data-testid="loading-spinner" />);
+jest.mock('@/components/TranscodeMetrics', () => () => <div data-testid="transcode-metrics" />);
 
 describe('Home Page', () => {
   const mockRouter = { push: jest.fn() };
@@ -125,6 +126,41 @@ describe('Home Page', () => {
     fireEvent.click(getByText('auth.signOut'));
 
     expect(signOut).toHaveBeenCalledWith({ callbackUrl: '/' });
+  });
+
+  it('switches to metrics view when sidebar metrics button is clicked', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { email: 'test@test.com', role: 'ADMIN' } },
+    });
+
+    const { getByTestId, queryByTestId, getAllByLabelText } = render(<Home />);
+    expect(getByTestId('upload-area')).toBeDefined();
+    expect(queryByTestId('transcode-metrics')).toBeNull();
+
+    // Click all metrics buttons (sidebar + mobile) to maximize coverage
+    getAllByLabelText('app.sidebar.metrics').forEach(btn => fireEvent.click(btn));
+
+    expect(queryByTestId('upload-area')).toBeNull();
+    expect(getByTestId('transcode-metrics')).toBeDefined();
+  });
+
+  it('switches back to library view when library nav button is clicked after metrics', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { email: 'test@test.com', role: 'ADMIN' } },
+    });
+
+    const { getByTestId, queryByTestId, getAllByLabelText } = render(<Home />);
+
+    // Navigate to metrics via all metrics buttons
+    getAllByLabelText('app.sidebar.metrics').forEach(btn => fireEvent.click(btn));
+    expect(getByTestId('transcode-metrics')).toBeDefined();
+
+    // Navigate back to library via all library buttons
+    getAllByLabelText('app.sidebar.library').forEach(btn => fireEvent.click(btn));
+    expect(queryByTestId('transcode-metrics')).toBeNull();
+    expect(getByTestId('upload-area')).toBeDefined();
   });
 
   it('clears the e2e cookie when signing out from an e2e session', async () => {
