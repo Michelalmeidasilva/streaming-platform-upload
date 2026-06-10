@@ -7,10 +7,16 @@ benchmark results grouped by EC2 machine type. It is intended for operators who 
 compare codec processing performance across different instance types before committing to a
 production configuration.
 
-## What the Tab Shows
+## Production / Benchmark Toggle
 
-Runs are grouped by `machineLabel` (the EC2 instance type label set via `TRANSCODE_MACHINE_LABEL`
-on the worker). Within each group, a per-codec aggregation table is displayed:
+The tab has two views selected by a toggle at the top of the `TranscodeMetrics` component:
+**Production** (default) and **Benchmark**.
+
+## Production View
+
+Calls `GET /api/runs` (no `benchmark` parameter). Runs are grouped by `machineLabel` (the
+EC2 instance type label set via `TRANSCODE_MACHINE_LABEL` on the worker). Within each
+group, a per-codec aggregation table is displayed:
 
 | Column | Description |
 |--------|-------------|
@@ -24,12 +30,33 @@ on the worker). Within each group, a per-codec aggregation table is displayed:
 
 No mutations are possible from the Metrics tab — it is strictly a read surface.
 
+## Benchmark View
+
+Calls `GET /api/runs?benchmark=true`. Runs are grouped by `machineLabel` (EC2 instance
+type). Within each group, a per **codec × resolution** aggregation table is displayed:
+
+| Column | Description |
+|--------|-------------|
+| Codec × Resolution | e.g. `h264 1280×720` |
+| Avg elapsed (s) | Average wall-clock encode seconds across all repetitions and clips |
+| Median elapsed (s) | Median wall-clock encode seconds |
+| Avg CPU % | Average CPU utilisation during encoding |
+| Max CPU % | Peak CPU utilisation |
+| Avg output bitrate (kbps) | Average measured output bitrate |
+| Runs | Number of measurement cells (clip × repetition) included |
+
+The benchmark view is designed for comparing encode performance across EC2 instance types
+using data produced by `streaming-transcode cmd/benchmark` over an S3 corpus.
+
+Different instance types appear as separate groups — operators can compare `c5.xlarge`
+vs. `c5.2xlarge` vs. `c7g.xlarge` side by side once each has run the corpus matrix.
+
 ## Read Path
 
 ```
 Browser
-  └── GET /api/runs?machineLabel=<label>&codec=<codec>   (streaming-platform-upload BFF)
-        └── GET /api/v1/runs?machineLabel=<label>&codec=<codec>   (streaming-ingest)
+  └── GET /api/runs?machineLabel=<label>&codec=<codec>&benchmark=<true|false>   (streaming-platform-upload BFF)
+        └── GET /api/v1/runs?machineLabel=<label>&codec=<codec>&benchmark=<true|false>   (streaming-ingest)
               └── MongoDB transcode_runs collection
 ```
 
@@ -57,26 +84,29 @@ All strings in the Metrics tab are i18n-keyed. Keys are defined in
 
 ## Benchmark Workflow
 
-The Metrics tab is designed around a specific manual benchmarking workflow:
+The Benchmark view is designed for the `transcode-benchmark-harness` infra module workflow:
 
-1. Enable the EC2 benchmark module in `infra/` (`enable_transcode_benchmark=true`) and set
+1. Upload representative corpus clips to `s3://<bucket>/benchmark/corpus/` once.
+2. Enable the harness in `infra/` (`enable_transcode_benchmark_harness=true`) and set
    `benchmark_instance_type` to the first instance type to test (e.g. `c5.xlarge`).
-2. Apply the Terraform module (`terraform apply`). The EC2 instance starts the transcode worker
-   with `TRANSCODE_MACHINE_LABEL` set to the instance type.
-3. Upload **one video** through the normal upload UI. Wait for the transcode to complete (the
-   video reaches the "Transcoded / Ready" stage).
-4. Open the Metrics tab and observe the run for `c5.xlarge`.
-5. Change `benchmark_instance_type` in `terraform.tfvars` (e.g. to `c5.2xlarge`), re-apply,
-   upload another video, and observe the new run.
-6. Repeat for as many instance types as needed. All runs accumulate in the `transcode_runs`
-   collection and are visible side by side in the Metrics tab.
+3. Apply (`terraform apply`). The self-terminating EC2 instance runs the `cmd/benchmark`
+   binary over the corpus (codec×resolution×clip×repeat matrix) and terminates when done.
+4. Open the Metrics tab → **Benchmark** view and observe the runs grouped by `c5.xlarge`.
+5. Change `benchmark_instance_type` (e.g. to `c5.2xlarge`) and re-apply. The new EC2 runs
+   the same corpus and terminates.
+6. Repeat for as many instance types as needed. All runs accumulate in `transcode_runs`
+   and are visible side by side in the Benchmark view.
+7. Set `enable_transcode_benchmark_harness=false` and re-apply to clean up.
+
+See `infra/docs/transcode-benchmark-harness.md` for the full infrastructure workflow.
 
 ## Caveats
 
-- Each benchmark run corresponds to a single video upload. Use the same source file across
-  runs to keep the comparison fair.
-- The default benchmark EC2 is `x86_64` (`c5.xlarge`). Benchmarking Graviton (`arm64`) instances
-  requires an `arm64` ECR image build first (see `infra/docs/transcode-ec2-benchmark.md`).
-- The Metrics tab aggregates all runs in the database for each machine label. If the same
-  instance type processed multiple different source files, the aggregated numbers reflect the
-  mix — not a single canonical file.
+- The Benchmark view aggregates all cells in `transcode_runs` where `benchmark=true` for
+  each machine label. Runs from different corpus sizes or different matrix configurations
+  are all included — use consistent `BENCHMARK_CODECS`/`BENCHMARK_RESOLUTIONS` across
+  runs for a fair comparison.
+- The default benchmark EC2 is `x86_64` (`c5.xlarge`). Benchmarking Graviton (`arm64`)
+  instances requires an arm64-capable ECR image build
+  (`make -C streaming-transcode image-push-multiarch`) and setting `benchmark_ami_arch=arm64`
+  in `terraform.tfvars`.

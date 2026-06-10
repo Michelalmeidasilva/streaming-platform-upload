@@ -1,3 +1,7 @@
+## [Unreleased] 2026-06-10
+### Added
+- Metrics tab Benchmark view: groups benchmark runs by machine label with a per codec×resolution table.
+
 ## [Unreleased] 2026-06-09
 ### Added
 - Read-only Metrics tab and GET /api/runs proxy: transcode runs grouped by machine label with per-codec processing time, CPU, and output bitrate.

@@ -70,6 +70,7 @@ Auth-gated proxy to `streaming-ingest` `GET /api/v1/runs`. Requires an authentic
 Query parameters forwarded to ingest:
 - `machineLabel` — filter runs by exact machine label
 - `codec` — filter by codec
+- `benchmark` — `true` for benchmark runs, `false` (default) for production runs
 
 Response `200`: array of `TranscodeRun` objects (see Data Models).
 
@@ -247,14 +248,22 @@ interface TranscodeRun {
   completedAt: string       // RFC3339
   createdAt: string         // RFC3339
   renditions: RunRendition[]
+  // Benchmark-only fields (absent on production runs):
+  benchmark?: boolean
+  clip?: string             // S3 key of the corpus clip
+  repetition?: number       // Repeat index within the matrix cell
 }
 ```
 
 ## Metrics Tab
 
 A read-only "Metrics" tab is available in the admin UI (sidebar navigation and mobile nav).
-It renders the `TranscodeMetrics` component, which calls `GET /api/runs` and groups the results
-by `machineLabel`. For each machine label a per-codec aggregation table is displayed showing:
+It renders the `TranscodeMetrics` component with a **Production / Benchmark toggle**.
+
+### Production view (default)
+
+Calls `GET /api/runs` (no `benchmark` parameter, defaults to `false`). Groups results by
+`machineLabel`. For each machine label a per-codec aggregation table is displayed showing:
 
 - Average elapsed seconds
 - Average and max CPU %
@@ -262,9 +271,24 @@ by `machineLabel`. For each machine label a per-codec aggregation table is displ
 - Codec preset
 - Number of runs included in the aggregate
 
+### Benchmark view
+
+Activated by the Production/Benchmark toggle. Calls `GET /api/runs?benchmark=true`. Groups
+results by `machineLabel` (EC2 instance type). For each machine label, a per **codec ×
+resolution** table is displayed showing:
+
+- Average and median elapsed seconds
+- Average and max CPU %
+- Average output bitrate (kbps)
+- Run count
+
+The benchmark view is designed for comparing encode performance across instance types using
+the corpus data produced by `streaming-transcode cmd/benchmark`.
+
 The tab is a view-only comparison surface — no mutations are possible from it. Navigation
 between the upload/library view and the Metrics tab is a client-side toggle in `page.tsx`.
-i18n keys for all Metrics tab strings are defined in `en`, `es`, and `pt` in
+i18n keys for all Metrics tab strings (including the Production/Benchmark toggle and
+benchmark table headers) are defined in `en`, `es`, and `pt` in
 `src/lib/i18n/translations.ts`.
 
 ## Storage Adapters
