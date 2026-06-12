@@ -32,44 +32,56 @@ No mutations are possible from the Metrics tab — it is strictly a read surface
 
 ## Benchmark View
 
-Calls `GET /api/runs?benchmark=true`. Runs are grouped by `machineLabel` (EC2 instance
-type). Within each group, a per **codec × resolution** aggregation table is displayed:
+Calls `GET /api/runs?benchmark=true`. Runs are organized **per video**: each source clip
+is a distinct block showing the clip title and source characterization
+(`{w}×{h} · {duration}s · {codec} · {size}`). Within each video block, every individual
+benchmark run is shown as **one row** in a flat table (not an aggregate):
 
 | Column | Description |
 |--------|-------------|
-| Video | Clip title (filename derived from the S3 key); full S3 key shown in tooltip |
-| Source | Source characterization: `{w}×{h} · {duration}s · {codec}` |
-| Codec × Resolution | e.g. `h264 1280×720` |
-| Avg elapsed (s) | Average wall-clock encode seconds across all repetitions and clips |
-| Median elapsed (s) | Median wall-clock encode seconds |
-| Avg CPU % | Average CPU utilisation during encoding |
-| Max CPU % | Peak CPU utilisation |
-| Avg output bitrate (kbps) | Average measured output bitrate |
-| Runs | Number of measurement cells (clip × repetition) included |
+| Machine | EC2 instance type label (`machineLabel`) |
+| Codec | Codec ID used for this run (e.g. `h264`, `av1`) |
+| Resolution | Rendition resolution (e.g. `1280×720`) |
+| Run time (s) | Wall-clock encode seconds for this run |
+| Output kbps | Measured output bitrate in kbps |
+| Output size | Encoded output file size (from `outputFileSizeBytes`) |
+| CPU % | Average CPU utilisation during encoding |
+| Date | `completedAt` timestamp |
+| Rep. | Repetition index within the matrix cell |
 
 The benchmark view is designed for comparing encode performance across EC2 instance types
 using data produced by `streaming-transcode cmd/benchmark` over an S3 corpus.
 
-Different instance types appear as separate groups — operators can compare `c5.xlarge`
-vs. `c5.2xlarge` vs. `c7g.xlarge` side by side once each has run the corpus matrix.
+Different instance types appear as rows within the same video block — operators can
+compare `c5.xlarge` vs. `c5.2xlarge` vs. `c7g.xlarge` for the same source clip side by
+side without switching between groups.
 
-### Source Characterization Columns
+### Per-Video Layout
 
-The **Video** column displays the clip filename (the last path segment of the S3 key) with
-the full S3 key available as a tooltip for disambiguation when multiple clips share a name.
+Each video block is headed by the clip title (filename derived from the S3 key, with the
+full key in a tooltip) and the source characterization line:
 
-The **Source** column summarizes the probed properties of each corpus clip:
-`{sourceWidth}×{sourceHeight} · {sourceDurationSeconds}s · {sourceCodec}`. Fields read
-from `sourceWidth`, `sourceHeight`, `sourceDurationSeconds`, and `sourceCodec` on each
-run document (set by `streaming-transcode cmd/benchmark` via `ffprobe`; zero/empty when
-the probe failed for that clip).
+```
+<clip filename>
+{sourceWidth}×{sourceHeight} · {sourceDurationSeconds}s · {sourceCodec} · {sourceFileSizeBytes}
+```
+
+Fields are read from `sourceWidth`, `sourceHeight`, `sourceDurationSeconds`,
+`sourceCodec`, and `sourceFileSizeBytes` on each run document (set by
+`streaming-transcode cmd/benchmark` via `ffprobe`; zero/empty when the probe failed).
+
+### Output Size Column
+
+The **Output size** column displays the per-rendition `outputFileSizeBytes` field
+(int64, bytes) recorded by the encoder (`RenditionMetrics.OutputFileSizeBytes`). It is
+formatted for readability (e.g. `17.0 MB`). This column is present only in the Benchmark
+view; the Production view is unchanged.
 
 ### Aggregation Key
 
-The Benchmark view keys its aggregations by **clip × codec × resolution** so that results
-from different corpus clips are kept separate within each machine-label group. This
-prevents blending results across clips with different characteristics (e.g. resolution,
-bitrate, content complexity) into a single misleading average.
+Each row is an individual run — no aggregation is applied in the Benchmark view. Rows
+are keyed by `clip × codec × resolution × machineLabel × repetition`, so results from
+different corpus clips, instance types, and repeat runs are all visible independently.
 
 ## Read Path
 

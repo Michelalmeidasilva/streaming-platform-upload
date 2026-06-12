@@ -1,3 +1,7 @@
+## [Unreleased] 2026-06-11
+### Changed
+- Benchmark view reorganized to per-video layout: each source clip is a block (title + source resolution · duration · codec · size) with one row per individual run; columns Machine · Codec · Resolution · Run time (s) · Output kbps · Output size · CPU % · Date · Rep. Production view unchanged.
+
 ## [Unreleased] 2026-06-10
 ### Added
 - Streaming format controls in the upload UI: **Protocolo** checkboxes (HLS and/or DASH, ≥1), a **Duração de segmento** preset dropdown (2/4/6 s), and a per-resolution **bitrate** kbps input (blank = auto). `buildTranscodeSelection` now emits `protocols`, `segmentSeconds`, and per-rendition `bitrateKbps` on the `transcode` payload. See `docs/streaming-format-controls.md`.
