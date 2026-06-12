@@ -6,13 +6,13 @@
 ### Added
 - Streaming format controls in the upload UI: **Protocolo** checkboxes (HLS and/or DASH, ≥1), a **Duração de segmento** preset dropdown (2/4/6 s), and a per-resolution **bitrate** kbps input (blank = auto). `buildTranscodeSelection` now emits `protocols`, `segmentSeconds`, and per-rendition `bitrateKbps` on the `transcode` payload. See `docs/streaming-format-controls.md`.
 
-## [Unreleased] 2026-06-10
+## [1.6.1] - 2026-06-10
 ### Added
 - Metrics tab Benchmark view: groups benchmark runs by machine label with a per codec×resolution table.
 
-## [1.6.0] - 2026-06-10
-### Added
-- Read-only Metrics tab and GET /api/runs proxy: transcode runs grouped by machine label with per-codec processing time, CPU, and output bitrate.
+95ec42b Merge remote-tracking branch 'origin/main'
+1837502 docs: metrics benchmark view
+97f533a feat(metrics): benchmark view (codec×resolution) in Metrics tab
 
 3246388 Merge remote-tracking branch 'origin/main'
 355497a docs: transcode metrics tab
