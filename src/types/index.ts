@@ -198,6 +198,7 @@ export interface RunRendition {
   preset?: string;
   targetBitrateKbps: number;
   outputBitrateKbps: number;
+  outputFileSizeBytes?: number;
   elapsedSeconds: number;
   avgCpuPercent: number;
   maxCpuPercent: number;
