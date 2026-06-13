@@ -8,13 +8,14 @@
   table (per-engine QoE + cloud projections from scalestore via `scalestore-api`,
   `SCALESTORE_API_URL`).
 
-## [Unreleased] 2026-06-11
-### Changed
-- Benchmark view reorganized to per-video layout: each source clip is a block (title + source resolution · duration · codec · size) with one row per individual run; columns Machine · Codec · Resolution · Run time (s) · Output kbps · Output size · CPU % · Date · Rep. Production view unchanged.
+## [1.6.2] - 2026-06-12
 
-## [Unreleased] 2026-06-10
-### Added
-- Streaming format controls in the upload UI: **Protocolo** checkboxes (HLS and/or DASH, ≥1), a **Duração de segmento** preset dropdown (2/4/6 s), and a per-resolution **bitrate** kbps input (blank = auto). `buildTranscodeSelection` now emits `protocols`, `segmentSeconds`, and per-rendition `bitrateKbps` on the `transcode` payload. See `docs/streaming-format-controls.md`.
+853999d Merge remote-tracking branch 'origin/main'
+b5144c9 docs: per-video benchmark view
+b7fa7be feat(metrics): per-video benchmark view with output size and per-run rows
+6f578e2 feat(upload): protocol/segment/bitrate selectors + format-controls contract
+e4b9181 docs: benchmark Video and Source columns
+870de4f feat(metrics): Video + Source columns in benchmark view
 
 ## [1.6.1] - 2026-06-10
 ### Added
