@@ -206,6 +206,36 @@ export interface RunRendition {
   maxMemoryMb: number;
 }
 
+// Distribution load-test (scalestore) shapes served by /api/distribution-runs.
+export interface EngineQoE {
+  RunID: number;
+  PlayerEngine: 'gpac' | 'shaka';
+  Samples: number;
+  StartupP50MS: number;
+  StartupP95MS: number;
+  RebufferRatioAvg: number;
+  BitrateAvgKbps: number;
+}
+export interface DistributionRun {
+  id: number;
+  tier: string;
+  n_viewers: number;
+  protocol: string;
+  machine: string;
+  asset_id: string;
+  started_at: string;
+  qoe: EngineQoE[];
+}
+export interface DistributionProjection {
+  basis: string;
+  n_target: number;
+  egress_gb_h: number;
+  agg_rps: number;
+  connections: number;
+  cost_usd_month: number;
+  saturation_tier: string;
+}
+
 export interface TranscodeRun {
   id: string;
   jobId: string;
