@@ -1,0 +1,11 @@
+.wrap { display: flex; flex-direction: column; gap: 16px; }
+.toggle { display: inline-flex; gap: 4px; background: var(--surface-2, #1c2128); padding: 4px; border-radius: 8px; width: fit-content; }
+.toggleBtn, .toggleActive { border: 0; background: transparent; color: var(--text-muted, #9aa4b2); padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.toggleActive { background: var(--accent, #7c5cff); color: #fff; }
+.state { display: flex; justify-content: center; padding: 48px; color: var(--text-muted, #9aa4b2); }
+.runCard { border: 1px solid var(--border, #262c35); border-radius: 12px; padding: 16px; }
+.runHead { font-size: 13px; color: var(--text-muted, #9aa4b2); margin-bottom: 10px; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border, #262c35); }
+.table th:first-child, .table td:first-child { text-align: left; }
+.suiteTitle { font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
