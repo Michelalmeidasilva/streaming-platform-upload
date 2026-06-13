@@ -32,6 +32,7 @@ jest.mock('@/components/ThemeToggle', () => () => <div data-testid="theme-toggle
 jest.mock('@/components/LoadingSpinner', () => () => <div data-testid="loading-spinner" />);
 jest.mock('@/components/TranscodeMetrics', () => () => <div data-testid="transcode-metrics" />);
 jest.mock('@/components/DistributionMetrics', () => () => <div data-testid="distribution-metrics" />);
+jest.mock('@/components/StorebenchMetrics', () => () => <div data-testid="storebench-metrics" />);
 
 describe('Home Page', () => {
   const mockRouter = { push: jest.fn() };
@@ -160,6 +161,22 @@ describe('Home Page', () => {
 
     expect(queryByTestId('upload-area')).toBeNull();
     expect(getByTestId('distribution-metrics')).toBeDefined();
+  });
+
+  it('switches to the Benchmarks Storage view', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { email: 'test@test.com', role: 'ADMIN' } },
+    });
+
+    const { getByTestId, queryByTestId, getAllByLabelText } = render(<Home />);
+    expect(getByTestId('upload-area')).toBeDefined();
+    expect(queryByTestId('storebench-metrics')).toBeNull();
+
+    getAllByLabelText('app.sidebar.storageBench').forEach(btn => fireEvent.click(btn));
+
+    expect(queryByTestId('upload-area')).toBeNull();
+    expect(getByTestId('storebench-metrics')).toBeDefined();
   });
 
   it('switches back to library view when library nav button is clicked after metrics', () => {

@@ -48,6 +48,7 @@ const translations = {
         settings: 'Settings',
         metrics: 'Metrics',
         distribution: 'Distribution',
+        storageBench: 'Benchmarks Storage',
       },
       topbar: {
         library: 'Library',
@@ -193,6 +194,14 @@ const translations = {
       runTime: 'Run time (s)',
       cpu: 'CPU %',
     },
+    storageBench: {
+      viewHttp: 'HTTP (end-to-end)',
+      viewMicro: 'Micro-benchmarks',
+      config: 'Config',
+      name: 'Benchmark',
+      empty: 'No runs yet — run the storebench ingest.',
+      error: 'Could not load storebench data.',
+    },
     distribution: {
       title: 'Distribution load test',
       empty: 'No distribution runs yet. Run a load test to see results.',
@@ -245,6 +254,7 @@ const translations = {
         settings: 'Ajustes',
         metrics: 'Métricas',
         distribution: 'Distribución',
+        storageBench: 'Benchmarks Storage',
       },
       topbar: {
         library: 'Biblioteca',
@@ -390,6 +400,14 @@ const translations = {
       runTime: 'Tiempo (s)',
       cpu: 'CPU %',
     },
+    storageBench: {
+      viewHttp: 'HTTP (extremo a extremo)',
+      viewMicro: 'Micro-benchmarks',
+      config: 'Config',
+      name: 'Benchmark',
+      empty: 'Aún no hay ejecuciones — ejecuta la ingesta de storebench.',
+      error: 'No se pudieron cargar los datos de storebench.',
+    },
     distribution: {
       title: 'Prueba de carga de distribución',
       empty: 'Aún no hay ejecuciones de distribución. Ejecuta una prueba de carga para ver resultados.',
@@ -442,6 +460,7 @@ const translations = {
         settings: 'Configurações',
         metrics: 'Métricas',
         distribution: 'Distribuição',
+        storageBench: 'Benchmarks Storage',
       },
       topbar: {
         library: 'Biblioteca',
@@ -586,6 +605,14 @@ const translations = {
       repetition: 'Rep',
       runTime: 'Tempo (s)',
       cpu: 'CPU %',
+    },
+    storageBench: {
+      viewHttp: 'HTTP (ponta a ponta)',
+      viewMicro: 'Micro-benchmarks',
+      config: 'Config',
+      name: 'Benchmark',
+      empty: 'Sem execuções ainda — rode a ingestão do storebench.',
+      error: 'Não foi possível carregar os dados do storebench.',
     },
     distribution: {
       title: 'Teste de carga de distribuição',

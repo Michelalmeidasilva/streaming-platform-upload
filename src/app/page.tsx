@@ -15,6 +15,7 @@ import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 import TranscodeMetrics from '@/components/TranscodeMetrics';
 import DistributionMetrics from '@/components/DistributionMetrics';
+import StorebenchMetrics from '@/components/StorebenchMetrics';
 
 export default function Home() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function Home() {
     void signOut({ callbackUrl: '/' });
   }, []);
 
-  const [view, setView] = useState<'library' | 'metrics' | 'distribution'>('library');
+  const [view, setView] = useState<'library' | 'metrics' | 'distribution' | 'storage-bench'>('library');
 
   const role = effectiveSession?.user?.role;
   let roleLabel = '';
@@ -112,6 +113,20 @@ export default function Home() {
               <circle cx="5" cy="19" r="2" />
               <circle cx="19" cy="19" r="2" />
               <path d="M12 7v4M12 11l-5 6M12 11l5 6" />
+            </svg>
+          </button>
+
+          <button
+            className={`${styles.navItem} ${view === 'storage-bench' ? styles.navItemActive : ''}`}
+            type="button"
+            aria-label={t('app.sidebar.storageBench')}
+            aria-current={view === 'storage-bench' ? 'page' : undefined}
+            onClick={() => setView('storage-bench')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
             </svg>
           </button>
 
@@ -182,8 +197,10 @@ export default function Home() {
               </>
             ) : view === 'metrics' ? (
               <TranscodeMetrics />
-            ) : (
+            ) : view === 'distribution' ? (
               <DistributionMetrics />
+            ) : (
+              <StorebenchMetrics />
             )}
           </main>
         </div>
@@ -232,6 +249,20 @@ export default function Home() {
               <path d="M12 7v4M12 11l-5 6M12 11l5 6" />
             </svg>
             <span className={styles.mobileNavLabel}>{t('app.sidebar.distribution')}</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${view === 'storage-bench' ? styles.mobileNavItemActive : ''}`}
+            aria-label={t('app.sidebar.storageBench')}
+            aria-current={view === 'storage-bench' ? 'page' : undefined}
+            onClick={() => setView('storage-bench')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+            </svg>
+            <span className={styles.mobileNavLabel}>{t('app.sidebar.storageBench')}</span>
           </button>
           <button
             type="button"
