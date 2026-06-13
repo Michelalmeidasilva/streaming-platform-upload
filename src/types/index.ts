@@ -260,3 +260,51 @@ export interface TranscodeRun {
   sourceCodec?: string;
   sourceBitrateKbps?: number;
 }
+
+// --- Storebench (catalog datastore benchmark) ---
+export interface StorebenchHttpResult {
+  run_id: number;
+  n: number;
+  config: string;
+  req_s: number;
+  p95_ms: number;
+  dropped: number;
+  payload_bytes: number;
+  sha256: string;
+}
+
+export interface StorebenchHttpRun {
+  id: number;
+  mode: string;
+  vus: number;
+  rate: number;
+  maxvus: number;
+  trials: number;
+  duration: string;
+  machine: string;
+  started_at: string;
+  notes: string;
+  results: StorebenchHttpResult[];
+}
+
+export interface StorebenchBenchResult {
+  run_id: number;
+  suite: string;
+  name: string;
+  config?: string | null;
+  n?: number | null;
+  op?: string | null;
+  ns_per_op: number;
+  bytes_per_op?: number | null;
+  allocs_per_op?: number | null;
+  iters: number;
+}
+
+export interface StorebenchBenchRun {
+  id: number;
+  machine: string;
+  go_version: string;
+  started_at: string;
+  notes: string;
+  results: StorebenchBenchResult[];
+}
