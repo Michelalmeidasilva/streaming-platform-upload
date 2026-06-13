@@ -64,6 +64,28 @@ Request: `{ "sessionId": "<uuid>" }`
 
 Response `200`: `{ "videoId": "<uuid>", "thumbnailStatus": "pending|ready|failed", "thumbnailUrl": "<url|null>" }`
 
+### GET /api/storebench-runs
+Auth-gated proxy to the `storebenchstore-api` Go service. Requires an authenticated session
+(returns `401` when unauthenticated, `403` when session is present but the user lacks
+`canSearchVideos` permission — same role check used by `GET /api/runs`). Returns `502`
+if either upstream call fails.
+
+Upstream base URL is read from `STOREBENCHSTORE_API_URL` (default `http://localhost:8091`).
+The route fetches both sub-endpoints **in parallel**:
+
+- `GET {STOREBENCHSTORE_API_URL}/http-runs` — HTTP end-to-end benchmark results
+- `GET {STOREBENCHSTORE_API_URL}/bench-runs` — Go micro-benchmark results
+
+Response `200`:
+```json
+{
+  "httpRuns":  [ /* array of HTTP end-to-end run records */ ],
+  "benchRuns": [ /* array of Go micro-benchmark run records */ ]
+}
+```
+
+Mirrors the `GET /api/distribution-runs` proxy in structure and auth model.
+
 ### GET /api/runs
 Auth-gated proxy to `streaming-ingest` `GET /api/v1/runs`. Requires an authenticated session (returns `401` when unauthenticated, `403` when session is present but not admin — same auth middleware as `GET /api/videos`). Returns `502` if the upstream ingest call fails.
 
@@ -291,6 +313,30 @@ i18n keys for all Metrics tab strings (including the Production/Benchmark toggle
 benchmark table headers) are defined in `en`, `es`, and `pt` in
 `src/lib/i18n/translations.ts`.
 
+## Benchmarks Storage Tab
+
+A read-only "Benchmarks Storage" tab is available in the admin UI (sidebar navigation
+and mobile nav). It renders the `StorebenchMetrics` component with an internal toggle
+between two sub-views.
+
+### HTTP (end-to-end) sub-view
+Displays a matrix of HTTP end-to-end benchmark results consumed from `/http-runs`.
+Rows represent benchmark configurations; columns represent request-rate levels (N).
+Each cell shows **req/s** and **p95 latency**. Data is sourced from `httpRuns` in the
+`GET /api/storebench-runs` response.
+
+### Micro-benchmarks sub-view
+Displays Go micro-benchmark results consumed from `/bench-runs`, grouped by suite.
+For each suite, a table shows **ns/op**, **B/op**, and **allocs/op** per measured
+operation. Data is sourced from `benchRuns` in the `GET /api/storebench-runs` response.
+
+The component renders loading, error, and empty states. No mutations are possible from
+this view.
+
+i18n keys: `app.sidebar.storageBench` (sidebar label) and `storageBench.*` (all
+tab-internal strings) are defined in `en`, `es`, and `pt-BR` in
+`src/lib/i18n/translations.ts`.
+
 ## Storage Adapters
 
 `src/lib/storage/IStorageAdapter` is the shared interface. Two implementations:
@@ -355,6 +401,7 @@ without the `x-`); for these the extension allow-list is the gate.
 | `E2E_AUTH_ENABLED` | `0` (off) | **Test/dev only.** When `1`, enables the E2E auth bypass: a NextAuth credentials provider (`auth/config.ts`) and the `e2e-session` cookie overlay (`auth/e2e.ts` / `session.ts`) that accepts any email as a session. Gated **solely** on this runtime flag — **not** `NODE_ENV` (Next freezes `NODE_ENV` as `production` at build time, so the optimized image can't read it at runtime). A real production deployment must leave this unset. |
 | `E2E_ADMIN_EMAIL` | — | Email granted `ADMIN` by the E2E bypass (falls back to first `ADMIN_EMAILS`). Should match the client build arg `NEXT_PUBLIC_E2E_ADMIN_EMAIL`. |
 | `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Enable direct browser-to-S3 upload |
+| `STOREBENCHSTORE_API_URL` | `http://localhost:8091` | Base URL of the `storebenchstore-api` Go service; used by `GET /api/storebench-runs`. |
 | `RABBITMQ_URL` | — | AMQP URL consumed by the realtime SSE push layer. Example: `amqp://guest:guest@rabbitmq:5672/`. When unset, `ensureRealtimeStarted()` is a no-op and the SSE route still serves connections (snapshot only, no live deltas). |
 
 ## RabbitMQ Dependency

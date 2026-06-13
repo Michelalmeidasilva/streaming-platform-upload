@@ -1,5 +1,9 @@
 ## [Unreleased] 2026-06-13
 ### Added
+- "Benchmarks Storage" tab: a new sidebar view rendering the storebench results (HTTP end-to-end matrix + Go micro-benchmarks) served by `storebenchstore-api` via the new authenticated `/api/storebench-runs` proxy.
+
+## [Unreleased] 2026-06-13
+### Added
 - Distribution load-test view: `/api/distribution-runs` proxy + `DistributionMetrics`
   table (per-engine QoE + cloud projections from scalestore via `scalestore-api`,
   `SCALESTORE_API_URL`).
