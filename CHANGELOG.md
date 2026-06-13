@@ -1,3 +1,9 @@
+## [Unreleased] 2026-06-13
+### Added
+- Distribution load-test view: `/api/distribution-runs` proxy + `DistributionMetrics`
+  table (per-engine QoE + cloud projections from scalestore via `scalestore-api`,
+  `SCALESTORE_API_URL`).
+
 ## [Unreleased] 2026-06-11
 ### Changed
 - Benchmark view reorganized to per-video layout: each source clip is a block (title + source resolution · duration · codec · size) with one row per individual run; columns Machine · Codec · Resolution · Run time (s) · Output kbps · Output size · CPU % · Date · Rep. Production view unchanged.
