@@ -31,6 +31,7 @@ jest.mock('@/components/VideoList', () => () => <div data-testid="video-list" />
 jest.mock('@/components/ThemeToggle', () => () => <div data-testid="theme-toggle" />);
 jest.mock('@/components/LoadingSpinner', () => () => <div data-testid="loading-spinner" />);
 jest.mock('@/components/TranscodeMetrics', () => () => <div data-testid="transcode-metrics" />);
+jest.mock('@/components/DistributionMetrics', () => () => <div data-testid="distribution-metrics" />);
 
 describe('Home Page', () => {
   const mockRouter = { push: jest.fn() };
@@ -143,6 +144,22 @@ describe('Home Page', () => {
 
     expect(queryByTestId('upload-area')).toBeNull();
     expect(getByTestId('transcode-metrics')).toBeDefined();
+  });
+
+  it('switches to distribution view when sidebar distribution button is clicked', () => {
+    (useSession as jest.Mock).mockReturnValue({
+      status: 'authenticated',
+      data: { user: { email: 'test@test.com', role: 'ADMIN' } },
+    });
+
+    const { getByTestId, queryByTestId, getAllByLabelText } = render(<Home />);
+    expect(getByTestId('upload-area')).toBeDefined();
+    expect(queryByTestId('distribution-metrics')).toBeNull();
+
+    getAllByLabelText('app.sidebar.distribution').forEach(btn => fireEvent.click(btn));
+
+    expect(queryByTestId('upload-area')).toBeNull();
+    expect(getByTestId('distribution-metrics')).toBeDefined();
   });
 
   it('switches back to library view when library nav button is clicked after metrics', () => {

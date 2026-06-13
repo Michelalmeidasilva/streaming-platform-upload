@@ -14,6 +14,7 @@ import { useE2ESession } from '@/lib/auth/useE2ESession';
 import { LOCALE_LABELS, type Locale } from '@/lib/i18n/translations';
 import { useI18n } from '@/lib/i18n/LocaleProvider';
 import TranscodeMetrics from '@/components/TranscodeMetrics';
+import DistributionMetrics from '@/components/DistributionMetrics';
 
 export default function Home() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function Home() {
     void signOut({ callbackUrl: '/' });
   }, []);
 
-  const [view, setView] = useState<'library' | 'metrics'>('library');
+  const [view, setView] = useState<'library' | 'metrics' | 'distribution'>('library');
 
   const role = effectiveSession?.user?.role;
   let roleLabel = '';
@@ -96,6 +97,21 @@ export default function Home() {
               <rect x="7" y="10" width="3" height="7" />
               <rect x="12" y="6" width="3" height="11" />
               <rect x="17" y="13" width="3" height="4" />
+            </svg>
+          </button>
+
+          <button
+            className={`${styles.navItem} ${view === 'distribution' ? styles.navItemActive : ''}`}
+            type="button"
+            aria-label={t('app.sidebar.distribution')}
+            aria-current={view === 'distribution' ? 'page' : undefined}
+            onClick={() => setView('distribution')}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="5" cy="19" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path d="M12 7v4M12 11l-5 6M12 11l5 6" />
             </svg>
           </button>
 
@@ -164,8 +180,10 @@ export default function Home() {
                 </div>
                 <VideoList />
               </>
-            ) : (
+            ) : view === 'metrics' ? (
               <TranscodeMetrics />
+            ) : (
+              <DistributionMetrics />
             )}
           </main>
         </div>
@@ -199,6 +217,21 @@ export default function Home() {
               <rect x="17" y="13" width="3" height="4" />
             </svg>
             <span className={styles.mobileNavLabel}>{t('app.sidebar.metrics')}</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.mobileNavItem} ${view === 'distribution' ? styles.mobileNavItemActive : ''}`}
+            aria-label={t('app.sidebar.distribution')}
+            aria-current={view === 'distribution' ? 'page' : undefined}
+            onClick={() => setView('distribution')}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="5" cy="19" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path d="M12 7v4M12 11l-5 6M12 11l5 6" />
+            </svg>
+            <span className={styles.mobileNavLabel}>{t('app.sidebar.distribution')}</span>
           </button>
           <button
             type="button"
