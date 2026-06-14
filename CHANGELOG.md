@@ -1,11 +1,8 @@
-## [Unreleased] 2026-06-14
-### Added
-- Storebench (catalog datastore) dashboard now shows **p50** and **p99** latency columns next to p95 in the HTTP matrix. `/api/storebench-runs` selects `p50_ms`/`p99_ms` (via `COALESCE(..., 0)` for legacy rows) and maps them onto `StorebenchHttpResult`; `StorebenchMetrics` renders all three percentiles per N, showing `—` when a value is 0 (legacy rows measured before capture).
+## [1.6.8] - 2026-06-14
 
-## [1.6.7] - 2026-06-14
+0166ca8 Merge remote-tracking branch 'origin/main'
+9b1187c feat(storebench-dashboard): show p50 and p99 latency columns
 
-6e0ea24 Merge remote-tracking branch 'origin/main'
-9fee5ab feat(upload): add Protocol, ABR switches, Stalls to Distribution QoE table
 
 e63504b feat(upload): show startup p95 + p99 in the Distribution QoE table
 
