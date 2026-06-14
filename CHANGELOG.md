@@ -1,11 +1,9 @@
-## [Unreleased] 2026-06-14
-### Added
-- Distribution QoE table now shows **startup p95 and p99** (was p50 only). p95 was already computed; p99 added via `percentile_cont(0.99)` over the raw `startup_ms` in `viewer_samples` (no re-run). New i18n keys + `StartupP99MS` on `EngineQoE`.
+## [1.6.6] - 2026-06-14
 
-## [1.6.5] - 2026-06-14
+3a8f1de docs(upload): changelog for startup p95/p99 columns
+a8a30a3 Merge remote-tracking branch 'origin/main'
+e63504b feat(upload): show startup p95 + p99 in the Distribution QoE table
 
-7f9554f Merge remote-tracking branch 'origin/main'
-bdf2940 feat(upload): /api/distribution-runs reads Neon directly (drop scalestore-api proxy)
 
 
 b55671f feat(upload): wire Benchmarks Storage tab + i18n
