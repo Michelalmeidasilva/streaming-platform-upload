@@ -1,11 +1,8 @@
-## [Unreleased] 2026-06-14
-### Changed
-- `/api/storebench-runs` now reads the storebench results **directly from Neon (Postgres)** via `@neondatabase/serverless` instead of proxying to the `storebenchstore-api` Go service — serverless-native, no separate service to host in production. Connection string from `STOREBENCH_DATABASE_URL` (falls back to `DATABASE_URL`).
+## [1.6.4] - 2026-06-14
 
-## [1.6.3] - 2026-06-13
+7f95c1a Merge remote-tracking branch 'origin/main'
+ad733e9 feat(upload): /api/storebench-runs reads Neon directly (drop Go-API proxy)
 
-8a2ec8e Merge remote-tracking branch 'origin/main'
-6567b25 docs(upload): SPEC + CHANGELOG + Benchmarks Storage tab doc
 b55671f feat(upload): wire Benchmarks Storage tab + i18n
 c2fd305 feat(upload): StorebenchMetrics component (HTTP matrix + micro-bench views)
 f4eb874 feat(upload): authenticated proxy /api/storebench-runs -> storebenchstore-api
