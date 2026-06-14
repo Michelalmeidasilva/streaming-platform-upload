@@ -12,29 +12,28 @@ directly inside the Upload platform UI so engineers have a single dashboard.
 ## Data flow
 
 ```
-scalestore (Postgres DB)
+scalestore tables in Neon (Postgres): runs, viewer_samples, run_timeseries, projections
         │
-        └── scalestore-api  :8090
-                │  GET /runs        → per-run QoE (player engine × tier)
-                │  GET /projections → cloud capacity projections
-                │
-        /api/distribution-runs  (Next.js proxy route)
+        /api/distribution-runs  (Next.js — reads Neon directly via @neondatabase/serverless)
                 │  - Requires authenticated session (canSearchVideos gate)
-                │  - Fetches both endpoints in parallel via Promise.all
-                │  - Returns { runs, projections }
+                │  - runs + per-engine QoE (native percentiles over viewer_samples) + projections
+                │  - Returns { runs, projections } ; 502 when DB unconfigured or query fails
                 │
         DistributionMetrics component  (client, useEffect)
                 │  - Runs table: one row per run × player engine (gpac / shaka)
                 │  - Projections table: egress, RPS, connections, cost, saturation tier
 ```
 
+Serverless-native: same pattern as `/api/storebench-runs` — the Vercel function reads the
+benchmark Postgres on Neon directly; **no `scalestore-api` Go service is hosted in
+production** (that binary remains a local dev tool). Until a real load-test (T1/T2) is run
+and ingested into the same Neon database, the tables are empty and the tab renders empty.
+
 ## Environment variable
 
 | Variable | Default | Description |
 |---|---|---|
-| `SCALESTORE_API_URL` | `http://localhost:8090` | Base URL of the scalestore HTTP API. Trailing slash is stripped automatically. |
-
-Set this in `.env.local` (dev) or as a container environment variable in production.
+| `DATABASE_URL` | — (falls back to `STOREBENCH_DATABASE_URL`) | Neon/Postgres connection string read directly by `GET /api/distribution-runs`. Same Neon database that holds the storebench tables. Set in Vercel (Production). |
 
 ## API contract
 

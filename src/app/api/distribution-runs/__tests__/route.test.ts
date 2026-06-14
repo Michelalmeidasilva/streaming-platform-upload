@@ -6,15 +6,24 @@ jest.mock('@/lib/auth/session', () => ({
 }));
 import { getCurrentSession } from '@/lib/auth/session';
 
+jest.mock('@neondatabase/serverless', () => ({ neon: jest.fn() }));
+import { neon } from '@neondatabase/serverless';
+
 const mockSession = getCurrentSession as jest.Mock;
+const mockNeon = neon as unknown as jest.Mock;
 
 function req(url = 'http://localhost/api/distribution-runs') {
   return new NextRequest(url);
 }
 
 describe('GET /api/distribution-runs', () => {
-  const realFetch = global.fetch;
-  afterEach(() => { global.fetch = realFetch; jest.clearAllMocks(); });
+  const origDatabase = process.env.DATABASE_URL;
+  const origStorebench = process.env.STOREBENCH_DATABASE_URL;
+  afterEach(() => {
+    process.env.DATABASE_URL = origDatabase;
+    process.env.STOREBENCH_DATABASE_URL = origStorebench;
+    jest.clearAllMocks();
+  });
 
   it('returns 401 without a session', async () => {
     mockSession.mockResolvedValue(null);
@@ -28,61 +37,72 @@ describe('GET /api/distribution-runs', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns runs and projections on success', async () => {
+  it('returns 502 when no database is configured', async () => {
     mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
-    process.env.SCALESTORE_API_URL = 'http://scalestore:8090';
-    const sampleRun = { id: 2, tier: 'T1', n_viewers: 2, protocol: 'hls', machine: 'local', asset_id: 'a', started_at: '2026-06-13T11:40:34-03:00', qoe: [] };
-    const sampleProjection = { basis: 'T1=1', n_target: 1000000, egress_gb_h: 1260000, agg_rps: 100000, connections: 5000, cost_usd_month: 78347712, saturation_tier: 'lambda' };
+    delete process.env.DATABASE_URL;
+    delete process.env.STOREBENCH_DATABASE_URL;
+    const res = await GET(req());
+    expect(res.status).toBe(502);
+  });
 
-    global.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [sampleRun] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ projections: [sampleProjection] }) }) as unknown as typeof fetch;
+  it('reads Neon and nests per-engine QoE on each run', async () => {
+    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
+    process.env.DATABASE_URL = 'postgres://x';
+    // 3 queries in order: runs, qoe, projections
+    const sql = jest.fn()
+      .mockResolvedValueOnce([
+        { id: 2, tier: 'T2', n_viewers: 10000, protocol: 'hls', machine: 'ec2:c7i.4xlarge', asset_id: 'a', started_at: '2026-06-13T00:00:00Z' },
+        { id: 1, tier: 'T1', n_viewers: 1000, protocol: 'dash', machine: null, asset_id: null, started_at: null },
+      ])
+      .mockResolvedValueOnce([
+        { run_id: 2, player_engine: 'gpac', samples: 9000, startup_p50: 820, startup_p95: 1500, rebuffer_avg: 0.02, bitrate_avg: 2800 },
+        { run_id: 2, player_engine: 'shaka', samples: 20, startup_p50: 760, startup_p95: 1100, rebuffer_avg: 0.01, bitrate_avg: 3000 },
+      ])
+      .mockResolvedValueOnce([
+        { basis: 'T1=1k,T2=10k', n_target: 1000000, egress_gb_h: 1260, agg_rps: 5000, connections: 800, cost_usd_month: 4200, saturation_tier: 'lambda' },
+      ]);
+    mockNeon.mockReturnValue(sql);
 
     const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.runs).toHaveLength(1);
+
+    expect(body.runs).toHaveLength(2);
+    const t2 = body.runs.find((r: { id: number }) => r.id === 2);
+    expect(t2.qoe).toHaveLength(2);
+    expect(t2.qoe[0].PlayerEngine).toBe('gpac');
+    expect(t2.qoe[0].StartupP50MS).toBe(820);
+    const t1 = body.runs.find((r: { id: number }) => r.id === 1);
+    expect(t1.qoe).toEqual([]); // no samples for this run
+    expect(t1.machine).toBe(''); // null -> ''
+
     expect(body.projections).toHaveLength(1);
-    expect(body.runs[0].tier).toBe('T1');
-    expect(body.projections[0].basis).toBe('T1=1');
+    expect(body.projections[0].cost_usd_month).toBe(4200);
   });
 
-  it('returns 502 when runs upstream returns !ok', async () => {
-    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
-    global.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: false, status: 500 })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ projections: [] }) }) as unknown as typeof fetch;
-    const res = await GET(req());
-    expect(res.status).toBe(502);
-  });
-
-  it('returns 502 when projections upstream returns !ok', async () => {
-    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
-    global.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [] }) })
-      .mockResolvedValueOnce({ ok: false, status: 500 }) as unknown as typeof fetch;
-    const res = await GET(req());
-    expect(res.status).toBe(502);
-  });
-
-  it('returns 502 when fetch throws', async () => {
-    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
-    global.fetch = jest.fn().mockRejectedValue(new Error('network error')) as unknown as typeof fetch;
-    const res = await GET(req());
-    expect(res.status).toBe(502);
-  });
-
-  it('uses SCALESTORE_API_URL env and strips trailing slash', async () => {
+  it('falls back to STOREBENCH_DATABASE_URL and returns empty when no data', async () => {
     mockSession.mockResolvedValue({ user: { role: 'MEMBER', email: 'b@c.d' } });
-    process.env.SCALESTORE_API_URL = 'http://scalestore:8090/';
-    global.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ runs: [] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ projections: [] }) }) as unknown as typeof fetch;
+    delete process.env.DATABASE_URL;
+    process.env.STOREBENCH_DATABASE_URL = 'postgres://fallback';
+    const sql = jest.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockNeon.mockReturnValue(sql);
 
     const res = await GET(req());
     expect(res.status).toBe(200);
-    const calls = (global.fetch as jest.Mock).mock.calls.map((c) => String(c[0]));
-    expect(calls.some((u) => u === 'http://scalestore:8090/runs')).toBe(true);
-    expect(calls.some((u) => u === 'http://scalestore:8090/projections')).toBe(true);
+    expect(mockNeon).toHaveBeenCalledWith('postgres://fallback');
+    const body = await res.json();
+    expect(body.runs).toEqual([]);
+    expect(body.projections).toEqual([]);
+  });
+
+  it('returns 502 when the query throws', async () => {
+    mockSession.mockResolvedValue({ user: { role: 'ADMIN', email: 'a@b.c' } });
+    process.env.DATABASE_URL = 'postgres://x';
+    mockNeon.mockReturnValue(jest.fn().mockRejectedValue(new Error('db error')));
+    const res = await GET(req());
+    expect(res.status).toBe(502);
   });
 });
