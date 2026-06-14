@@ -1,3 +1,7 @@
+## [Unreleased] 2026-06-14
+### Changed
+- `/api/storebench-runs` now reads the storebench results **directly from Neon (Postgres)** via `@neondatabase/serverless` instead of proxying to the `storebenchstore-api` Go service — serverless-native, no separate service to host in production. Connection string from `STOREBENCH_DATABASE_URL` (falls back to `DATABASE_URL`).
+
 ## [Unreleased] 2026-06-13
 ### Added
 - "Benchmarks Storage" tab: a new sidebar view rendering the storebench results (HTTP end-to-end matrix + Go micro-benchmarks) served by `storebenchstore-api` via the new authenticated `/api/storebench-runs` proxy.

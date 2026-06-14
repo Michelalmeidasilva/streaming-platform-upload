@@ -65,16 +65,20 @@ Request: `{ "sessionId": "<uuid>" }`
 Response `200`: `{ "videoId": "<uuid>", "thumbnailStatus": "pending|ready|failed", "thumbnailUrl": "<url|null>" }`
 
 ### GET /api/storebench-runs
-Auth-gated proxy to the `storebenchstore-api` Go service. Requires an authenticated session
-(returns `401` when unauthenticated, `403` when session is present but the user lacks
-`canSearchVideos` permission — same role check used by `GET /api/runs`). Returns `502`
-if either upstream call fails.
+Auth-gated reader of the storebench results, served directly from **Neon (Postgres)** —
+no separate service to host (serverless-native: the Vercel function queries Neon via
+`@neondatabase/serverless`). Requires an authenticated session (returns `401` when
+unauthenticated, `403` when the user lacks `canSearchVideos` permission — same role check
+used by `GET /api/runs`). Returns `502` when the database is unconfigured or a query fails.
 
-Upstream base URL is read from `STOREBENCHSTORE_API_URL` (default `http://localhost:8091`).
-The route fetches both sub-endpoints **in parallel**:
+The connection string is read from `STOREBENCH_DATABASE_URL` (falls back to `DATABASE_URL`).
+The route reads the four storebench tables and assembles results nested per run:
 
-- `GET {STOREBENCHSTORE_API_URL}/http-runs` — HTTP end-to-end benchmark results
-- `GET {STOREBENCHSTORE_API_URL}/bench-runs` — Go micro-benchmark results
+- `http_runs` + `http_results` → HTTP end-to-end benchmark results
+- `bench_runs` + `bench_results` → Go micro-benchmark results
+
+The storebench tables are populated out-of-band by the Go ingest/seed tooling
+(`streaming-distribution/bench/storebench/store/`); this route is read-only.
 
 Response `200`:
 ```json
@@ -401,7 +405,7 @@ without the `x-`); for these the extension allow-list is the gate.
 | `E2E_AUTH_ENABLED` | `0` (off) | **Test/dev only.** When `1`, enables the E2E auth bypass: a NextAuth credentials provider (`auth/config.ts`) and the `e2e-session` cookie overlay (`auth/e2e.ts` / `session.ts`) that accepts any email as a session. Gated **solely** on this runtime flag — **not** `NODE_ENV` (Next freezes `NODE_ENV` as `production` at build time, so the optimized image can't read it at runtime). A real production deployment must leave this unset. |
 | `E2E_ADMIN_EMAIL` | — | Email granted `ADMIN` by the E2E bypass (falls back to first `ADMIN_EMAILS`). Should match the client build arg `NEXT_PUBLIC_E2E_ADMIN_EMAIL`. |
 | `NEXT_PUBLIC_STORAGE_DIRECT_UPLOAD_ENABLED` | `false` | Enable direct browser-to-S3 upload |
-| `STOREBENCHSTORE_API_URL` | `http://localhost:8091` | Base URL of the `storebenchstore-api` Go service; used by `GET /api/storebench-runs`. |
+| `STOREBENCH_DATABASE_URL` | — (falls back to `DATABASE_URL`) | Neon/Postgres connection string read directly by `GET /api/storebench-runs`. Set in Vercel (Production). |
 | `RABBITMQ_URL` | — | AMQP URL consumed by the realtime SSE push layer. Example: `amqp://guest:guest@rabbitmq:5672/`. When unset, `ensureRealtimeStarted()` is a no-op and the SSE route still serves connections (snapshot only, no live deltas). |
 
 ## RabbitMQ Dependency

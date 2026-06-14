@@ -17,13 +17,20 @@ leaving the application.
 satisfy `canSearchVideos(role)` (`403` otherwise). This is the same role check used by
 `GET /api/runs` and `GET /api/distribution-runs`.
 
-**Upstream:** the route reads `STOREBENCHSTORE_API_URL` (default `http://localhost:8091`)
-and fans out **in parallel** to two sub-endpoints:
+**Data source:** the route queries **Neon (Postgres) directly** via `@neondatabase/serverless`
+— no separate service to host (serverless-native; the Vercel function reads the DB). The
+connection string is read from `STOREBENCH_DATABASE_URL` (falls back to `DATABASE_URL`);
+returns `502` when unconfigured or on query error. It reads four tables and nests results
+per run:
 
-| Sub-endpoint | Purpose |
+| Tables | Purpose |
 |---|---|
-| `GET {STOREBENCHSTORE_API_URL}/http-runs` | HTTP end-to-end benchmark records |
-| `GET {STOREBENCHSTORE_API_URL}/bench-runs` | Go micro-benchmark records |
+| `http_runs` + `http_results` | HTTP end-to-end benchmark records |
+| `bench_runs` + `bench_results` | Go micro-benchmark records |
+
+The tables are populated out-of-band by the Go ingest/seed tooling in
+`streaming-distribution/bench/storebench/store/` (e.g. `seed/seed.sh` with
+`STOREBENCHSTORE_DSN` pointed at the same Neon database). This route is read-only.
 
 **Response `200`:**
 ```json

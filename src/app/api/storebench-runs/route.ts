@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { neon } from '@neondatabase/serverless';
 import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import { withEmf } from '@/lib/telemetry/emf';
+import type {
+  StorebenchHttpRun,
+  StorebenchHttpResult,
+  StorebenchBenchRun,
+  StorebenchBenchResult,
+} from '@/types';
 
 export const dynamic = 'force-dynamic';
 
-function storebenchBaseUrl(): string {
-  const raw = process.env.STOREBENCHSTORE_API_URL || 'http://localhost:8091';
-  return raw.replace(/\/$/, '');
+// Serverless-native: the storebench results live in Neon (Postgres). This route
+// reads them directly (no separate Go service to host) and returns the same
+// shape the UI expects: { httpRuns, benchRuns } with results nested per run.
+function databaseUrl(): string | null {
+  return process.env.STOREBENCH_DATABASE_URL || process.env.DATABASE_URL || null;
+}
+
+function numOrNull(v: unknown): number | null {
+  return v === null || v === undefined ? null : Number(v);
 }
 
 async function getHandler(_request: NextRequest) {
@@ -39,24 +52,75 @@ async function getHandler(_request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const base = storebenchBaseUrl();
+  const url = databaseUrl();
+  if (!url) {
+    return NextResponse.json({ error: 'storebench database not configured' }, { status: 502 });
+  }
 
   try {
-    const [httpResp, benchResp] = await Promise.all([
-      fetch(`${base}/http-runs`, { cache: 'no-store' }),
-      fetch(`${base}/bench-runs`, { cache: 'no-store' }),
-    ]);
+    const sql = neon(url);
+    const [httpRunRows, httpResultRows, benchRunRows, benchResultRows] = (await Promise.all([
+      sql`SELECT id, mode, vus, rate, maxvus, trials, duration, machine, started_at, notes
+          FROM http_runs ORDER BY id DESC`,
+      sql`SELECT run_id, n, config, req_s, p95_ms, dropped, payload_bytes, sha256
+          FROM http_results ORDER BY id`,
+      sql`SELECT id, machine, go_version, started_at, notes
+          FROM bench_runs ORDER BY id DESC`,
+      sql`SELECT run_id, suite, name, config, n, op, ns_per_op, bytes_per_op, allocs_per_op, iters
+          FROM bench_results ORDER BY id`,
+    ])) as unknown as [
+      Record<string, unknown>[],
+      Record<string, unknown>[],
+      Record<string, unknown>[],
+      Record<string, unknown>[],
+    ];
 
-    if (!httpResp.ok || !benchResp.ok) {
-      return NextResponse.json({ error: 'Failed to load storebench data' }, { status: 502 });
-    }
+    const httpResults: StorebenchHttpResult[] = httpResultRows.map((r) => ({
+      run_id: Number(r.run_id),
+      n: Number(r.n),
+      config: String(r.config),
+      req_s: Number(r.req_s),
+      p95_ms: Number(r.p95_ms),
+      dropped: Number(r.dropped),
+      payload_bytes: Number(r.payload_bytes),
+      sha256: String(r.sha256 ?? ''),
+    }));
+    const httpRuns: StorebenchHttpRun[] = httpRunRows.map((r) => ({
+      id: Number(r.id),
+      mode: String(r.mode),
+      vus: Number(r.vus),
+      rate: Number(r.rate),
+      maxvus: Number(r.maxvus),
+      trials: Number(r.trials),
+      duration: String(r.duration ?? ''),
+      machine: String(r.machine ?? ''),
+      started_at: String(r.started_at ?? ''),
+      notes: String(r.notes ?? ''),
+      results: httpResults.filter((x) => x.run_id === Number(r.id)),
+    }));
 
-    const [httpBody, benchBody] = await Promise.all([httpResp.json(), benchResp.json()]);
+    const benchResults: StorebenchBenchResult[] = benchResultRows.map((r) => ({
+      run_id: Number(r.run_id),
+      suite: String(r.suite),
+      name: String(r.name),
+      config: r.config === null || r.config === undefined ? null : String(r.config),
+      n: numOrNull(r.n),
+      op: r.op === null || r.op === undefined ? null : String(r.op),
+      ns_per_op: Number(r.ns_per_op),
+      bytes_per_op: numOrNull(r.bytes_per_op),
+      allocs_per_op: numOrNull(r.allocs_per_op),
+      iters: Number(r.iters),
+    }));
+    const benchRuns: StorebenchBenchRun[] = benchRunRows.map((r) => ({
+      id: Number(r.id),
+      machine: String(r.machine ?? ''),
+      go_version: String(r.go_version ?? ''),
+      started_at: String(r.started_at ?? ''),
+      notes: String(r.notes ?? ''),
+      results: benchResults.filter((x) => x.run_id === Number(r.id)),
+    }));
 
-    return NextResponse.json({
-      httpRuns: httpBody.runs ?? [],
-      benchRuns: benchBody.runs ?? [],
-    });
+    return NextResponse.json({ httpRuns, benchRuns });
   } catch {
     return NextResponse.json({ error: 'Failed to load storebench data' }, { status: 502 });
   }
