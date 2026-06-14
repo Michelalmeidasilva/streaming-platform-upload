@@ -17,7 +17,7 @@ const mockBenchRuns = [{
 const mockHttpRuns = [{
   id: 1, mode: 'vus', vus: 10, rate: 0, maxvus: 0, trials: 3, duration: '15s',
   machine: 'local', started_at: '2026-06-13T00:00:00Z', notes: '',
-  results: [{ run_id: 1, n: 1000, config: 'redis', req_s: 900.5, p95_ms: 12, dropped: 0, payload_bytes: 1, sha256: 'x' }],
+  results: [{ run_id: 1, n: 1000, config: 'redis', req_s: 900.5, p50_ms: 5, p95_ms: 12, p99_ms: 18, dropped: 0, payload_bytes: 1, sha256: 'x' }],
 }];
 
 describe('StorebenchMetrics', () => {
@@ -33,6 +33,9 @@ describe('StorebenchMetrics', () => {
     render(<StorebenchMetrics />);
     await waitFor(() => expect(screen.getByText('redis')).toBeInTheDocument());
     expect(screen.getByText('900.5')).toBeInTheDocument();
+    expect(screen.getByText('5ms')).toBeInTheDocument();  // p50
+    expect(screen.getByText('12ms')).toBeInTheDocument(); // p95
+    expect(screen.getByText('18ms')).toBeInTheDocument(); // p99
   });
 
   it('shows an empty state when there are no runs', async () => {

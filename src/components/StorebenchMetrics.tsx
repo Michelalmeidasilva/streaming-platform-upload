@@ -12,7 +12,10 @@ function fmtDate(iso?: string): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toISOString().slice(0, 16).replace('T', ' ');
 }
 
-// HTTP matrix: rows = config, columns = N×metric (req/s and p95ms per N).
+// p50/p99 are 0 for legacy rows measured before they were captured — show '—'.
+const fmtLat = (ms: number) => (ms > 0 ? `${ms.toFixed(0)}ms` : '—');
+
+// HTTP matrix: rows = config, columns = N×metric (req/s, p50/p95/p99 ms per N).
 function HttpRunCard({ run, t }: { run: StorebenchHttpRun; t: (k: string) => string }) {
   const ns = useMemo(() => Array.from(new Set(run.results.map((r) => r.n))).sort((a, b) => a - b), [run]);
   const configs = useMemo(() => Array.from(new Set(run.results.map((r) => r.config))), [run]);
@@ -29,7 +32,9 @@ function HttpRunCard({ run, t }: { run: StorebenchHttpRun; t: (k: string) => str
             {ns.map((n) => (
               <Fragment key={n}>
                 <th>{`N=${n} req/s`}</th>
+                <th>{`N=${n} p50ms`}</th>
                 <th>{`N=${n} p95ms`}</th>
+                <th>{`N=${n} p99ms`}</th>
               </Fragment>
             ))}
           </tr>
@@ -43,7 +48,9 @@ function HttpRunCard({ run, t }: { run: StorebenchHttpRun; t: (k: string) => str
                 return (
                   <Fragment key={n}>
                     <td>{x ? x.req_s.toFixed(1) : '—'}</td>
-                    <td>{x ? `${x.p95_ms.toFixed(0)}ms` : '—'}</td>
+                    <td>{x ? fmtLat(x.p50_ms) : '—'}</td>
+                    <td>{x ? fmtLat(x.p95_ms) : '—'}</td>
+                    <td>{x ? fmtLat(x.p99_ms) : '—'}</td>
                   </Fragment>
                 );
               })}

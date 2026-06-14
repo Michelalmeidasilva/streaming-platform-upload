@@ -56,8 +56,8 @@ describe('GET /api/storebench-runs', () => {
         { id: 2, mode: 'arrival', vus: 0, rate: 20, maxvus: 60, trials: 3, duration: null, machine: null, started_at: null, notes: null },
       ])
       .mockResolvedValueOnce([
-        { run_id: 1, n: 1000, config: 'redis', req_s: 4091, p95_ms: 4.38, dropped: 0, payload_bytes: '126976', sha256: '' },
-        { run_id: 2, n: 50000, config: 'mongo', req_s: 12, p95_ms: 1114, dropped: 0, payload_bytes: '6501171', sha256: null },
+        { run_id: 1, n: 1000, config: 'redis', req_s: 4091, p50_ms: 2.1, p95_ms: 4.38, p99_ms: 7.9, dropped: 0, payload_bytes: '126976', sha256: '' },
+        { run_id: 2, n: 50000, config: 'mongo', req_s: 12, p50_ms: 0, p95_ms: 1114, p99_ms: 0, dropped: 0, payload_bytes: '6501171', sha256: null }, // legacy row: COALESCE -> 0
       ])
       .mockResolvedValueOnce([
         { id: 1, machine: 'local-i7', go_version: 'go1.x', started_at: '2026-06-10T00:00:00Z', notes: '' },
@@ -77,6 +77,8 @@ describe('GET /api/storebench-runs', () => {
     const run1 = body.httpRuns.find((r: { id: number }) => r.id === 1);
     expect(run1.results).toHaveLength(1);
     expect(run1.results[0].config).toBe('redis');
+    expect(run1.results[0].p50_ms).toBe(2.1);
+    expect(run1.results[0].p99_ms).toBe(7.9);
     expect(run1.results[0].payload_bytes).toBe(126976); // bigint string -> number
     const run2 = body.httpRuns.find((r: { id: number }) => r.id === 2);
     expect(run2.duration).toBe(''); // null -> ''

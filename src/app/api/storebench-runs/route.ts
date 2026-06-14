@@ -62,7 +62,9 @@ async function getHandler(_request: NextRequest) {
     const [httpRunRows, httpResultRows, benchRunRows, benchResultRows] = (await Promise.all([
       sql`SELECT id, mode, vus, rate, maxvus, trials, duration, machine, started_at, notes
           FROM http_runs ORDER BY id DESC`,
-      sql`SELECT run_id, n, config, req_s, p95_ms, dropped, payload_bytes, sha256
+      sql`SELECT run_id, n, config, req_s,
+                 COALESCE(p50_ms, 0) AS p50_ms, p95_ms, COALESCE(p99_ms, 0) AS p99_ms,
+                 dropped, payload_bytes, sha256
           FROM http_results ORDER BY id`,
       sql`SELECT id, machine, go_version, started_at, notes
           FROM bench_runs ORDER BY id DESC`,
@@ -80,7 +82,9 @@ async function getHandler(_request: NextRequest) {
       n: Number(r.n),
       config: String(r.config),
       req_s: Number(r.req_s),
+      p50_ms: Number(r.p50_ms),
       p95_ms: Number(r.p95_ms),
+      p99_ms: Number(r.p99_ms),
       dropped: Number(r.dropped),
       payload_bytes: Number(r.payload_bytes),
       sha256: String(r.sha256 ?? ''),

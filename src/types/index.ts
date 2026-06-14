@@ -270,7 +270,9 @@ export interface StorebenchHttpResult {
   n: number;
   config: string;
   req_s: number;
+  p50_ms: number; // 0 for legacy rows measured before p50/p99 were captured
   p95_ms: number;
+  p99_ms: number; // 0 for legacy rows measured before p50/p99 were captured
   dropped: number;
   payload_bytes: number;
   sha256: string;

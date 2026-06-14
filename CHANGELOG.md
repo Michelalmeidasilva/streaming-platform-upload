@@ -1,5 +1,6 @@
 ## [Unreleased] 2026-06-14
 ### Added
+- Storebench (catalog datastore) dashboard now shows **p50** and **p99** latency columns next to p95 in the HTTP matrix. `/api/storebench-runs` selects `p50_ms`/`p99_ms` (via `COALESCE(..., 0)` for legacy rows) and maps them onto `StorebenchHttpResult`; `StorebenchMetrics` renders all three percentiles per N, showing `—` when a value is 0 (legacy rows measured before capture).
 - Distribution QoE table now also shows **Protocol** (HLS/DASH, per run), **ABR switches** (avg/viewer) and **Stalls** (avg/viewer). `abr_switches`/`stalls` were already in `viewer_samples` (aggregated via `avg(...)`); `protocol` was already on the run. Added `ABRSwitchesAvg`/`StallsAvg` to `EngineQoE` + i18n keys (en/es/pt).
 
 ## [1.6.6] - 2026-06-14
