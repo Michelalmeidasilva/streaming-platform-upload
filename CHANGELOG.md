@@ -1,3 +1,7 @@
+## [Unreleased] 2026-06-14
+### Added
+- Distribution QoE table now shows **startup p95 and p99** (was p50 only). p95 was already computed; p99 added via `percentile_cont(0.99)` over the raw `startup_ms` in `viewer_samples` (no re-run). New i18n keys + `StartupP99MS` on `EngineQoE`.
+
 ## [1.6.5] - 2026-06-14
 
 7f9554f Merge remote-tracking branch 'origin/main'
