@@ -55,8 +55,8 @@ describe('GET /api/distribution-runs', () => {
         { id: 1, tier: 'T1', n_viewers: 1000, protocol: 'dash', machine: null, asset_id: null, started_at: null },
       ])
       .mockResolvedValueOnce([
-        { run_id: 2, player_engine: 'gpac', samples: 9000, startup_p50: 820, startup_p95: 1500, rebuffer_avg: 0.02, bitrate_avg: 2800 },
-        { run_id: 2, player_engine: 'shaka', samples: 20, startup_p50: 760, startup_p95: 1100, rebuffer_avg: 0.01, bitrate_avg: 3000 },
+        { run_id: 2, player_engine: 'gpac', samples: 9000, startup_p50: 820, startup_p95: 1500, startup_p99: 2100, rebuffer_avg: 0.02, bitrate_avg: 2800 },
+        { run_id: 2, player_engine: 'shaka', samples: 20, startup_p50: 760, startup_p95: 1100, startup_p99: 1400, rebuffer_avg: 0.01, bitrate_avg: 3000 },
       ])
       .mockResolvedValueOnce([
         { basis: 'T1=1k,T2=10k', n_target: 1000000, egress_gb_h: 1260, agg_rps: 5000, connections: 800, cost_usd_month: 4200, saturation_tier: 'lambda' },
@@ -72,6 +72,8 @@ describe('GET /api/distribution-runs', () => {
     expect(t2.qoe).toHaveLength(2);
     expect(t2.qoe[0].PlayerEngine).toBe('gpac');
     expect(t2.qoe[0].StartupP50MS).toBe(820);
+    expect(t2.qoe[0].StartupP95MS).toBe(1500);
+    expect(t2.qoe[0].StartupP99MS).toBe(2100);
     const t1 = body.runs.find((r: { id: number }) => r.id === 1);
     expect(t1.qoe).toEqual([]); // no samples for this run
     expect(t1.machine).toBe(''); // null -> ''

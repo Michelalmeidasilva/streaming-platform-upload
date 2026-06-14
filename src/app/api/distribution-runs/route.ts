@@ -60,6 +60,7 @@ async function getHandler(_request: NextRequest) {
                  count(*)::int AS samples,
                  percentile_cont(0.5)  WITHIN GROUP (ORDER BY startup_ms) AS startup_p50,
                  percentile_cont(0.95) WITHIN GROUP (ORDER BY startup_ms) AS startup_p95,
+                 percentile_cont(0.99) WITHIN GROUP (ORDER BY startup_ms) AS startup_p99,
                  avg(rebuffer_ratio)   AS rebuffer_avg,
                  avg(avg_bitrate_kbps) AS bitrate_avg
           FROM viewer_samples GROUP BY run_id, player_engine ORDER BY run_id, player_engine`,
@@ -81,6 +82,7 @@ async function getHandler(_request: NextRequest) {
         Samples: Number(q.samples),
         StartupP50MS: Number(q.startup_p50),
         StartupP95MS: Number(q.startup_p95),
+        StartupP99MS: Number(q.startup_p99),
         RebufferRatioAvg: Number(q.rebuffer_avg),
         BitrateAvgKbps: Number(q.bitrate_avg),
       });

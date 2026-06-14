@@ -213,6 +213,7 @@ export interface EngineQoE {
   Samples: number;
   StartupP50MS: number;
   StartupP95MS: number;
+  StartupP99MS: number;
   RebufferRatioAvg: number;
   BitrateAvgKbps: number;
 }

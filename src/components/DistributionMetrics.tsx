@@ -29,6 +29,8 @@ interface QoeRow {
   machine: string;
   engine: string;
   startup: string;
+  startupP95: string;
+  startupP99: string;
   rebuffer: string;
   bitrate: string;
   samples: number;
@@ -45,6 +47,8 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
         machine: run.machine,
         engine: '—',
         startup: '—',
+        startupP95: '—',
+        startupP99: '—',
         rebuffer: '—',
         bitrate: '—',
         samples: 0,
@@ -58,6 +62,8 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
           machine: run.machine,
           engine: q.PlayerEngine,
           startup: fmtMs(q.StartupP50MS),
+          startupP95: fmtMs(q.StartupP95MS),
+          startupP99: fmtMs(q.StartupP99MS),
           rebuffer: fmtPct(q.RebufferRatioAvg),
           bitrate: fmtKbps(q.BitrateAvgKbps),
           samples: q.Samples,
@@ -110,6 +116,8 @@ export default function DistributionMetrics() {
                 <th>{t('distribution.col.machine')}</th>
                 <th>{t('distribution.col.engine')}</th>
                 <th>{t('distribution.col.startup')}</th>
+                <th>{t('distribution.col.startupP95')}</th>
+                <th>{t('distribution.col.startupP99')}</th>
                 <th>{t('distribution.col.rebuffer')}</th>
                 <th>{t('distribution.col.bitrate')}</th>
                 <th>{t('distribution.col.samples')}</th>
@@ -123,6 +131,8 @@ export default function DistributionMetrics() {
                   <td>{row.machine}</td>
                   <td>{row.engine}</td>
                   <td>{row.startup}</td>
+                  <td>{row.startupP95}</td>
+                  <td>{row.startupP99}</td>
                   <td>{row.rebuffer}</td>
                   <td>{row.bitrate}</td>
                   <td>{row.engine === '—' ? '—' : row.samples}</td>
