@@ -1,11 +1,8 @@
-## [Unreleased] 2026-06-14
-### Changed
-- `/api/distribution-runs` now reads the scalestore tables **directly from Neon** (same pattern/database) instead of proxying to `scalestore-api`; per-engine QoE is computed with native percentiles. Connection from `DATABASE_URL` (falls back to `STOREBENCH_DATABASE_URL`). The distribution tab stays empty until a real T1/T2 load-test is run and ingested (no data is fabricated).
+## [1.6.5] - 2026-06-14
 
-## [1.6.4] - 2026-06-14
+7f9554f Merge remote-tracking branch 'origin/main'
+bdf2940 feat(upload): /api/distribution-runs reads Neon directly (drop scalestore-api proxy)
 
-7f95c1a Merge remote-tracking branch 'origin/main'
-ad733e9 feat(upload): /api/storebench-runs reads Neon directly (drop Go-API proxy)
 
 b55671f feat(upload): wire Benchmarks Storage tab + i18n
 c2fd305 feat(upload): StorebenchMetrics component (HTTP matrix + micro-bench views)
