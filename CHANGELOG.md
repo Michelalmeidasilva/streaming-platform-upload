@@ -2,16 +2,20 @@
 ### Changed
 - `/api/storebench-runs` now reads the storebench results **directly from Neon (Postgres)** via `@neondatabase/serverless` instead of proxying to the `storebenchstore-api` Go service — serverless-native, no separate service to host in production. Connection string from `STOREBENCH_DATABASE_URL` (falls back to `DATABASE_URL`).
 
-## [Unreleased] 2026-06-13
-### Added
-- "Benchmarks Storage" tab: a new sidebar view rendering the storebench results (HTTP end-to-end matrix + Go micro-benchmarks) served by `storebenchstore-api` via the new authenticated `/api/storebench-runs` proxy.
+## [1.6.3] - 2026-06-13
 
-## [Unreleased] 2026-06-13
-### Added
-- Distribution load-test view: `/api/distribution-runs` proxy + `DistributionMetrics`
-  table (per-engine QoE + cloud projections from scalestore via `scalestore-api`,
-  `SCALESTORE_API_URL`).
-
+8a2ec8e Merge remote-tracking branch 'origin/main'
+6567b25 docs(upload): SPEC + CHANGELOG + Benchmarks Storage tab doc
+b55671f feat(upload): wire Benchmarks Storage tab + i18n
+c2fd305 feat(upload): StorebenchMetrics component (HTTP matrix + micro-bench views)
+f4eb874 feat(upload): authenticated proxy /api/storebench-runs -> storebenchstore-api
+afed3ee feat(upload): storebench run/result types
+b3e19cb docs(upload): distribution load-test table feature
+799e08d feat(upload): distribution load-test view in the sidebar
+f724588 feat(upload): DistributionMetrics table component
+b537d37 feat(upload): i18n keys for the distribution load-test view
+82da2b8 feat(upload): /api/distribution-runs proxy + distribution types
+0b48cd4 docs: plan for distribution load-test table in upload UI
 ## [1.6.2] - 2026-06-12
 
 853999d Merge remote-tracking branch 'origin/main'
