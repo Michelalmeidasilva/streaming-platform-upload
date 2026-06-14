@@ -26,6 +26,7 @@ interface QoeRow {
   runId: number;
   tier: string;
   n_viewers: number;
+  protocol: string;
   machine: string;
   engine: string;
   startup: string;
@@ -33,6 +34,8 @@ interface QoeRow {
   startupP99: string;
   rebuffer: string;
   bitrate: string;
+  abrSwitches: string;
+  stalls: string;
   samples: number;
 }
 
@@ -44,6 +47,7 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
         runId: run.id,
         tier: run.tier,
         n_viewers: run.n_viewers,
+        protocol: run.protocol,
         machine: run.machine,
         engine: '—',
         startup: '—',
@@ -51,6 +55,8 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
         startupP99: '—',
         rebuffer: '—',
         bitrate: '—',
+        abrSwitches: '—',
+        stalls: '—',
         samples: 0,
       });
     } else {
@@ -59,6 +65,7 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
           runId: run.id,
           tier: run.tier,
           n_viewers: run.n_viewers,
+          protocol: run.protocol,
           machine: run.machine,
           engine: q.PlayerEngine,
           startup: fmtMs(q.StartupP50MS),
@@ -66,6 +73,8 @@ function buildQoeRows(runs: DistributionRun[]): QoeRow[] {
           startupP99: fmtMs(q.StartupP99MS),
           rebuffer: fmtPct(q.RebufferRatioAvg),
           bitrate: fmtKbps(q.BitrateAvgKbps),
+          abrSwitches: q.ABRSwitchesAvg.toFixed(1),
+          stalls: q.StallsAvg.toFixed(1),
           samples: q.Samples,
         });
       }
@@ -113,6 +122,7 @@ export default function DistributionMetrics() {
               <tr>
                 <th>{t('distribution.col.tier')}</th>
                 <th>{t('distribution.col.viewers')}</th>
+                <th>{t('distribution.col.protocol')}</th>
                 <th>{t('distribution.col.machine')}</th>
                 <th>{t('distribution.col.engine')}</th>
                 <th>{t('distribution.col.startup')}</th>
@@ -120,6 +130,8 @@ export default function DistributionMetrics() {
                 <th>{t('distribution.col.startupP99')}</th>
                 <th>{t('distribution.col.rebuffer')}</th>
                 <th>{t('distribution.col.bitrate')}</th>
+                <th>{t('distribution.col.abrSwitches')}</th>
+                <th>{t('distribution.col.stalls')}</th>
                 <th>{t('distribution.col.samples')}</th>
               </tr>
             </thead>
@@ -128,6 +140,7 @@ export default function DistributionMetrics() {
                 <tr key={`${row.runId}-${row.engine}-${i}`}>
                   <td>{row.tier}</td>
                   <td>{row.n_viewers}</td>
+                  <td>{row.protocol}</td>
                   <td>{row.machine}</td>
                   <td>{row.engine}</td>
                   <td>{row.startup}</td>
@@ -135,6 +148,8 @@ export default function DistributionMetrics() {
                   <td>{row.startupP99}</td>
                   <td>{row.rebuffer}</td>
                   <td>{row.bitrate}</td>
+                  <td>{row.abrSwitches}</td>
+                  <td>{row.stalls}</td>
                   <td>{row.engine === '—' ? '—' : row.samples}</td>
                 </tr>
               ))}

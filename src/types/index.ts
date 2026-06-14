@@ -216,6 +216,8 @@ export interface EngineQoE {
   StartupP99MS: number;
   RebufferRatioAvg: number;
   BitrateAvgKbps: number;
+  ABRSwitchesAvg: number;
+  StallsAvg: number;
 }
 export interface DistributionRun {
   id: number;

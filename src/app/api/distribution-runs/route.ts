@@ -62,7 +62,9 @@ async function getHandler(_request: NextRequest) {
                  percentile_cont(0.95) WITHIN GROUP (ORDER BY startup_ms) AS startup_p95,
                  percentile_cont(0.99) WITHIN GROUP (ORDER BY startup_ms) AS startup_p99,
                  avg(rebuffer_ratio)   AS rebuffer_avg,
-                 avg(avg_bitrate_kbps) AS bitrate_avg
+                 avg(avg_bitrate_kbps) AS bitrate_avg,
+                 avg(abr_switches)     AS abr_switches_avg,
+                 avg(stalls)           AS stalls_avg
           FROM viewer_samples GROUP BY run_id, player_engine ORDER BY run_id, player_engine`,
       sql`SELECT basis, n_target, egress_gb_h, agg_rps, connections, cost_usd_month, saturation_tier
           FROM projections ORDER BY n_target, id DESC`,
@@ -85,6 +87,8 @@ async function getHandler(_request: NextRequest) {
         StartupP99MS: Number(q.startup_p99),
         RebufferRatioAvg: Number(q.rebuffer_avg),
         BitrateAvgKbps: Number(q.bitrate_avg),
+        ABRSwitchesAvg: Number(q.abr_switches_avg),
+        StallsAvg: Number(q.stalls_avg),
       });
       qoeByRun.set(runId, list);
     }

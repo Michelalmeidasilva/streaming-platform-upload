@@ -29,6 +29,8 @@ const sampleRun = {
       StartupP99MS: 180,
       RebufferRatioAvg: 0,
       BitrateAvgKbps: 2800,
+      ABRSwitchesAvg: 3.2,
+      StallsAvg: 0.4,
     },
     {
       RunID: 2,
@@ -39,6 +41,8 @@ const sampleRun = {
       StartupP99MS: 190,
       RebufferRatioAvg: 0.01,
       BitrateAvgKbps: 2600,
+      ABRSwitchesAvg: 2.0,
+      StallsAvg: 0.1,
     },
   ],
 };
