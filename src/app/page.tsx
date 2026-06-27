@@ -16,6 +16,7 @@ import { useI18n } from '@/lib/i18n/LocaleProvider';
 import TranscodeMetrics from '@/components/TranscodeMetrics';
 import DistributionMetrics from '@/components/DistributionMetrics';
 import StorebenchMetrics from '@/components/StorebenchMetrics';
+import BenchmarkLauncher from '@/components/BenchmarkLauncher';
 
 export default function Home() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function Home() {
     void signOut({ callbackUrl: '/' });
   }, []);
 
-  const [view, setView] = useState<'library' | 'metrics' | 'distribution' | 'storage-bench'>('library');
+  const [view, setView] = useState<'library' | 'metrics' | 'distribution' | 'storage-bench' | 'benchmark'>('library');
 
   const role = effectiveSession?.user?.role;
   let roleLabel = '';
@@ -130,6 +131,22 @@ export default function Home() {
             </svg>
           </button>
 
+          {role === 'ADMIN' && (
+            <button
+              className={`${styles.navItem} ${view === 'benchmark' ? styles.navItemActive : ''}`}
+              type="button"
+              aria-label={t('app.sidebar.benchmark')}
+              aria-current={view === 'benchmark' ? 'page' : undefined}
+              onClick={() => setView('benchmark')}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </button>
+          )}
+
           <div className={styles.sidebarSpacer} />
 
           <button
@@ -199,6 +216,8 @@ export default function Home() {
               <TranscodeMetrics />
             ) : view === 'distribution' ? (
               <DistributionMetrics />
+            ) : view === 'benchmark' && role === 'ADMIN' ? (
+              <BenchmarkLauncher />
             ) : (
               <StorebenchMetrics />
             )}
@@ -264,6 +283,22 @@ export default function Home() {
             </svg>
             <span className={styles.mobileNavLabel}>{t('app.sidebar.storageBench')}</span>
           </button>
+          {role === 'ADMIN' && (
+            <button
+              type="button"
+              className={`${styles.mobileNavItem} ${view === 'benchmark' ? styles.mobileNavItemActive : ''}`}
+              aria-label={t('app.sidebar.benchmark')}
+              aria-current={view === 'benchmark' ? 'page' : undefined}
+              onClick={() => setView('benchmark')}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+              <span className={styles.mobileNavLabel}>{t('app.sidebar.benchmark')}</span>
+            </button>
+          )}
           <button
             type="button"
             className={styles.mobileNavItem}
