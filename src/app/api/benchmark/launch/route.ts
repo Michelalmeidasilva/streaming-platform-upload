@@ -56,12 +56,12 @@ export async function POST(request: Request) {
   });
 
   // Adapted: `type: "auth_success"` (no benchmark-specific type in AuditEventType).
-  // `reason` carries the action name; `metadata` field does not exist in AuditEvent.
+  // `reason` carries the action name; encode instance types and session ID for traceability.
   recordSecurityEvent({
     type: "auth_success",
     route: ROUTE,
     method: METHOD,
-    reason: "benchmark_launch",
+    reason: `benchmark_launch types=${(types as string[]).join(",")} session=${result.body?.sessionId ?? "unknown"}`,
     status: result.status,
     email: session.user.email,
     role: "ADMIN",

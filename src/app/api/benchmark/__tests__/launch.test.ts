@@ -29,7 +29,9 @@ it("403 para MEMBER", async () => {
   (resolveRoleFromEmail as jest.Mock).mockReturnValue("MEMBER");
   const res = await POST(req(valid));
   expect(res.status).toBe(403);
-  expect(recordSecurityEvent).toHaveBeenCalled();
+  expect(recordSecurityEvent).toHaveBeenCalledWith(
+    expect.objectContaining({ type: "access_denied", email: "u@x.com" })
+  );
   expect(invokeOrchestrator).not.toHaveBeenCalled();
 });
 
@@ -51,4 +53,26 @@ it("200 e repassa ao orquestrador para ADMIN com payload válido", async () => {
   expect(invokeOrchestrator).toHaveBeenCalledWith(expect.objectContaining({ instanceTypes: ["c5.xlarge"] }));
   // Adapted: real AuditEvent uses `type` (not `action`) — using "auth_success" for successful launch
   expect(recordSecurityEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "auth_success" }));
+});
+
+it("400 para instanceTypes vazio (ADMIN)", async () => {
+  (getCurrentSession as jest.Mock).mockResolvedValue({ user: { email: "a@x.com" } });
+  (resolveRoleFromEmail as jest.Mock).mockReturnValue("ADMIN");
+  const res = await POST(req({ ...valid, instanceTypes: [] }));
+  expect(res.status).toBe(400);
+  expect(invokeOrchestrator).not.toHaveBeenCalled();
+});
+
+it("400 para instanceTypes acima do teto (ADMIN)", async () => {
+  (getCurrentSession as jest.Mock).mockResolvedValue({ user: { email: "a@x.com" } });
+  (resolveRoleFromEmail as jest.Mock).mockReturnValue("ADMIN");
+  // 9 instances exceeds MAX_CONCURRENT (8)
+  const res = await POST(
+    req({
+      ...valid,
+      instanceTypes: Array(9).fill("c5.xlarge"),
+    })
+  );
+  expect(res.status).toBe(400);
+  expect(invokeOrchestrator).not.toHaveBeenCalled();
 });
