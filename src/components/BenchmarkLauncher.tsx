@@ -21,19 +21,23 @@ export default function BenchmarkLauncher() {
 
   async function launch() {
     setStatus("Disparando...");
-    const res = await fetch("/api/benchmark/launch", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        instanceTypes: selected,
-        codecs: ["h264", "h265", "av1"],
-        resolutions: "1280x720:2800,1920x1080:5000",
-        repeats: 3,
-        mode: "throughput",
-      }),
-    });
-    const body = await res.json();
-    setStatus(res.ok ? `Sessão iniciada: ${body.sessionId}` : `Erro: ${body.error ?? res.status}`);
+    try {
+      const res = await fetch("/api/benchmark/launch", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          instanceTypes: selected,
+          codecs: ["h264", "h265", "av1"],
+          resolutions: "1280x720:2800,1920x1080:5000",
+          repeats: 3,
+          mode: "throughput",
+        }),
+      });
+      const body = await res.json();
+      setStatus(res.ok ? `Sessão iniciada: ${body.sessionId}` : `Erro: ${body.error ?? res.status}`);
+    } catch (e) {
+      setStatus(`Erro: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   return (
