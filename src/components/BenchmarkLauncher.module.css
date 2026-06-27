@@ -1,0 +1,4 @@
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.group { margin-bottom: 16px; }
+.cost { font-weight: 600; margin: 12px 0; }
+.actions { display: flex; gap: 12px; align-items: center; }
