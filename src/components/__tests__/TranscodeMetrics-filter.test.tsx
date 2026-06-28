@@ -1,4 +1,5 @@
 /** @jest-environment jsdom */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen } from "@testing-library/react";
 import TranscodeMetrics from "../TranscodeMetrics";
 

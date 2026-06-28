@@ -1,4 +1,5 @@
 /** @jest-environment jsdom */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MAX_CONCURRENT } from "@/lib/benchmark/catalog";
 import BenchmarkLauncher from "../BenchmarkLauncher";
