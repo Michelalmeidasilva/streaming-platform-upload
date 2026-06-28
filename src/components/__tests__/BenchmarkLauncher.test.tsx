@@ -61,4 +61,16 @@ describe("BenchmarkLauncher", () => {
 
     await waitFor(() => expect(screen.getByText(/erro/i)).toBeInTheDocument());
   });
+
+  it("mostra botão 'Ver na aba Metrics' após lançamento bem-sucedido e chama onViewMetrics", async () => {
+    const onViewMetrics = jest.fn();
+    render(<BenchmarkLauncher onViewMetrics={onViewMetrics} />);
+    fireEvent.click(screen.getByLabelText("c5.xlarge"));
+    fireEvent.click(screen.getByRole("button", { name: /rodar benchmark/i }));
+
+    const viewButton = await screen.findByRole("button", { name: /ver na aba metrics/i });
+    expect(viewButton).toBeInTheDocument();
+    fireEvent.click(viewButton);
+    expect(onViewMetrics).toHaveBeenCalledWith("s1");
+  });
 });

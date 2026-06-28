@@ -77,7 +77,11 @@ function runRows(runs: TranscodeRun[]): RunRow[] {
   return rows;
 }
 
-export default function TranscodeMetrics() {
+interface TranscodeMetricsProps {
+  sessionId?: string;
+}
+
+export default function TranscodeMetrics({ sessionId }: TranscodeMetricsProps = {}) {
   const { t } = useI18n();
   const [runs, setRuns] = useState<TranscodeRun[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -89,10 +93,17 @@ export default function TranscodeMetrics() {
     const url = mode === 'benchmark' ? '/api/runs?benchmark=true' : '/api/runs?benchmark=false';
     fetch(url, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
-      .then((body) => { if (!cancelled) { setRuns(body.runs ?? []); setStatus('ready'); } })
+      .then((body) => {
+        if (!cancelled) {
+          const all: TranscodeRun[] = Array.isArray(body) ? body : (body.runs ?? []);
+          const filtered = sessionId ? all.filter((r) => r.sessionId === sessionId) : all;
+          setRuns(filtered);
+          setStatus('ready');
+        }
+      })
       .catch(() => { if (!cancelled) setStatus('error'); });
     return () => { cancelled = true; };
-  }, [mode]);
+  }, [mode, sessionId]);
 
   const byMachine = useMemo(() => {
     const groups = new Map<string, TranscodeRun[]>();

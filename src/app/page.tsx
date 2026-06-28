@@ -48,6 +48,12 @@ export default function Home() {
   }, []);
 
   const [view, setView] = useState<'library' | 'metrics' | 'distribution' | 'storage-bench' | 'benchmark'>('library');
+  const [metricsSessionFilter, setMetricsSessionFilter] = useState<string | null>(null);
+
+  const handleViewMetrics = useCallback((sessionId: string) => {
+    setMetricsSessionFilter(sessionId);
+    setView('metrics');
+  }, []);
 
   const role = effectiveSession?.user?.role;
   let roleLabel = '';
@@ -92,7 +98,7 @@ export default function Home() {
             type="button"
             aria-label={t('app.sidebar.metrics')}
             aria-current={view === 'metrics' ? 'page' : undefined}
-            onClick={() => setView('metrics')}
+            onClick={() => { setMetricsSessionFilter(null); setView('metrics'); }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 3v18h18" />
@@ -213,11 +219,11 @@ export default function Home() {
                 <VideoList />
               </>
             ) : view === 'metrics' ? (
-              <TranscodeMetrics />
+              <TranscodeMetrics sessionId={metricsSessionFilter ?? undefined} />
             ) : view === 'distribution' ? (
               <DistributionMetrics />
             ) : view === 'benchmark' && role === 'ADMIN' ? (
-              <BenchmarkLauncher />
+              <BenchmarkLauncher onViewMetrics={handleViewMetrics} />
             ) : (
               <StorebenchMetrics />
             )}
@@ -244,7 +250,7 @@ export default function Home() {
             className={`${styles.mobileNavItem} ${view === 'metrics' ? styles.mobileNavItemActive : ''}`}
             aria-label={t('app.sidebar.metrics')}
             aria-current={view === 'metrics' ? 'page' : undefined}
-            onClick={() => setView('metrics')}
+            onClick={() => { setMetricsSessionFilter(null); setView('metrics'); }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 3v18h18" />
