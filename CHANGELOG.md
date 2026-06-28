@@ -1,11 +1,20 @@
-## [1.6.9] - 2026-06-26
+## [1.6.10] - 2026-06-28
 
-157b18d chore: untrack .DS_Store/tsbuildinfo; redact AWS account id in .env.example
-3b62c2f chore: update package-lock.json
+0bdbb98 merge: integrar release v1.6.9 do origin/main
+f7b48d7 merge: Plano 3 — GUI Benchmark + rotas /api/benchmark + fronteira SigV4
+22421b1 fix(upload): auditar e retornar 502 em falha do orquestrador na rota launch (final review Plano 3)
+dbd7357 test(upload): E2E fail-fast on CSRF + asserção exata do sessionId (fix review Task 6)
+449174e test(upload): E2E do disparo de benchmark
+3635bb6 feat(upload): aba Benchmark (ADMIN-only) na navegação principal
+56cb424 fix(upload): tratar resposta de erro/não-JSON no launch + testes de cap e erro (fix review Task 4)
+cd0e538 feat(upload): componente BenchmarkLauncher (seleção + custo + disparo)
+8ff1b38 fix(upload): audit rastreável (tipos+session) + cobrir gates 400/403 (fix review Task 3)
+9fd9663 feat(upload): rota /api/benchmark/launch (ADMIN + validação + audit + SigV4)
+b4e3872 chore(upload): usar @smithy/signature-v4 e protocol-http (remove wrappers deprecados)
+4c60a3a feat(upload): cliente SigV4 para o orquestrador de benchmark
+f541b77 feat(upload): catálogo de máquinas + estimativa de custo do benchmark
+3f413ee chore: ignore .superpowers scratch dir
 
-
-
-b55671f feat(upload): wire Benchmarks Storage tab + i18n
 c2fd305 feat(upload): StorebenchMetrics component (HTTP matrix + micro-bench views)
 f4eb874 feat(upload): authenticated proxy /api/storebench-runs -> storebenchstore-api
 afed3ee feat(upload): storebench run/result types
