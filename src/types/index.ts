@@ -262,6 +262,7 @@ export interface TranscodeRun {
   sourceFps?: number;
   sourceCodec?: string;
   sourceBitrateKbps?: number;
+  sessionId?: string;
 }
 
 // --- Storebench (catalog datastore benchmark) ---

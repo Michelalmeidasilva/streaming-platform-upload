@@ -9,9 +9,14 @@ const GROUPS: { key: "x86" | "graviton" | "gpu"; label: string }[] = [
   { key: "gpu", label: "GPU (NVENC)" },
 ];
 
-export default function BenchmarkLauncher() {
+interface BenchmarkLauncherProps {
+  onViewMetrics?: (sessionId: string) => void;
+}
+
+export default function BenchmarkLauncher({ onViewMetrics }: BenchmarkLauncherProps = {}) {
   const [selected, setSelected] = useState<string[]>([]);
   const [status, setStatus] = useState<string>("");
+  const [launchedSessionId, setLaunchedSessionId] = useState<string | null>(null);
   const cost = useMemo(() => estimateCostPerHour(selected), [selected]);
   const overCap = selected.length > MAX_CONCURRENT;
 
@@ -21,6 +26,7 @@ export default function BenchmarkLauncher() {
 
   async function launch() {
     setStatus("Disparando...");
+    setLaunchedSessionId(null);
     try {
       const res = await fetch("/api/benchmark/launch", {
         method: "POST",
@@ -34,7 +40,12 @@ export default function BenchmarkLauncher() {
         }),
       });
       const body = await res.json();
-      setStatus(res.ok ? `Sessão iniciada: ${body.sessionId}` : `Erro: ${body.error ?? res.status}`);
+      if (res.ok) {
+        setStatus(`Sessão iniciada: ${body.sessionId}`);
+        if (body.sessionId) setLaunchedSessionId(body.sessionId);
+      } else {
+        setStatus(`Erro: ${body.error ?? res.status}`);
+      }
     } catch (e) {
       setStatus(`Erro: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -61,6 +72,14 @@ export default function BenchmarkLauncher() {
       <div className={styles.actions}>
         <button onClick={launch} disabled={selected.length === 0 || overCap}>Rodar benchmark</button>
         {status && <span>{status}</span>}
+        {launchedSessionId && (
+          <button
+            type="button"
+            onClick={() => onViewMetrics?.(launchedSessionId)}
+          >
+            Ver na aba Metrics
+          </button>
+        )}
       </div>
     </div>
   );

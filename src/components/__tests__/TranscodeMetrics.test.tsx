@@ -161,6 +161,23 @@ describe('TranscodeMetrics', () => {
     expect(screen.getByText('0 KB')).toBeInTheDocument();
   });
 
+  it('with sessionId prop → starts in benchmark mode and fetches benchmark=true', async () => {
+    const sessionRun = {
+      ...sampleRun, id: 'bench-s1', sessionId: 's1', benchmark: true,
+      clip: 'bench/session-video.mp4',
+      renditions: [{ ...sampleRun.renditions[0], codec: 'av1', width: 1280, height: 720 }],
+    };
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true, json: async () => ({ runs: [sessionRun] }),
+    }) as unknown as typeof fetch;
+
+    render(<TranscodeMetrics sessionId="s1" />);
+    // Should immediately show benchmark data (av1) without requiring a toggle click
+    await waitFor(() => expect(screen.getByText('av1')).toBeInTheDocument());
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('benchmark=true');
+  });
+
   it('benchmark view shows dash for zero outputFileSizeBytes and missing completedAt', async () => {
     const zeroSizeRun = {
       ...sampleRun, benchmark: true, clip: 'clips/zero.mp4',

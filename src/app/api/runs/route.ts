@@ -3,16 +3,9 @@ import { getCurrentSession } from '@/lib/auth/session';
 import { canSearchVideos } from '@/lib/auth/permissions';
 import { recordSecurityEvent } from '@/lib/security/audit';
 import { withEmf } from '@/lib/telemetry/emf';
+import { ingestBaseUrl } from '@/lib/benchmark/ingestBase';
 
 export const dynamic = 'force-dynamic';
-
-function ingestBaseUrl(): string {
-  const raw =
-    process.env.INGEST_PERSISTENCE_BASE_URL ||
-    process.env.EVENT_GATEWAY_URL ||
-    'http://localhost:8080/api/v1';
-  return raw.replace(/\/$/, '');
-}
 
 async function getHandler(request: NextRequest) {
   const session = await getCurrentSession();
