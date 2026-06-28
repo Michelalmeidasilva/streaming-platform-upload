@@ -14,3 +14,4 @@ coverage/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+.superpowers/

@@ -49,6 +49,7 @@ const translations = {
         metrics: 'Metrics',
         distribution: 'Distribution',
         storageBench: 'Benchmarks Storage',
+        benchmark: 'Benchmark',
       },
       topbar: {
         library: 'Library',
@@ -260,6 +261,7 @@ const translations = {
         metrics: 'Métricas',
         distribution: 'Distribución',
         storageBench: 'Benchmarks Storage',
+        benchmark: 'Benchmark',
       },
       topbar: {
         library: 'Biblioteca',
@@ -471,6 +473,7 @@ const translations = {
         metrics: 'Métricas',
         distribution: 'Distribuição',
         storageBench: 'Benchmarks Storage',
+        benchmark: 'Benchmark',
       },
       topbar: {
         library: 'Biblioteca',
