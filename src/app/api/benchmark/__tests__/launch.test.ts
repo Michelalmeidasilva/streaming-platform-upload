@@ -76,3 +76,15 @@ it("400 para instanceTypes acima do teto (ADMIN)", async () => {
   expect(res.status).toBe(400);
   expect(invokeOrchestrator).not.toHaveBeenCalled();
 });
+
+it("502 quando invokeOrchestrator falha (ADMIN + payload válido)", async () => {
+  (getCurrentSession as jest.Mock).mockResolvedValue({ user: { email: "a@x.com" } });
+  (resolveRoleFromEmail as jest.Mock).mockReturnValue("ADMIN");
+  (invokeOrchestrator as jest.Mock).mockRejectedValue(new Error("Network timeout"));
+  const res = await POST(req(valid));
+  expect(res.status).toBe(502);
+  expect(await res.json()).toEqual({ error: "Falha ao disparar o benchmark." });
+  expect(recordSecurityEvent).toHaveBeenCalledWith(
+    expect.objectContaining({ type: "auth_failure", status: 502, email: "a@x.com" })
+  );
+});

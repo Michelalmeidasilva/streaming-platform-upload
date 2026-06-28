@@ -47,25 +47,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "instanceTypes inválido (allowlist/teto)." }, { status: 400 });
   }
 
-  const result = await invokeOrchestrator({
-    instanceTypes: types,
-    codecs: body.codecs,
-    resolutions: body.resolutions,
-    repeats: body.repeats,
-    mode: body.mode,
-  });
+  let result;
+  try {
+    result = await invokeOrchestrator({
+      instanceTypes: types,
+      codecs: body.codecs,
+      resolutions: body.resolutions,
+      repeats: body.repeats,
+      mode: body.mode,
+    });
 
-  // Adapted: `type: "auth_success"` (no benchmark-specific type in AuditEventType).
-  // `reason` carries the action name; encode instance types and session ID for traceability.
-  recordSecurityEvent({
-    type: "auth_success",
-    route: ROUTE,
-    method: METHOD,
-    reason: `benchmark_launch types=${(types as string[]).join(",")} session=${result.body?.sessionId ?? "unknown"}`,
-    status: result.status,
-    email: session.user.email,
-    role: "ADMIN",
-  });
+    // Adapted: `type` is "auth_success" if status < 400, else "auth_failure" (downstream failure).
+    // `reason` carries the action name; encode instance types and session ID for traceability.
+    const auditType = result.status >= 400 ? "auth_failure" : "auth_success";
+    recordSecurityEvent({
+      type: auditType,
+      route: ROUTE,
+      method: METHOD,
+      reason: `benchmark_launch types=${(types as string[]).join(",")} session=${result.body?.sessionId ?? "unknown"}`,
+      status: result.status,
+      email: session.user.email,
+      role: "ADMIN",
+    });
 
-  return NextResponse.json(result.body, { status: result.status });
+    return NextResponse.json(result.body, { status: result.status });
+  } catch (err) {
+    // Orchestrator call failed; emit failure audit and return 502.
+    recordSecurityEvent({
+      type: "auth_failure",
+      route: ROUTE,
+      method: METHOD,
+      reason: `benchmark_launch_error types=${(types as string[]).join(",")} ${err instanceof Error ? err.message : String(err)}`,
+      status: 502,
+      email: session.user.email,
+      role: "ADMIN",
+    });
+    return NextResponse.json({ error: "Falha ao disparar o benchmark." }, { status: 502 });
+  }
 }
