@@ -95,7 +95,7 @@ export default function TranscodeMetrics({ sessionId }: TranscodeMetricsProps = 
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('failed'))))
       .then((body) => {
         if (!cancelled) {
-          const all: TranscodeRun[] = Array.isArray(body) ? body : (body.runs ?? []);
+          const all: TranscodeRun[] = body.runs ?? [];
           const filtered = sessionId ? all.filter((r) => r.sessionId === sessionId) : all;
           setRuns(filtered);
           setStatus('ready');

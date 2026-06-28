@@ -9,10 +9,10 @@ jest.mock('@/lib/i18n/LocaleProvider', () => ({
 it("com sessionId, mostra só os runs daquela sessão", async () => {
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
-    json: async () => ([
+    json: async () => ({ runs: [
       { sessionId: "s1", machineLabel: "c5.xlarge", renditions: [] },
       { sessionId: "s2", machineLabel: "g6.xlarge", renditions: [] },
-    ]),
+    ] }),
   }) as any;
 
   render(<TranscodeMetrics sessionId="s1" />);
