@@ -1,11 +1,14 @@
-## [1.6.10] - 2026-06-28
+## [1.6.11] - 2026-06-28
 
-0bdbb98 merge: integrar release v1.6.9 do origin/main
-f7b48d7 merge: Plano 3 — GUI Benchmark + rotas /api/benchmark + fronteira SigV4
-22421b1 fix(upload): auditar e retornar 502 em falha do orquestrador na rota launch (final review Plano 3)
-dbd7357 test(upload): E2E fail-fast on CSRF + asserção exata do sessionId (fix review Task 6)
-449174e test(upload): E2E do disparo de benchmark
-3635bb6 feat(upload): aba Benchmark (ADMIN-only) na navegação principal
+6fa2e98 merge: integrar release v1.6.10 do origin/main
+509f0e6 merge: Plano 4 T4-6 — correlação sessionId, status de sessões, deep-link Metrics
+6e455c4 fix(upload): deep-link em modo benchmark + sessões launched no GET /sessions + dedup ingestBaseUrl (final review Plano 4)
+6492484 test(upload): mock de runs no shape real {runs:[]} + reverter guard Array.isArray (fix review Task 6)
+a169da9 feat(upload): filtrar Metrics por sessionId + deep-link do Benchmark
+e77ad4d refactor(upload): ingestBaseUrl compartilhado + degradar store-fetch + assert no path 500 (fix review Task 5)
+6e00564 feat(upload): registrar sessão lançada e usar p/ status fiel (launched vs reported)
+099b365 feat(upload): endpoint de sessões de benchmark + reconciliação de status
+
 56cb424 fix(upload): tratar resposta de erro/não-JSON no launch + testes de cap e erro (fix review Task 4)
 cd0e538 feat(upload): componente BenchmarkLauncher (seleção + custo + disparo)
 8ff1b38 fix(upload): audit rastreável (tipos+session) + cobrir gates 400/403 (fix review Task 3)
