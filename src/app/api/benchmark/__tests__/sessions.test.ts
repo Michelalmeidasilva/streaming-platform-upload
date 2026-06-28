@@ -146,6 +146,31 @@ it("chama ingest com benchmark=true", async () => {
   expect(urls.some((u) => u.includes("benchmark=true"))).toBe(true);
 });
 
+it("sessão lançada sem runs aparece com status 'launched' e total = instanceTypes.length", async () => {
+  (getCurrentSession as jest.Mock).mockResolvedValue({
+    user: { email: "admin@x.com" },
+  });
+  (resolveRoleFromEmail as jest.Mock).mockReturnValue("ADMIN");
+
+  // createdAt is 5 minutes ago — well within the 120-min stale window → "launched"
+  const recentCreatedAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+  mockFetch(
+    [], // no runs at all
+    [{ sessionId: "sess-new", instanceTypes: ["c5.xlarge", "g6.xlarge"], requestedBy: "a@x.com", createdAt: recentCreatedAt }]
+  );
+
+  const res = await GET();
+  expect(res.status).toBe(200);
+  const body = await res.json();
+
+  const sn = body.sessions.find((s: { sessionId: string }) => s.sessionId === "sess-new");
+  expect(sn).toBeDefined();
+  expect(sn.status).toBe("launched");
+  expect(sn.total).toBe(2);
+  expect(sn.reported).toBe(0);
+});
+
 it("launchedTypes do store → status fiel (incomplete quando parcial e sessão antiga)", async () => {
   (getCurrentSession as jest.Mock).mockResolvedValue({
     user: { email: "admin@x.com" },

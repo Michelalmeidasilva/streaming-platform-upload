@@ -48,40 +48,53 @@ async function listBenchmarkSessions() {
     listLaunchedSessions().catch(() => []),
   ]);
 
-  // Build a lookup: sessionId → launched instanceTypes (source-of-truth from store).
-  const launchedMap = new Map<string, string[]>();
+  // Build a lookup: sessionId → { instanceTypes, createdAt } (source-of-truth from store).
+  const launchedMap = new Map<string, { instanceTypes: string[]; createdAt?: string }>();
   for (const ls of launchedSessions) {
-    launchedMap.set(ls.sessionId, ls.instanceTypes);
+    launchedMap.set(ls.sessionId, { instanceTypes: ls.instanceTypes, createdAt: ls.createdAt });
   }
 
-  // Group runs: sessionId → { labels seen, earliest completedAt timestamp }
+  // Group sessions: sessionId → { labels seen, earliest timestamp }
   const bySession = new Map<
     string,
     { labels: Set<string>; firstSeen: number }
   >();
 
+  // SEED from launched sessions so sessions with 0 runs appear (launched/incomplete status).
+  for (const ls of launchedSessions) {
+    const ts = ls.createdAt ? Date.parse(ls.createdAt) : NaN;
+    const firstSeen = !Number.isNaN(ts) ? ts : Date.now();
+    bySession.set(ls.sessionId, { labels: new Set<string>(), firstSeen });
+  }
+
+  // Merge in reported runs on top of the seeded map.
   for (const r of runs) {
     if (!r.sessionId) continue;
     const ts = Date.parse(r.completedAt);
-    const e = bySession.get(r.sessionId) ?? {
-      labels: new Set<string>(),
-      firstSeen: Number.isNaN(ts) ? Date.now() : ts,
-    };
-    e.labels.add(r.machineLabel);
-    if (!Number.isNaN(ts)) {
-      e.firstSeen = Math.min(e.firstSeen, ts);
+    const existing = bySession.get(r.sessionId);
+    if (existing) {
+      // Known session (from store or already seen): merge labels and advance firstSeen.
+      existing.labels.add(r.machineLabel);
+      if (!Number.isNaN(ts)) {
+        existing.firstSeen = Math.min(existing.firstSeen, ts);
+      }
+    } else {
+      // Legacy session (predates the store): seed from run data as before.
+      bySession.set(r.sessionId, {
+        labels: new Set([r.machineLabel]),
+        firstSeen: Number.isNaN(ts) ? Date.now() : ts,
+      });
     }
-    bySession.set(r.sessionId, e);
   }
 
   const now = Date.now();
   return Array.from(bySession.entries())
     .map(([sessionId, e]) => {
       const reportedLabels = Array.from(e.labels);
-      // Use launched types from the store (persisted at dispatch time) for faithful
-      // "collecting"/"incomplete" status. Fall back to reportedLabels for legacy
-      // sessions that pre-date the store.
-      const launchedTypes = launchedMap.get(sessionId) ?? reportedLabels;
+      const storeEntry = launchedMap.get(sessionId);
+      // Use launched types from the store for faithful "collecting"/"incomplete" status.
+      // Fall back to reportedLabels for legacy sessions that pre-date the store.
+      const launchedTypes = storeEntry?.instanceTypes ?? reportedLabels;
       const ageMinutes = (now - e.firstSeen) / 60_000;
       return {
         sessionId,

@@ -85,7 +85,10 @@ export default function TranscodeMetrics({ sessionId }: TranscodeMetricsProps = 
   const { t } = useI18n();
   const [runs, setRuns] = useState<TranscodeRun[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [mode, setMode] = useState<'production' | 'benchmark'>('production');
+  const [mode, setMode] = useState<'production' | 'benchmark'>(sessionId ? 'benchmark' : 'production');
+
+  // Force benchmark mode whenever a sessionId is set (handles prop changes after mount).
+  useEffect(() => { if (sessionId) setMode('benchmark'); }, [sessionId]);
 
   useEffect(() => {
     let cancelled = false;

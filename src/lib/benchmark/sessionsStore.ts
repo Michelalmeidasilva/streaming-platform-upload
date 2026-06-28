@@ -6,6 +6,8 @@ export interface LaunchedSession {
   sessionId: string;
   instanceTypes: string[];
   requestedBy: string;
+  /** ISO timestamp recorded by the ingest when the session was dispatched. */
+  createdAt?: string;
 }
 
 /** POST /api/v1/benchmark-sessions — persiste sessão lançada no ingest. */
