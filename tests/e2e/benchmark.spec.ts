@@ -25,7 +25,8 @@ test("ADMIN dispara benchmark e vê o sessionId", async ({ page }) => {
   // to avoid redirect) → session-token cookie is set → page.goto('/') reads ADMIN JWT.
 
   const csrfRes = await page.request.get("/api/auth/csrf");
-  const { csrfToken } = await csrfRes.json() as { csrfToken: string };
+  expect(csrfRes.ok()).toBeTruthy();
+  const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
 
   await page.request.post("/api/auth/callback/credentials", {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -62,5 +63,5 @@ test("ADMIN dispara benchmark e vê o sessionId", async ({ page }) => {
 
   // The BenchmarkLauncher sets status to `Sessão iniciada: ${body.sessionId}`,
   // so the mocked sessionId "e2e-123" must be visible.
-  await expect(page.getByText("e2e-123")).toBeVisible();
+  await expect(page.getByText("Sessão iniciada: e2e-123", { exact: true })).toBeVisible();
 });
