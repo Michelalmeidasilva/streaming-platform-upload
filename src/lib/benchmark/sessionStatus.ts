@@ -35,6 +35,7 @@ export function reconcileSession(i: ReconcileInput): SessionStatus {
   const reported = i.launchedTypes.filter((t) => i.reportedLabels.includes(t)).length;
 
   let status: SessionStatus["status"];
+  // Guard: total === 0 (empty launchedTypes) must not resolve to "complete".
   if (reported >= total && total > 0) {
     status = "complete";
   } else if (reported === 0 && i.ageMinutes <= STALE_AFTER_MINUTES) {

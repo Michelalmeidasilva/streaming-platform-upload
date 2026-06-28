@@ -3,6 +3,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { resolveRoleFromEmail } from "@/lib/auth/roles";
 import { recordSecurityEvent } from "@/lib/security/audit";
 import { reconcileSession } from "@/lib/benchmark/sessionStatus";
+import { listLaunchedSessions } from "@/lib/benchmark/sessionsStore";
 
 const ROUTE = "/api/benchmark/sessions";
 const METHOD = "GET";
@@ -49,9 +50,19 @@ async function fetchBenchmarkRuns(): Promise<IngestBenchmarkRun[]> {
  * this derivation so "incomplete" and "collecting" work faithfully.
  */
 async function listBenchmarkSessions() {
-  const runs = await fetchBenchmarkRuns();
+  // Fetch runs and launched-session metadata in parallel.
+  const [runs, launchedSessions] = await Promise.all([
+    fetchBenchmarkRuns(),
+    listLaunchedSessions(),
+  ]);
 
-  // Group: sessionId → { labels seen, earliest completedAt timestamp }
+  // Build a lookup: sessionId → launched instanceTypes (source-of-truth from store).
+  const launchedMap = new Map<string, string[]>();
+  for (const ls of launchedSessions) {
+    launchedMap.set(ls.sessionId, ls.instanceTypes);
+  }
+
+  // Group runs: sessionId → { labels seen, earliest completedAt timestamp }
   const bySession = new Map<
     string,
     { labels: Set<string>; firstSeen: number }
@@ -75,8 +86,10 @@ async function listBenchmarkSessions() {
   return Array.from(bySession.entries())
     .map(([sessionId, e]) => {
       const reportedLabels = Array.from(e.labels);
-      // Task 5: replace launchedTypes with the list from the sessions store.
-      const launchedTypes = reportedLabels;
+      // Use launched types from the store (persisted at dispatch time) for faithful
+      // "collecting"/"incomplete" status. Fall back to reportedLabels for legacy
+      // sessions that pre-date the store.
+      const launchedTypes = launchedMap.get(sessionId) ?? reportedLabels;
       const ageMinutes = (now - e.firstSeen) / 60_000;
       return {
         sessionId,

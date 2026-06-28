@@ -4,6 +4,7 @@ jest.mock("@/lib/auth/session", () => ({ getCurrentSession: jest.fn() }));
 jest.mock("@/lib/auth/roles", () => ({ resolveRoleFromEmail: jest.fn() }));
 jest.mock("@/lib/benchmark/orchestratorClient", () => ({ invokeOrchestrator: jest.fn() }));
 jest.mock("@/lib/security/audit", () => ({ recordSecurityEvent: jest.fn() }));
+jest.mock("@/lib/benchmark/sessionsStore", () => ({ recordLaunchedSession: jest.fn().mockResolvedValue(undefined) }));
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveRoleFromEmail } from "@/lib/auth/roles";

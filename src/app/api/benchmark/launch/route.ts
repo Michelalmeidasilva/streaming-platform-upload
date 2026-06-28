@@ -4,6 +4,7 @@ import { resolveRoleFromEmail } from "@/lib/auth/roles";
 import { invokeOrchestrator } from "@/lib/benchmark/orchestratorClient";
 import { recordSecurityEvent } from "@/lib/security/audit";
 import { isSupportedType, MAX_CONCURRENT } from "@/lib/benchmark/catalog";
+import { recordLaunchedSession } from "@/lib/benchmark/sessionsStore";
 
 const ROUTE = "/api/benchmark/launch";
 const METHOD = "POST";
@@ -69,6 +70,23 @@ export async function POST(request: Request) {
       email: session.user.email,
       role: "ADMIN",
     });
+
+    // Persist the launched session for faithful status reconciliation (Task 5).
+    // Non-blocking: a record failure must NOT abort a successful launch.
+    if (result.body?.sessionId) {
+      try {
+        await recordLaunchedSession({
+          sessionId: result.body.sessionId as string,
+          instanceTypes: types as string[],
+          requestedBy: session.user.email,
+        });
+      } catch (recordErr) {
+        console.error(
+          "recordLaunchedSession falhou (launch não é bloqueado):",
+          recordErr
+        );
+      }
+    }
 
     return NextResponse.json(result.body, { status: result.status });
   } catch (err) {

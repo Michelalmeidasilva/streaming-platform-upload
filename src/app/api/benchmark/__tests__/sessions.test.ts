@@ -17,14 +17,26 @@ afterEach(() => {
   (global.fetch as jest.Mock)?.mockRestore?.();
 });
 
-function mockFetch(runs: unknown[]) {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ runs }),
+/**
+ * Mock global.fetch branching on URL:
+ *   - /benchmark-sessions → { sessions: launchedSessions }
+ *   - /runs?...           → { runs }
+ * Default launchedSessions=[] so existing tests fall back to reportedLabels derivation.
+ */
+function mockFetch(runs: unknown[], launchedSessions: unknown[] = []) {
+  global.fetch = jest.fn().mockImplementation((url: string) => {
+    if (url.includes("benchmark-sessions")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ sessions: launchedSessions }),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ({ runs }),
+    });
   }) as unknown as typeof fetch;
 }
-
-const now = new Date("2025-01-15T12:00:00.000Z").getTime();
 
 it("401 sem sessão", async () => {
   (getCurrentSession as jest.Mock).mockResolvedValue(null);
@@ -130,7 +142,33 @@ it("chama ingest com benchmark=true", async () => {
   mockFetch([]);
 
   await GET();
-  expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain(
-    "benchmark=true"
+  const urls = (global.fetch as jest.Mock).mock.calls.map((c: unknown[]) => c[0] as string);
+  expect(urls.some((u) => u.includes("benchmark=true"))).toBe(true);
+});
+
+it("launchedTypes do store → status fiel (incomplete quando parcial e sessão antiga)", async () => {
+  (getCurrentSession as jest.Mock).mockResolvedValue({
+    user: { email: "admin@x.com" },
+  });
+  (resolveRoleFromEmail as jest.Mock).mockReturnValue("ADMIN");
+
+  // Session is very old (> 120 min) — ensures "incomplete" (not "collecting")
+  const oldCompletedAt = "2025-01-15T10:00:00.000Z";
+
+  // Store says 2 types were launched; only 1 has reported
+  mockFetch(
+    [{ machineLabel: "c5.xlarge", completedAt: oldCompletedAt, sessionId: "sess-x" }],
+    [{ sessionId: "sess-x", instanceTypes: ["c5.xlarge", "g6.xlarge"], requestedBy: "a@x.com" }]
   );
+
+  const res = await GET();
+  expect(res.status).toBe(200);
+  const body = await res.json();
+
+  const sx = body.sessions.find((s: { sessionId: string }) => s.sessionId === "sess-x");
+  expect(sx).toBeDefined();
+  // With real launchedTypes from store: total=2, reported=1 → incomplete (old session)
+  expect(sx.reported).toBe(1);
+  expect(sx.total).toBe(2);
+  expect(sx.status).toBe("incomplete");
 });
