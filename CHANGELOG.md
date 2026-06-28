@@ -1,10 +1,7 @@
-## [1.6.8] - 2026-06-14
+## [1.6.9] - 2026-06-26
 
-0166ca8 Merge remote-tracking branch 'origin/main'
-9b1187c feat(storebench-dashboard): show p50 and p99 latency columns
-
-
-e63504b feat(upload): show startup p95 + p99 in the Distribution QoE table
+157b18d chore: untrack .DS_Store/tsbuildinfo; redact AWS account id in .env.example
+3b62c2f chore: update package-lock.json
 
 
 
