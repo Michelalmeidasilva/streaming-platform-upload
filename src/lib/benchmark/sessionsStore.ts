@@ -1,13 +1,6 @@
 // Persiste/recupera metadados de sessões de benchmark via o ingest (cliente HTTP).
 
-/** Mirrors the helper in /api/benchmark/sessions/route.ts — single source: env var. */
-function ingestBaseUrl(): string {
-  const raw =
-    process.env.INGEST_PERSISTENCE_BASE_URL ||
-    process.env.EVENT_GATEWAY_URL ||
-    "http://localhost:8080/api/v1";
-  return raw.replace(/\/$/, "");
-}
+import { ingestBaseUrl } from "./ingestBase";
 
 export interface LaunchedSession {
   sessionId: string;

@@ -68,6 +68,5 @@ it("não grava sessão se o orquestrador retorna erro (4xx/5xx)", async () => {
 
   // Only record when there's a valid sessionId returned
   // (500 responses may not have sessionId)
-  // This test just ensures no throw; recordLaunchedSession may or may not be called
-  // depending on whether sessionId is in the body — that's implementation detail
+  expect(recordLaunchedSession).not.toHaveBeenCalled();
 });

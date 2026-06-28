@@ -4,18 +4,10 @@ import { resolveRoleFromEmail } from "@/lib/auth/roles";
 import { recordSecurityEvent } from "@/lib/security/audit";
 import { reconcileSession } from "@/lib/benchmark/sessionStatus";
 import { listLaunchedSessions } from "@/lib/benchmark/sessionsStore";
+import { ingestBaseUrl } from "@/lib/benchmark/ingestBase";
 
 const ROUTE = "/api/benchmark/sessions";
 const METHOD = "GET";
-
-/** Mirrors the helper in /api/runs/route.ts — single source: env var. */
-function ingestBaseUrl(): string {
-  const raw =
-    process.env.INGEST_PERSISTENCE_BASE_URL ||
-    process.env.EVENT_GATEWAY_URL ||
-    "http://localhost:8080/api/v1";
-  return raw.replace(/\/$/, "");
-}
 
 /**
  * Shape returned by the ingest /runs endpoint for benchmark runs.
@@ -53,7 +45,7 @@ async function listBenchmarkSessions() {
   // Fetch runs and launched-session metadata in parallel.
   const [runs, launchedSessions] = await Promise.all([
     fetchBenchmarkRuns(),
-    listLaunchedSessions(),
+    listLaunchedSessions().catch(() => []),
   ]);
 
   // Build a lookup: sessionId → launched instanceTypes (source-of-truth from store).
