@@ -1,11 +1,153 @@
-## [1.6.11] - 2026-06-28
+## [1.7.0] - 2026-06-29
 
-6fa2e98 merge: integrar release v1.6.10 do origin/main
-509f0e6 merge: Plano 4 T4-6 — correlação sessionId, status de sessões, deep-link Metrics
-6e455c4 fix(upload): deep-link em modo benchmark + sessões launched no GET /sessions + dedup ingestBaseUrl (final review Plano 4)
-6492484 test(upload): mock de runs no shape real {runs:[]} + reverter guard Array.isArray (fix review Task 6)
-a169da9 feat(upload): filtrar Metrics por sessionId + deep-link do Benchmark
-e77ad4d refactor(upload): ingestBaseUrl compartilhado + degradar store-fetch + assert no path 500 (fix review Task 5)
+878c580 merge: integrar release v1.6.11
+bbc931b fix(upload): eslint-disable no-explicit-any nos testes de benchmark (desbloqueia next build)
+247d154 chore: release v1.6.11
+fdbbe72 merge: integrar release v1.6.10 do origin/main
+cee09ec merge: Plano 4 T4-6 — correlação sessionId, status de sessões, deep-link Metrics
+1a5f722 fix(upload): deep-link em modo benchmark + sessões launched no GET /sessions + dedup ingestBaseUrl (final review Plano 4)
+1d9a980 test(upload): mock de runs no shape real {runs:[]} + reverter guard Array.isArray (fix review Task 6)
+e95db0c feat(upload): filtrar Metrics por sessionId + deep-link do Benchmark
+b950008 refactor(upload): ingestBaseUrl compartilhado + degradar store-fetch + assert no path 500 (fix review Task 5)
+a1ac12e feat(upload): registrar sessão lançada e usar p/ status fiel (launched vs reported)
+df3a09d feat(upload): endpoint de sessões de benchmark + reconciliação de status
+1f23fa3 chore: release v1.6.10
+27aa85e merge: integrar release v1.6.9 do origin/main
+c676b12 merge: Plano 3 — GUI Benchmark + rotas /api/benchmark + fronteira SigV4
+abba02f fix(upload): auditar e retornar 502 em falha do orquestrador na rota launch (final review Plano 3)
+7afa55d test(upload): E2E fail-fast on CSRF + asserção exata do sessionId (fix review Task 6)
+e4963f6 test(upload): E2E do disparo de benchmark
+9bb5c2c feat(upload): aba Benchmark (ADMIN-only) na navegação principal
+51e9083 fix(upload): tratar resposta de erro/não-JSON no launch + testes de cap e erro (fix review Task 4)
+f4582ff feat(upload): componente BenchmarkLauncher (seleção + custo + disparo)
+14a0338 fix(upload): audit rastreável (tipos+session) + cobrir gates 400/403 (fix review Task 3)
+2a4625e feat(upload): rota /api/benchmark/launch (ADMIN + validação + audit + SigV4)
+f5fe5e9 chore(upload): usar @smithy/signature-v4 e protocol-http (remove wrappers deprecados)
+1518a97 feat(upload): cliente SigV4 para o orquestrador de benchmark
+8ecc5bf feat(upload): catálogo de máquinas + estimativa de custo do benchmark
+5682258 chore: ignore .superpowers scratch dir
+9783df8 chore: release v1.6.9
+97bd9b5 chore: untrack .DS_Store/tsbuildinfo; redact AWS account id in .env.example
+c49bb2f chore: update package-lock.json
+6f247b2 chore: release v1.6.8
+2dd48bb Merge remote-tracking branch 'origin/main'
+fb6830e feat(storebench-dashboard): show p50 and p99 latency columns
+db2e258 chore: release v1.6.7
+28c19b9 Merge remote-tracking branch 'origin/main'
+420bb83 feat(upload): add Protocol, ABR switches, Stalls to Distribution QoE table
+4b72ba1 chore: release v1.6.6
+c2d1779 docs(upload): changelog for startup p95/p99 columns
+99655ee Merge remote-tracking branch 'origin/main'
+ea8c88d feat(upload): show startup p95 + p99 in the Distribution QoE table
+c18aa3d chore: release v1.6.5
+5989ab4 Merge remote-tracking branch 'origin/main'
+c8b16d9 feat(upload): /api/distribution-runs reads Neon directly (drop scalestore-api proxy)
+10c0f15 chore: release v1.6.4
+b36b6fb Merge remote-tracking branch 'origin/main'
+0760484 feat(upload): /api/storebench-runs reads Neon directly (drop Go-API proxy)
+45dcd19 chore: release v1.6.3
+2862178 Merge remote-tracking branch 'origin/main'
+ccceeeb docs(upload): SPEC + CHANGELOG + Benchmarks Storage tab doc
+a1c3d34 feat(upload): wire Benchmarks Storage tab + i18n
+2ccd69c feat(upload): StorebenchMetrics component (HTTP matrix + micro-bench views)
+c5e6ecc feat(upload): authenticated proxy /api/storebench-runs -> storebenchstore-api
+0dd084f feat(upload): storebench run/result types
+f4ed755 docs(upload): distribution load-test table feature
+b063a75 feat(upload): distribution load-test view in the sidebar
+f3b6ddd feat(upload): DistributionMetrics table component
+140d191 feat(upload): i18n keys for the distribution load-test view
+636ec3a feat(upload): /api/distribution-runs proxy + distribution types
+c618c18 chore: release v1.6.2
+b5220cd Merge remote-tracking branch 'origin/main'
+12ad307 docs: per-video benchmark view
+56ad533 feat(metrics): per-video benchmark view with output size and per-run rows
+1234027 feat(upload): protocol/segment/bitrate selectors + format-controls contract
+ba13c92 docs: benchmark Video and Source columns
+8a12440 feat(metrics): Video + Source columns in benchmark view
+10e620c chore: release v1.6.1
+b23e38f Merge remote-tracking branch 'origin/main'
+e0865cf docs: metrics benchmark view
+1f3a761 feat(metrics): benchmark view (codec×resolution) in Metrics tab
+c024697 chore: release v1.6.0
+85ae4da Merge remote-tracking branch 'origin/main'
+46279a2 docs: transcode metrics tab
+0a7840d feat: add read-only transcode metrics tab
+5ba92a3 feat: proxy transcode runs from ingest behind auth
+d590fd9 feat(upload): codec selection as single-select radio (was multi-checkbox)
+f4a3a82 docs(upload): codec + resolution selection
+3e3b9c6 feat(upload): codec + resolution selector in the upload form
+72b7d25 feat(upload): thread transcode selection through UploadService
+f9f9032 feat(upload): carry transcode selection on upload.started
+af0a80a feat(upload): transcode options module (codecs, resolutions, product)
+bb37a93 chore: release v1.5.1
+7d5b05e Fix E2E auth in the production-built Docker image
+8eb55bd chore: refresh package-lock (drop stale peer markers)
+021aabc chore: release v1.5.0
+7dd84cb Merge origin/main (v1.4.0) into realtime SSE push work
+da4330a refactor: log RABBITMQ_URL-unset degraded mode at warn, not error
+7255be2 docs: record realtime SSE push design, SPEC and changelog
+1cd17ec docs: document RABBITMQ_URL in .env.example for BFF realtime consumer
+7781350 feat: drive SSE stream from RabbitMQ hub instead of polling
+bcb712a feat: add lazy idempotent realtime bootstrap
+c02de0a feat: add RabbitConsumer binding video_events to the hub
+c0c60e1 feat: add VideoEventHub for in-process realtime fan-out
+1f388fa build: add amqplib for BFF realtime consumer
+e83849d test(upload): cover .mkv non-canonical MIME types + doc extended formats
+16f559e feat(upload): wire NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_GB build arg
+cafc1ed docs(telemetry): document CloudWatch EMF migration
+450760d refactor(telemetry): swap /metrics+OTel for EMF wrapper, drop deps
+4d17ba8 feat(telemetry): add CloudWatch EMF wrapper for route handlers
+e561942 chore: release v1.4.0
+eec7a29 Merge remote-tracking branch 'origin/main'
+dca4442 chore(env): set example UPLOAD_MAX_FILE_SIZE_GB to 10
+c1841b5 Merge feat/upload-status-stages: 6 visible upload stages + configurable max file size
+5945d27 fix(upload): style stage badges, fix SSE effect dep, drop dead updateVideoStatus
+6bfa41f feat(upload): configurable max file size via UPLOAD_MAX_FILE_SIZE_GB
+1c7187e docs(upload): document 6 upload stages and deriveUploadStage
+b0265a5 docs(env): document UPLOAD_RAW_PREFIX_ENABLED requirement on AWS
+b048ed9 feat(UploadArea): track server videoId, subscribe SSE, render 6 stages
+a781992 feat(VideoList): render 6 derived upload stages
+c7fddbb feat(i18n): add 6 upload stage labels (en/es/pt)
+24b512c feat(stream): propagate storageConfirmedAt over SSE
+6af26ee refactor(upload): remove autoReadyAfterUpload shortcut so transcoding stages surface
+547bf10 feat: add deriveUploadStage pure function
+58916d6 feat(types): add storageConfirmedAt and UploadStage
+b5bb026 feat: added tsconfig
+fadc867 chore: release v1.3.0
+a6341c2 feat: accept mkv/y4m/yuv uploads and sidecar .srt subtitles
+19a07ba chore: release v1.2.5
+ad513fb Merge remote-tracking branch 'origin/main'
+0bd9c5c merge fix/upload-area: thumbnail proxy, cache dir, SSE + thumbnail WIP
+16009f4 fix(platform): serve thumbnails via same-origin proxy + cache dir
+6337b56 docs(platform): thumbnail derive + SSE status
+2e0a54a feat(platform): live status/thumbnail updates via SSE in library
+4a656d9 feat(platform): SSE stream of video status changes
+27d8341 feat(platform): default thumbnail fallback in library grid
+2787686 feat(platform): derive public thumbnailUrl from thumbnailStatus
+4d168af chore: release v1.2.4
+af338b9 Merge branch 'fix/upload-area'
+7923741 Merge remote-tracking branch 'origin/main'
+561c059 docs(upload): document Prometheus RED /api/metrics endpoint
+d97f886 feat(upload): expose Prometheus RED metrics at /api/metrics (prom-client)
+adf8cd1 feat(upload): add OpenTelemetry instrumentation for traces and metrics
+9ebc46c fix(docker): support E2E auth and fix lint error for Docker build
+c0589b1 chore: migrate docs to obsidian-vault, add AGENTS.md
+88f8646 chore: release v1.2.3
+9558dfa fix(upload): fall back to server upload when S3 CORS blocks localhost (#11)
+33ccc55 chore: release v1.2.2
+68fd588 Fix/upload area (#12)
+d0ac1c5 chore: fix uploada chunk
+490fbc5 chore: fix readme.md
+c412a28 chore: fix upload
+c5c8313 chore: release v1.2.1
+a31d0a3 fix(upload): parallelize S3 multipart chunks and remove redundant API calls (#10)
+74a8fab fix(upload): parallelize S3 multipart chunks and remove redundant ListParts call
+644986e chore: merge main, resolve conflicts and add gitleaks ignore for security docs
+defc6a8 chore: release v1.2.0
+af61455 feat: mobile UX overhaul — responsive layout, accessibility & modal (#9)
+8bb9e3a Merge branch 'main' of github.com:Michelalmeidasilva/streaming-platform-upload
+3b2c33c chore: fix readme.md
+
 6e00564 feat(upload): registrar sessão lançada e usar p/ status fiel (launched vs reported)
 099b365 feat(upload): endpoint de sessões de benchmark + reconciliação de status
 
